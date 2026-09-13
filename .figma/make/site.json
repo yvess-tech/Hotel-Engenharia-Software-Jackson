@@ -1,0 +1,10 @@
+{
+  "description": "This hotel management web application streamlines operations with a user-friendly interface featuring a left-side menu, enhancing efficiency for staff and guests.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

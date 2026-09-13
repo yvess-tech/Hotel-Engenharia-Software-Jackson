@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Inria+Serif:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-serif: 'Inria Serif', Georgia, serif;
+  --color-primary: #3e5525;
+  --color-primary-dark: #2d3d1a;
+  --color-primary-light: #4d6a2f;
+  --color-surface: #f0f2ee;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inria Serif', Georgia, serif;
+  background: #f0f2ee;
+  color: #1a1a1a;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Custom scrollbar — sidebar */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 3px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 99px;
+}
+
+/* Focus ring */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid #3e5525;
+  outline-offset: 1px;
+}
+
+button:focus-visible {
+  outline: 2px solid #3e5525;
+  outline-offset: 2px;
+}
