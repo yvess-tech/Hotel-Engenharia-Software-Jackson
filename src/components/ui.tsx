@@ -1,10 +1,21 @@
-import type { ReactNode, InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import type {
+  ReactNode,
+  InputHTMLAttributes,
+  SelectHTMLAttributes,
+  TextareaHTMLAttributes,
+} from "react"
 
 /* ─── typography helpers ─────────────────────────────────────────────── */
-const SERIF = "'Inria Serif', Georgia, serif";
+const SERIF = "'Inria Serif', Georgia, serif"
 
 /* ─── PageHeader ─────────────────────────────────────────────────────── */
-export function PageHeader({ title, actions }: { title: string; actions?: ReactNode }) {
+export function PageHeader({
+  title,
+  actions,
+}: {
+  title: string
+  actions?: ReactNode
+}) {
   return (
     <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
       <h2
@@ -21,11 +32,17 @@ export function PageHeader({ title, actions }: { title: string; actions?: ReactN
       </h2>
       {actions && <div className="flex gap-2 flex-wrap">{actions}</div>}
     </div>
-  );
+  )
 }
 
 /* ─── Card ───────────────────────────────────────────────────────────── */
-export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function Card({
+  children,
+  className = "",
+}: {
+  children: ReactNode
+  className?: string
+}) {
   return (
     <div
       className={className}
@@ -39,7 +56,7 @@ export function Card({ children, className = "" }: { children: ReactNode; classN
     >
       {children}
     </div>
-  );
+  )
 }
 
 /* ─── StatCard ───────────────────────────────────────────────────────── */
@@ -50,11 +67,11 @@ export function StatCard({
   icon,
   color = "#3e5525",
 }: {
-  label: string;
-  value: string;
-  sub?: string;
-  icon?: string;
-  color?: string;
+  label: string
+  value: string
+  sub?: string
+  icon?: string
+  color?: string
 }) {
   return (
     <div
@@ -70,7 +87,13 @@ export function StatCard({
         gap: "4px",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
         <p
           style={{
             fontFamily: SERIF,
@@ -83,7 +106,9 @@ export function StatCard({
         >
           {label}
         </p>
-        {icon && <span style={{ fontSize: "1.2rem", opacity: 0.6 }}>{icon}</span>}
+        {icon && (
+          <span style={{ fontSize: "1.2rem", opacity: 0.6 }}>{icon}</span>
+        )}
       </div>
       <p
         style={{
@@ -109,11 +134,11 @@ export function StatCard({
         </p>
       )}
     </div>
-  );
+  )
 }
 
 /* ─── Button ─────────────────────────────────────────────────────────── */
-type BtnVariant = "primary" | "secondary" | "danger" | "ghost";
+type BtnVariant = "primary" | "secondary" | "danger" | "ghost"
 
 const btnStyles: Record<BtnVariant, React.CSSProperties> = {
   primary: {
@@ -136,7 +161,7 @@ const btnStyles: Record<BtnVariant, React.CSSProperties> = {
     color: "#4b5563",
     border: "1.5px solid #d1d5db",
   },
-};
+}
 
 export function Btn({
   children,
@@ -146,12 +171,12 @@ export function Btn({
   small,
   fullWidth,
 }: {
-  children: ReactNode;
-  onClick?: () => void;
-  variant?: BtnVariant;
-  type?: "button" | "submit";
-  small?: boolean;
-  fullWidth?: boolean;
+  children: ReactNode
+  onClick?: () => void
+  variant?: BtnVariant
+  type?: "button" | "submit"
+  small?: boolean
+  fullWidth?: boolean
 }) {
   return (
     <button
@@ -173,12 +198,16 @@ export function Btn({
         width: fullWidth ? "100%" : undefined,
         justifyContent: fullWidth ? "center" : undefined,
       }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "0.85"; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
+      onMouseEnter={(e) => {
+        ;(e.currentTarget as HTMLButtonElement).style.opacity = "0.85"
+      }}
+      onMouseLeave={(e) => {
+        ;(e.currentTarget as HTMLButtonElement).style.opacity = "1"
+      }}
     >
       {children}
     </button>
-  );
+  )
 }
 
 /* ─── Input ──────────────────────────────────────────────────────────── */
@@ -186,7 +215,10 @@ export function Input({
   label,
   helpText,
   ...props
-}: { label?: string; helpText?: string } & InputHTMLAttributes<HTMLInputElement>) {
+}: {
+  label?: string
+  helpText?: string
+} & InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
       {label && (
@@ -217,10 +249,12 @@ export function Input({
         }}
       />
       {helpText && (
-        <p style={{ fontFamily: SERIF, fontSize: "0.72rem", color: "#9aaa8a" }}>{helpText}</p>
+        <p style={{ fontFamily: SERIF, fontSize: "0.72rem", color: "#9aaa8a" }}>
+          {helpText}
+        </p>
       )}
     </div>
-  );
+  )
 }
 
 /* ─── Textarea ───────────────────────────────────────────────────────── */
@@ -258,7 +292,7 @@ export function Textarea({
         }}
       />
     </div>
-  );
+  )
 }
 
 /* ─── Select ─────────────────────────────────────────────────────────── */
@@ -298,25 +332,45 @@ export function Select({
         {children}
       </select>
     </div>
-  );
+  )
 }
 
 /* ─── Badge ──────────────────────────────────────────────────────────── */
 const badgeMap: Record<string, React.CSSProperties> = {
-  green:  { background: "#dcfce7", color: "#15803d", border: "1px solid #bbf7d0" },
-  red:    { background: "#fee2e2", color: "#b91c1c", border: "1px solid #fecaca" },
-  yellow: { background: "#fef9c3", color: "#92400e", border: "1px solid #fde68a" },
-  blue:   { background: "#dbeafe", color: "#1d4ed8", border: "1px solid #bfdbfe" },
-  gray:   { background: "#f3f4f6", color: "#4b5563", border: "1px solid #e5e7eb" },
-  purple: { background: "#ede9fe", color: "#6d28d9", border: "1px solid #ddd6fe" },
-};
+  green: {
+    background: "#dcfce7",
+    color: "#15803d",
+    border: "1px solid #bbf7d0",
+  },
+  red: { background: "#fee2e2", color: "#b91c1c", border: "1px solid #fecaca" },
+  yellow: {
+    background: "#fef9c3",
+    color: "#92400e",
+    border: "1px solid #fde68a",
+  },
+  blue: {
+    background: "#dbeafe",
+    color: "#1d4ed8",
+    border: "1px solid #bfdbfe",
+  },
+  gray: {
+    background: "#f3f4f6",
+    color: "#4b5563",
+    border: "1px solid #e5e7eb",
+  },
+  purple: {
+    background: "#ede9fe",
+    color: "#6d28d9",
+    border: "1px solid #ddd6fe",
+  },
+}
 
 export function Badge({
   label,
   color,
 }: {
-  label: string;
-  color: "green" | "red" | "yellow" | "blue" | "gray" | "purple";
+  label: string
+  color: "green" | "red" | "yellow" | "blue" | "gray" | "purple"
 }) {
   return (
     <span
@@ -335,7 +389,7 @@ export function Badge({
     >
       {label}
     </span>
-  );
+  )
 }
 
 /* ─── Table ──────────────────────────────────────────────────────────── */
@@ -343,8 +397,8 @@ export function Table({
   headers,
   rows,
 }: {
-  headers: string[];
-  rows: (string | number | ReactNode)[][];
+  headers: string[]
+  rows: (string | number | ReactNode)[][]
 }) {
   return (
     <div
@@ -354,7 +408,13 @@ export function Table({
         border: "1.5px solid #e2ecd8",
       }}
     >
-      <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "auto" }}>
+      <table
+        style={{
+          width: "100%",
+          borderCollapse: "collapse",
+          tableLayout: "auto",
+        }}
+      >
         <thead>
           <tr style={{ background: "#3e5525" }}>
             {headers.map((h, i) => (
@@ -423,7 +483,7 @@ export function Table({
         </tbody>
       </table>
     </div>
-  );
+  )
 }
 
 /* ─── Modal ──────────────────────────────────────────────────────────── */
@@ -433,10 +493,10 @@ export function Modal({
   children,
   wide,
 }: {
-  title: string;
-  onClose: () => void;
-  children: ReactNode;
-  wide?: boolean;
+  title: string
+  onClose: () => void
+  children: ReactNode
+  wide?: boolean
 }) {
   return (
     <div
@@ -451,7 +511,9 @@ export function Modal({
         background: "rgba(20,30,12,0.45)",
         backdropFilter: "blur(2px)",
       }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
     >
       <div
         style={{
@@ -507,7 +569,7 @@ export function Modal({
         <div style={{ padding: "20px 24px 24px" }}>{children}</div>
       </div>
     </div>
-  );
+  )
 }
 
 /* ─── SectionTitle ───────────────────────────────────────────────────── */
@@ -527,18 +589,23 @@ export function SectionTitle({ children }: { children: ReactNode }) {
     >
       {children}
     </h3>
-  );
+  )
 }
 
 /* ─── Tabs ───────────────────────────────────────────────────────────── */
+interface TabItem<T extends string> {
+  id: T
+  label: string
+}
+
 export function Tabs<T extends string>({
   tabs,
   active,
   onChange,
 }: {
-  tabs: { id: T; label: string }[];
-  active: T;
-  onChange: (id: T) => void;
+  tabs: TabItem<T>[]
+  active: T
+  onChange: (id: T) => void
 }) {
   return (
     <div
@@ -573,7 +640,7 @@ export function Tabs<T extends string>({
         </button>
       ))}
     </div>
-  );
+  )
 }
 
 /* ─── Alert ──────────────────────────────────────────────────────────── */
@@ -581,15 +648,31 @@ export function Alert({
   children,
   type = "info",
 }: {
-  children: ReactNode;
-  type?: "info" | "warning" | "error" | "success";
+  children: ReactNode
+  type?: "info" | "warning" | "error" | "success"
 }) {
   const styles: Record<string, React.CSSProperties> = {
-    info:    { background: "#eff6ff", borderLeft: "4px solid #3b82f6", color: "#1e40af" },
-    warning: { background: "#fffbeb", borderLeft: "4px solid #f59e0b", color: "#92400e" },
-    error:   { background: "#fef2f2", borderLeft: "4px solid #ef4444", color: "#991b1b" },
-    success: { background: "#f0fdf4", borderLeft: "4px solid #22c55e", color: "#15803d" },
-  };
+    info: {
+      background: "#eff6ff",
+      borderLeft: "4px solid #3b82f6",
+      color: "#1e40af",
+    },
+    warning: {
+      background: "#fffbeb",
+      borderLeft: "4px solid #f59e0b",
+      color: "#92400e",
+    },
+    error: {
+      background: "#fef2f2",
+      borderLeft: "4px solid #ef4444",
+      color: "#991b1b",
+    },
+    success: {
+      background: "#f0fdf4",
+      borderLeft: "4px solid #22c55e",
+      color: "#15803d",
+    },
+  }
   return (
     <div
       style={{
@@ -602,7 +685,7 @@ export function Alert({
     >
       {children}
     </div>
-  );
+  )
 }
 
 /* ─── FormGrid ───────────────────────────────────────────────────────── */
@@ -610,8 +693,8 @@ export function FormGrid({
   children,
   cols = 2,
 }: {
-  children: ReactNode;
-  cols?: 1 | 2 | 3;
+  children: ReactNode
+  cols?: 1 | 2 | 3
 }) {
   return (
     <div
@@ -623,11 +706,11 @@ export function FormGrid({
     >
       {children}
     </div>
-  );
+  )
 }
 
 export function FullCol({ children }: { children: ReactNode }) {
-  return <div style={{ gridColumn: "1 / -1" }}>{children}</div>;
+  return <div style={{ gridColumn: "1 / -1" }}>{children}</div>
 }
 
 export function FormActions({ children }: { children: ReactNode }) {
@@ -643,5 +726,5 @@ export function FormActions({ children }: { children: ReactNode }) {
     >
       {children}
     </div>
-  );
+  )
 }

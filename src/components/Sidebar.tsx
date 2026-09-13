@@ -1,40 +1,57 @@
-import type { Page } from "./AppShell";
+import type { Page } from "./AppShell"
 
-const SERIF = "'Inria Serif', Georgia, serif";
+const SERIF = "'Inria Serif', Georgia, serif"
 
 type NavItem = {
-  id: Page;
-  label: string;
-  icon: string;
-  group?: string;
-};
+  id: Page
+  label: string
+  icon: string
+  group?: string
+}
 
 const navItems: NavItem[] = [
-  { id: "dashboard",    label: "Dashboard",             icon: "◼", group: "Principal" },
-  { id: "hospedes",     label: "Hóspedes",              icon: "👤", group: "Recepção" },
-  { id: "reservas",     label: "Reservas",              icon: "📅", group: "Recepção" },
-  { id: "quartos",      label: "Quartos",               icon: "🛏", group: "Recepção" },
-  { id: "checkinout",   label: "Check-in / Check-out",  icon: "🔑", group: "Recepção" },
-  { id: "consumos",     label: "Consumos",              icon: "🍽", group: "Serviços" },
-  { id: "estoque",      label: "Estoque",               icon: "📦", group: "Serviços" },
-  { id: "pacotes",      label: "Pacotes",               icon: "🎁", group: "Serviços" },
-  { id: "limpeza",      label: "Limpeza & Manutenção",  icon: "🧹", group: "Operações" },
-  { id: "eventos",      label: "Eventos",               icon: "🎪", group: "Operações" },
-  { id: "funcionarios", label: "Funcionários",          icon: "👥", group: "Gestão" },
-  { id: "financeiro",   label: "Financeiro",            icon: "💰", group: "Gestão" },
-  { id: "fiscal",       label: "Fiscal",                icon: "🧾", group: "Gestão" },
-  { id: "comunicacoes", label: "Comunicações",          icon: "✉", group: "Gestão" },
-  { id: "usuarios",     label: "Usuários & Acesso",     icon: "🔐", group: "Sistema" },
-  { id: "relatorios",   label: "Relatórios",            icon: "📊", group: "Sistema" },
-];
+  { id: "dashboard", label: "Dashboard", icon: "◼", group: "Principal" },
+  { id: "hospedes", label: "Hóspedes", icon: "👤", group: "Recepção" },
+  { id: "reservas", label: "Reservas", icon: "📅", group: "Recepção" },
+  { id: "quartos", label: "Quartos", icon: "🛏", group: "Recepção" },
+  {
+    id: "checkinout",
+    label: "Check-in / Check-out",
+    icon: "🔑",
+    group: "Recepção",
+  },
+  { id: "consumos", label: "Consumos", icon: "🍽", group: "Serviços" },
+  { id: "estoque", label: "Estoque", icon: "📦", group: "Serviços" },
+  { id: "pacotes", label: "Pacotes", icon: "🎁", group: "Serviços" },
+  {
+    id: "limpeza",
+    label: "Limpeza & Manutenção",
+    icon: "🧹",
+    group: "Operações",
+  },
+  { id: "eventos", label: "Eventos", icon: "🎪", group: "Operações" },
+  { id: "funcionarios", label: "Funcionários", icon: "👥", group: "Gestão" },
+  { id: "financeiro", label: "Financeiro", icon: "💰", group: "Gestão" },
+  { id: "fiscal", label: "Fiscal", icon: "🧾", group: "Gestão" },
+  { id: "comunicacoes", label: "Comunicações", icon: "✉", group: "Gestão" },
+  { id: "usuarios", label: "Usuários & Acesso", icon: "🔐", group: "Sistema" },
+  { id: "relatorios", label: "Relatórios", icon: "📊", group: "Sistema" },
+]
 
-const groups = ["Principal", "Recepção", "Serviços", "Operações", "Gestão", "Sistema"];
+const groups = [
+  "Principal",
+  "Recepção",
+  "Serviços",
+  "Operações",
+  "Gestão",
+  "Sistema",
+]
 
 type Props = {
-  currentPage: Page;
-  onNavigate: (page: Page) => void;
-  isOpen: boolean;
-};
+  currentPage: Page
+  onNavigate: (page: Page) => void
+  isOpen: boolean
+}
 
 export default function Sidebar({ currentPage, onNavigate, isOpen }: Props) {
   return (
@@ -47,7 +64,8 @@ export default function Sidebar({ currentPage, onNavigate, isOpen }: Props) {
         height: "100vh",
         display: "flex",
         flexDirection: "column",
-        transition: "width 0.25s cubic-bezier(.4,0,.2,1), min-width 0.25s, max-width 0.25s",
+        transition:
+          "width 0.25s cubic-bezier(.4,0,.2,1), min-width 0.25s, max-width 0.25s",
         overflow: "hidden",
         flexShrink: 0,
         boxShadow: "2px 0 12px rgba(0,0,0,0.12)",
@@ -125,8 +143,8 @@ export default function Sidebar({ currentPage, onNavigate, isOpen }: Props) {
         }}
       >
         {groups.map((group) => {
-          const items = navItems.filter((n) => n.group === group);
-          if (!items.length) return null;
+          const items = navItems.filter((n) => n.group === group)
+          if (!items.length) return null
           return (
             <div key={group}>
               {isOpen && (
@@ -145,7 +163,7 @@ export default function Sidebar({ currentPage, onNavigate, isOpen }: Props) {
                 </p>
               )}
               {items.map((item) => {
-                const active = currentPage === item.id;
+                const active = currentPage === item.id
                 return (
                   <button
                     key={item.id}
@@ -171,10 +189,14 @@ export default function Sidebar({ currentPage, onNavigate, isOpen }: Props) {
                       transition: "background 0.15s",
                     }}
                     onMouseEnter={(e) => {
-                      if (!active) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)";
+                      if (!active)
+                        (e.currentTarget as HTMLElement).style.background =
+                          "rgba(255,255,255,0.06)"
                     }}
                     onMouseLeave={(e) => {
-                      if (!active) (e.currentTarget as HTMLElement).style.background = "transparent";
+                      if (!active)
+                        (e.currentTarget as HTMLElement).style.background =
+                          "transparent"
                     }}
                   >
                     <span
@@ -204,10 +226,10 @@ export default function Sidebar({ currentPage, onNavigate, isOpen }: Props) {
                       </span>
                     )}
                   </button>
-                );
+                )
               })}
             </div>
-          );
+          )
         })}
       </nav>
 
@@ -232,5 +254,5 @@ export default function Sidebar({ currentPage, onNavigate, isOpen }: Props) {
         </div>
       )}
     </aside>
-  );
+  )
 }

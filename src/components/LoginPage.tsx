@@ -1,29 +1,29 @@
-import { useState } from "react";
-import imgForest from "@/imports/Tela1/3a93009c2376d8a57b19c35dd183458cfa7efcfa.png";
-import imgBg from "@/imports/Tela1/a0d675e5dbbaa64a9cbd0de29255fe8fe8cd0e10.png";
+import { useState } from "react"
+import imgForest from "@/imports/Tela1/3a93009c2376d8a57b19c35dd183458cfa7efcfa.png"
+import imgBg from "@/imports/Tela1/a0d675e5dbbaa64a9cbd0de29255fe8fe8cd0e10.png"
 
-const SERIF = "'Inria Serif', Georgia, serif";
+const SERIF = "'Inria Serif', Georgia, serif"
 
-type Props = { onLogin: (email: string, password: string) => void };
+type Props = { onLogin: (email: string, password: string) => void }
 
 export default function LoginPage({ onLogin }: Props) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     if (!email.trim() || !password.trim()) {
-      setError("Preencha e-mail e senha para continuar.");
-      return;
+      setError("Preencha e-mail e senha para continuar.")
+      return
     }
-    setError("");
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
-    setLoading(false);
-    onLogin(email, password);
-  };
+    setError("")
+    setLoading(true)
+    await new Promise((r) => setTimeout(r, 600))
+    setLoading(false)
+    onLogin(email, password)
+  }
 
   return (
     <div
@@ -63,7 +63,8 @@ export default function LoginPage({ onLogin }: Props) {
           style={{
             position: "absolute",
             inset: 0,
-            background: "linear-gradient(90deg, rgba(30,45,14,0.35) 0%, rgba(62,85,37,0.55) 100%)",
+            background:
+              "linear-gradient(90deg, rgba(30,45,14,0.35) 0%, rgba(62,85,37,0.55) 100%)",
           }}
         />
         {/* Text on photo */}
@@ -139,7 +140,14 @@ export default function LoginPage({ onLogin }: Props) {
           }}
         />
 
-        <div style={{ width: "100%", maxWidth: "380px", position: "relative", zIndex: 1 }}>
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "380px",
+            position: "relative",
+            zIndex: 1,
+          }}
+        >
           {/* Brand */}
           <div style={{ marginBottom: "36px", textAlign: "center" }}>
             <div
@@ -220,7 +228,9 @@ export default function LoginPage({ onLogin }: Props) {
               }}
             >
               {/* Email */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: "6px" }}
+              >
                 <label
                   style={{
                     fontFamily: SERIF,
@@ -253,7 +263,9 @@ export default function LoginPage({ onLogin }: Props) {
               </div>
 
               {/* Senha */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: "6px" }}
+              >
                 <label
                   style={{
                     fontFamily: SERIF,
@@ -339,5 +351,5 @@ export default function LoginPage({ onLogin }: Props) {
         </div>
       </div>
     </div>
-  );
+  )
 }

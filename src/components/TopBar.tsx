@@ -1,41 +1,46 @@
-import type { User } from "../App";
-import type { Page } from "./AppShell";
+import type { User } from "../App"
+import type { Page } from "./AppShell"
 
-const SERIF = "'Inria Serif', Georgia, serif";
+const SERIF = "'Inria Serif', Georgia, serif"
 
 const pageTitles: Record<Page, string> = {
-  dashboard:    "Dashboard",
-  hospedes:     "Hóspedes",
-  reservas:     "Reservas",
-  quartos:      "Quartos",
-  checkinout:   "Check-in / Check-out",
-  consumos:     "Consumos do Hóspede",
-  estoque:      "Controle de Estoque",
-  pacotes:      "Pacotes & Promoções",
-  financeiro:   "Financeiro",
+  dashboard: "Dashboard",
+  hospedes: "Hóspedes",
+  reservas: "Reservas",
+  quartos: "Quartos",
+  checkinout: "Check-in / Check-out",
+  consumos: "Consumos do Hóspede",
+  estoque: "Controle de Estoque",
+  pacotes: "Pacotes & Promoções",
+  financeiro: "Financeiro",
   funcionarios: "Funcionários",
-  limpeza:      "Limpeza & Manutenção",
-  eventos:      "Eventos & Conferências",
+  limpeza: "Limpeza & Manutenção",
+  eventos: "Eventos & Conferências",
   comunicacoes: "Comunicações",
-  fiscal:       "Fiscal",
-  usuarios:     "Usuários & Acesso",
-  relatorios:   "Relatórios",
-};
+  fiscal: "Fiscal",
+  usuarios: "Usuários & Acesso",
+  relatorios: "Relatórios",
+}
 
 type Props = {
-  user: User;
-  onLogout: () => void;
-  onMenuToggle: () => void;
-  currentPage: Page;
-};
+  user: User
+  onLogout: () => void
+  onMenuToggle: () => void
+  currentPage: Page
+}
 
-export default function TopBar({ user, onLogout, onMenuToggle, currentPage }: Props) {
+export default function TopBar({
+  user,
+  onLogout,
+  onMenuToggle,
+  currentPage,
+}: Props) {
   const today = new Date().toLocaleDateString("pt-BR", {
     weekday: "long",
     day: "2-digit",
     month: "long",
     year: "numeric",
-  });
+  })
 
   return (
     <header
@@ -115,7 +120,13 @@ export default function TopBar({ user, onLogout, onMenuToggle, currentPage }: Pr
       {/* Right */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         {/* User info */}
-        <div style={{ textAlign: "right", display: "flex", flexDirection: "column" }}>
+        <div
+          style={{
+            textAlign: "right",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
           <p
             style={{
               fontFamily: SERIF,
@@ -178,19 +189,19 @@ export default function TopBar({ user, onLogout, onMenuToggle, currentPage }: Pr
             transition: "all 0.15s",
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.background = "#fee2e2";
-            (e.currentTarget as HTMLElement).style.borderColor = "#fca5a5";
-            (e.currentTarget as HTMLElement).style.color = "#dc2626";
+            ;(e.currentTarget as HTMLElement).style.background = "#fee2e2"
+            ;(e.currentTarget as HTMLElement).style.borderColor = "#fca5a5"
+            ;(e.currentTarget as HTMLElement).style.color = "#dc2626"
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.background = "#f0f2ee";
-            (e.currentTarget as HTMLElement).style.borderColor = "#d1d5db";
-            (e.currentTarget as HTMLElement).style.color = "#6b7280";
+            ;(e.currentTarget as HTMLElement).style.background = "#f0f2ee"
+            ;(e.currentTarget as HTMLElement).style.borderColor = "#d1d5db"
+            ;(e.currentTarget as HTMLElement).style.color = "#6b7280"
           }}
         >
           Sair
         </button>
       </div>
     </header>
-  );
+  )
 }

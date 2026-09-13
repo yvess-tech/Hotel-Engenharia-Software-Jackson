@@ -1,32 +1,78 @@
-import { useState } from "react";
-import { PageHeader, Card, Btn, Input, Select, Table, Modal, Badge, SectionTitle } from "../ui";
+import { useState } from "react"
+import {
+  PageHeader,
+  Card,
+  Btn,
+  Input,
+  Select,
+  Table,
+  Modal,
+  Badge,
+  SectionTitle,
+} from "../ui"
 
-type Tab = "funcionarios" | "cargos" | "turnos" | "ponto";
+type Tab = "funcionarios" | "cargos" | "turnos" | "ponto"
+interface TabItem {
+  id: Tab
+  label: string
+}
 
 const funcionarios = [
-  { id: 1, nome: "Carlos Mendes", cargo: "Recepcionista", turno: "Manhã", ponto: "08:05", status: "Ativo" },
-  { id: 2, nome: "Lúcia Santos", cargo: "Camareira", turno: "Manhã", ponto: "07:58", status: "Ativo" },
-  { id: 3, nome: "Roberto Alves", cargo: "Garçom", turno: "Tarde", ponto: "13:02", status: "Ativo" },
-  { id: 4, nome: "Fernanda Lima", cargo: "Financeiro", turno: "Comercial", ponto: "09:00", status: "Inativo" },
-];
+  {
+    id: 1,
+    nome: "Carlos Mendes",
+    cargo: "Recepcionista",
+    turno: "Manhã",
+    ponto: "08:05",
+    status: "Ativo",
+  },
+  {
+    id: 2,
+    nome: "Lúcia Santos",
+    cargo: "Camareira",
+    turno: "Manhã",
+    ponto: "07:58",
+    status: "Ativo",
+  },
+  {
+    id: 3,
+    nome: "Roberto Alves",
+    cargo: "Garçom",
+    turno: "Tarde",
+    ponto: "13:02",
+    status: "Ativo",
+  },
+  {
+    id: 4,
+    nome: "Fernanda Lima",
+    cargo: "Financeiro",
+    turno: "Comercial",
+    ponto: "09:00",
+    status: "Inativo",
+  },
+]
 
 const cargos = [
-  { nome: "Recepcionista", descricao: "Atendimento ao cliente", status: "Ativo" },
+  {
+    nome: "Recepcionista",
+    descricao: "Atendimento ao cliente",
+    status: "Ativo",
+  },
   { nome: "Camareira", descricao: "Governança e limpeza", status: "Ativo" },
   { nome: "Garçom", descricao: "Restaurante e room service", status: "Ativo" },
   { nome: "Financeiro", descricao: "Setor financeiro", status: "Ativo" },
-];
+]
 
 export default function Funcionarios() {
-  const [tab, setTab] = useState<Tab>("funcionarios");
-  const [modal, setModal] = useState(false);
+  const [tab, setTab] = useState<Tab>("funcionarios")
+  const [modal, setModal] = useState(false)
 
-  const tabs: { id: Tab; label: string }[] = [
+  const tabs: TabItem[] = [
     { id: "funcionarios", label: "Funcionários" },
     { id: "cargos", label: "Cargos" },
     { id: "turnos", label: "Turnos" },
     { id: "ponto", label: "Ponto" },
-  ];
+  ]
 
   return (
     <div className="space-y-4">
@@ -56,17 +102,33 @@ export default function Funcionarios() {
       {tab === "funcionarios" && (
         <Card>
           <Table
-            headers={["Nome", "Cargo", "Turno", "Entrada hoje", "Status", "Ações"]}
+            headers={[
+              "Nome",
+              "Cargo",
+              "Turno",
+              "Entrada hoje",
+              "Status",
+              "Ações",
+            ]}
             rows={funcionarios.map((f) => [
               f.nome,
               f.cargo,
               f.turno,
               f.ponto,
-              <Badge label={f.status} color={f.status === "Ativo" ? "green" : "gray"} />,
+              <Badge
+                label={f.status}
+                color={f.status === "Ativo" ? "green" : "gray"}
+              />,
               <div className="flex gap-1">
-                <Btn small variant="ghost">Editar</Btn>
-                <Btn small variant="secondary">Histórico</Btn>
-                <Btn small variant="ghost">Inativar</Btn>
+                <Btn small variant="ghost">
+                  Editar
+                </Btn>
+                <Btn small variant="secondary">
+                  Histórico
+                </Btn>
+                <Btn small variant="ghost">
+                  Inativar
+                </Btn>
               </div>,
             ])}
           />
@@ -86,8 +148,12 @@ export default function Funcionarios() {
               c.descricao,
               <Badge label={c.status} color="green" />,
               <div className="flex gap-1">
-                <Btn small variant="ghost">Editar</Btn>
-                <Btn small variant="secondary">Inativar</Btn>
+                <Btn small variant="ghost">
+                  Editar
+                </Btn>
+                <Btn small variant="secondary">
+                  Inativar
+                </Btn>
               </div>,
             ])}
           />
@@ -103,10 +169,30 @@ export default function Funcionarios() {
           <Table
             headers={["Turno", "Início", "Fim", "Status"]}
             rows={[
-              ["Manhã", "06:00", "14:00", <Badge label="Ativo" color="green" />],
-              ["Tarde", "14:00", "22:00", <Badge label="Ativo" color="green" />],
-              ["Noite", "22:00", "06:00", <Badge label="Ativo" color="green" />],
-              ["Comercial", "08:00", "17:00", <Badge label="Ativo" color="green" />],
+              [
+                "Manhã",
+                "06:00",
+                "14:00",
+                <Badge label="Ativo" color="green" />,
+              ],
+              [
+                "Tarde",
+                "14:00",
+                "22:00",
+                <Badge label="Ativo" color="green" />,
+              ],
+              [
+                "Noite",
+                "22:00",
+                "06:00",
+                <Badge label="Ativo" color="green" />,
+              ],
+              [
+                "Comercial",
+                "08:00",
+                "17:00",
+                <Badge label="Ativo" color="green" />,
+              ],
             ]}
           />
         </Card>
@@ -119,14 +205,22 @@ export default function Funcionarios() {
             <Input label="Data" type="date" defaultValue="2026-09-13" />
             <Select label="Funcionário">
               <option value="">Todos</option>
-              {funcionarios.map((f) => <option key={f.id}>{f.nome}</option>)}
+              {funcionarios.map((f) => (
+                <option key={f.id}>{f.nome}</option>
+              ))}
             </Select>
             <div className="flex items-end">
               <Btn>Consultar</Btn>
             </div>
           </div>
           <Table
-            headers={["Funcionário", "Data", "Entrada", "Saída", "Horas trabalhadas"]}
+            headers={[
+              "Funcionário",
+              "Data",
+              "Entrada",
+              "Saída",
+              "Horas trabalhadas",
+            ]}
             rows={[
               ["Carlos Mendes", "13/09/2026", "08:05", "—", "em andamento"],
               ["Lúcia Santos", "13/09/2026", "07:58", "14:02", "6h04"],
@@ -144,7 +238,9 @@ export default function Funcionarios() {
             <Input label="Nome completo *" />
             <Input label="CPF *" placeholder="000.000.000-00" />
             <Select label="Cargo *">
-              {cargos.map((c) => <option key={c.nome}>{c.nome}</option>)}
+              {cargos.map((c) => (
+                <option key={c.nome}>{c.nome}</option>
+              ))}
             </Select>
             <Select label="Turno *">
               <option>Manhã</option>
@@ -156,12 +252,14 @@ export default function Funcionarios() {
             <Input label="E-mail" type="email" />
             <Input label="Telefone" placeholder="(00) 00000-0000" />
             <div className="flex justify-end gap-2">
-              <Btn variant="ghost" onClick={() => setModal(false)}>Cancelar</Btn>
+              <Btn variant="ghost" onClick={() => setModal(false)}>
+                Cancelar
+              </Btn>
               <Btn onClick={() => setModal(false)}>Salvar</Btn>
             </div>
           </div>
         </Modal>
       )}
     </div>
-  );
+  )
 }
