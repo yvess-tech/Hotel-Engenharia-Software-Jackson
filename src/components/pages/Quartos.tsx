@@ -1,540 +1,117 @@
-import { useState } from "react"
-import {
-  PageHeader,
-  Card,
-  Btn,
-  Input,
-  Select,
-  Modal,
-  Badge,
-  SectionTitle,
-  Tabs,
-  FormGrid,
-  FullCol,
-  FormActions,
-  Table,
-} from "../ui"
+import { useMemo, useState } from "react";
+import { Alert, Badge, Btn, Card, FormActions, FormGrid, FullCol, Input, Modal, PageHeader, SectionTitle, Select, Table, Tabs, Textarea } from "../ui";
+import { formatMoney, useHotelOperations, type Room, type RoomCategory, type RoomStatus } from "../HotelOperationsContext";
 
-type Status = "Livre" | "Ocupado" | "Manutenção" | "Reservado"
-type Tab = "painel" | "lista" | "categorias"
+type Tab = "painel" | "lista" | "categorias";
+type RoomModal = "new" | "edit" | "view" | null;
+type CategoryModal = "new" | "edit" | "view" | null;
 
-const statusColor: Record<Status, "green" | "blue" | "yellow" | "red"> = {
-  Livre: "green",
-  Ocupado: "blue",
-  Manutenção: "yellow",
-  Reservado: "red",
-}
-
-const statusBg: Record<Status, string> = {
-  Livre: "#f0fdf4",
-  Ocupado: "#eff6ff",
-  Manutenção: "#fffbeb",
-  Reservado: "#fef2f2",
-}
-
-const statusBorder: Record<Status, string> = {
-  Livre: "#bbf7d0",
-  Ocupado: "#bfdbfe",
-  Manutenção: "#fde68a",
-  Reservado: "#fecaca",
-}
-
-const initialQuartos = [
-  {
-    id: 1,
-    numero: "101",
-    andar: "1",
-    categoria: "Standard",
-    capacidade: 2,
-    status: "Livre" as Status,
-    tarifa: "R$ 250,00",
-    obs: "Vista jardim",
-  },
-  {
-    id: 2,
-    numero: "102",
-    andar: "1",
-    categoria: "Standard",
-    capacidade: 2,
-    status: "Ocupado" as Status,
-    tarifa: "R$ 250,00",
-    obs: "",
-  },
-  {
-    id: 3,
-    numero: "205",
-    andar: "2",
-    categoria: "Luxo",
-    capacidade: 3,
-    status: "Reservado" as Status,
-    tarifa: "R$ 450,00",
-    obs: "Acessível",
-  },
-  {
-    id: 4,
-    numero: "312",
-    andar: "3",
-    categoria: "Suíte",
-    capacidade: 4,
-    status: "Livre" as Status,
-    tarifa: "R$ 800,00",
-    obs: "Vista panorâmica",
-  },
-  {
-    id: 5,
-    numero: "204",
-    andar: "2",
-    categoria: "Luxo",
-    capacidade: 2,
-    status: "Manutenção" as Status,
-    tarifa: "R$ 450,00",
-    obs: "Encanamento",
-  },
-  {
-    id: 6,
-    numero: "407",
-    andar: "4",
-    categoria: "Standard",
-    capacidade: 2,
-    status: "Livre" as Status,
-    tarifa: "R$ 260,00",
-    obs: "",
-  },
-]
-
-const SERIF = "'Inria Serif', Georgia, serif"
+const roomStatuses: RoomStatus[] = ["Livre", "Ocupado", "Em manutenção", "Reservado"];
+const emptyRoom = { number: "", floor: "1", category: "Standard", capacity: "2", status: "Livre" as RoomStatus, rate: "250", notes: "", accessibility: false, view: "", bedType: "Casal", balcony: false, minibar: true, airConditioning: true };
+const emptyCategory = { name: "", description: "", capacity: "2", rate: "", notes: "" };
 
 export default function Quartos() {
-  const [quartos, setQuartos] = useState(initialQuartos)
-  const [tab, setTab] = useState<Tab>("painel")
-  const [modal, setModal] = useState<"new" | "edit" | "view" | null>(null)
-  const [selected, setSelected] = useState<typeof initialQuartos[0] | null>(
-    null,
-  )
-  const [filterStatus, setFilterStatus] = useState("")
-  const [form, setForm] = useState({
-    numero: "",
-    andar: "1",
-    categoria: "Standard",
-    capacidade: "2",
-    status: "Livre",
-    tarifa: "",
-    obs: "",
-  })
+  const { rooms, setRooms, categories, setCategories, setReservations } = useHotelOperations();
+  const [tab, setTab] = useState<Tab>("painel");
+  const [roomModal, setRoomModal] = useState<RoomModal>(null);
+  const [categoryModal, setCategoryModal] = useState<CategoryModal>(null);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<RoomCategory | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [roomForm, setRoomForm] = useState(emptyRoom);
+  const [categoryForm, setCategoryForm] = useState(emptyCategory);
 
-  const filtered = quartos.filter(
-    (q) => !filterStatus || q.status === filterStatus,
-  )
+  const filteredRooms = useMemo(() => rooms.filter((room) =>
+    (!search || room.number.includes(search)) &&
+    (!statusFilter || room.status === statusFilter) &&
+    (!categoryFilter || room.category === categoryFilter)
+  ), [rooms, search, statusFilter, categoryFilter]);
+  const paginatedRooms = filteredRooms.slice((page - 1) * 20, page * 20);
+  const totalPages = Math.max(1, Math.ceil(filteredRooms.length / 20));
 
-  const save = () => {
-    if (modal === "new") {
-      setQuartos([
-        ...quartos,
-        {
-          id: Date.now(),
-          ...form,
-          capacidade: Number(form.capacidade),
-          status: form.status as Status,
-        },
-      ])
-    } else if (modal === "edit" && selected) {
-      setQuartos(
-        quartos.map((q) =>
-          q.id === selected.id
-            ? {
-                ...q,
-                ...form,
-                capacidade: Number(form.capacidade),
-                status: form.status as Status,
-              }
-            : q,
-        ),
-      )
+  const openNewRoom = () => { setSelectedRoom(null); setRoomForm(emptyRoom); setRoomModal("new"); };
+  const openEditRoom = (room: Room) => {
+    setSelectedRoom(room);
+    setRoomForm({ number: room.number, floor: room.floor, category: room.category, capacity: String(room.capacity), status: room.status, rate: String(room.rate), notes: room.notes, accessibility: room.accessibility, view: room.view, bedType: room.bedType, balcony: room.balcony, minibar: room.minibar, airConditioning: room.airConditioning });
+    setRoomModal("edit");
+  };
+
+  const saveRoom = () => {
+    if (!roomForm.number || !roomForm.floor || !roomForm.category || !roomForm.capacity) return;
+    const roomData = { number: roomForm.number, floor: roomForm.floor, category: roomForm.category, capacity: Number(roomForm.capacity), status: roomForm.status, rate: Number(roomForm.rate), notes: roomForm.notes, accessibility: roomForm.accessibility, view: roomForm.view, bedType: roomForm.bedType, balcony: roomForm.balcony, minibar: roomForm.minibar, airConditioning: roomForm.airConditioning };
+    if (roomModal === "new") setRooms((current) => [...current, { id: Math.max(...current.map((item) => item.id)) + 1, ...roomData }]);
+    if (roomModal === "edit" && selectedRoom) setRooms((current) => current.map((item) => item.id === selectedRoom.id ? { ...item, ...roomData } : item));
+    setRoomModal(null);
+  };
+
+  const openCategory = (category: RoomCategory, mode: CategoryModal) => {
+    setSelectedCategory(category);
+    setCategoryForm({ name: category.name, description: category.description, capacity: String(category.capacity), rate: String(category.rate), notes: category.notes });
+    setCategoryModal(mode);
+  };
+
+  const saveCategory = () => {
+    if (!categoryForm.name || !categoryForm.capacity || !categoryForm.rate) return;
+    const data = { name: categoryForm.name, description: categoryForm.description, capacity: Number(categoryForm.capacity), rate: Number(categoryForm.rate), notes: categoryForm.notes };
+    if (categoryModal === "new") setCategories((current) => [...current, { id: Math.max(...current.map((item) => item.id)) + 1, ...data }]);
+    if (categoryModal === "edit" && selectedCategory) {
+      setCategories((current) => current.map((item) => item.id === selectedCategory.id ? { ...item, ...data } : item));
+      setRooms((current) => current.map((room) => room.category === selectedCategory.name ? { ...room, category: data.name } : room));
+      setReservations((current) => current.map((reservation) => reservation.category === selectedCategory.name ? { ...reservation, category: data.name } : reservation));
     }
-    setModal(null)
-  }
+    setCategoryModal(null);
+  };
 
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-      <PageHeader
-        title="Quartos — RF16 a RF23"
-        actions={
-          <Btn
-            onClick={() => {
-              setForm({
-                numero: "",
-                andar: "1",
-                categoria: "Standard",
-                capacidade: "2",
-                status: "Livre",
-                tarifa: "",
-                obs: "",
-              })
-              setModal("new")
-            }}
-          >
-            + Cadastrar Quarto
-          </Btn>
-        }
-      />
+  const roomStatusStyle: Record<RoomStatus, { background: string; border: string }> = {
+    Livre: { background: "var(--ok-bg)", border: "var(--ok-fg)" },
+    Ocupado: { background: "var(--info-bg)", border: "var(--info-fg)" },
+    "Em manutenção": { background: "var(--warn-bg)", border: "var(--warn-fg)" },
+    Reservado: { background: "var(--reserved-bg)", border: "var(--reserved-fg)" },
+  };
 
-      <Tabs
-        tabs={[
-          { id: "painel", label: "Painel visual" },
-          { id: "lista", label: "Lista detalhada" },
-          { id: "categorias", label: "Categorias" },
-        ]}
-        active={tab}
-        onChange={setTab}
-      />
+  return <div className="ops-page">
+    <PageHeader title="Quartos" actions={tab === "categorias" ? <Btn onClick={() => { setSelectedCategory(null); setCategoryForm(emptyCategory); setCategoryModal("new"); }}>+ Nova Categoria</Btn> : <Btn onClick={openNewRoom}>+ Cadastrar Quarto</Btn>} />
+    <Tabs tabs={[{ id: "painel", label: "Painel visual" }, { id: "lista", label: "Consulta de quartos" }, { id: "categorias", label: "Categorias de Quarto" }]} active={tab} onChange={setTab} />
 
-      {tab === "painel" && (
-        <Card>
-          <SectionTitle>Mapa de quartos — clique para detalhes</SectionTitle>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
-              gap: "10px",
-            }}
-          >
-            {quartos.map((q) => (
-              <button
-                key={q.id}
-                onClick={() => {
-                  setSelected(q)
-                  setModal("view")
-                }}
-                style={{
-                  background: statusBg[q.status],
-                  border: `1.5px solid ${statusBorder[q.status]}`,
-                  borderRadius: "12px",
-                  padding: "12px 10px",
-                  cursor: "pointer",
-                  textAlign: "center",
-                  transition: "transform 0.1s, box-shadow 0.1s",
-                }}
-                onMouseEnter={(e) => {
-                  ;(e.currentTarget as HTMLElement).style.transform =
-                    "translateY(-2px)"
-                  ;(e.currentTarget as HTMLElement).style.boxShadow =
-                    "0 4px 12px rgba(0,0,0,0.1)"
-                }}
-                onMouseLeave={(e) => {
-                  ;(e.currentTarget as HTMLElement).style.transform = "none"
-                  ;(e.currentTarget as HTMLElement).style.boxShadow = "none"
-                }}
-              >
-                <p
-                  style={{
-                    fontFamily: SERIF,
-                    fontWeight: 700,
-                    fontSize: "1.1rem",
-                    color: "#2d3d1a",
-                    marginBottom: "4px",
-                  }}
-                >
-                  {q.numero}
-                </p>
-                <p
-                  style={{
-                    fontFamily: SERIF,
-                    fontSize: "0.68rem",
-                    color: "#7a8a6a",
-                    marginBottom: "6px",
-                  }}
-                >
-                  {q.categoria}
-                </p>
-                <Badge label={q.status} color={statusColor[q.status]} />
-              </button>
-            ))}
-          </div>
-        </Card>
-      )}
+    {tab === "painel" && <Card>
+      <SectionTitle>Mapa de quartos</SectionTitle>
+      <div className="status-legend">{roomStatuses.map((status) => <span key={status}><i style={{ background: roomStatusStyle[status].border }} />{status}</span>)}</div>
+      <div className="room-grid">{rooms.map((room) => <button key={room.id} className="room-tile" onClick={() => { setSelectedRoom(room); setRoomModal("view"); }} style={{ background: roomStatusStyle[room.status].background, border: `1px solid ${roomStatusStyle[room.status].border}` }}><strong>{room.number}</strong><span>{room.category}</span><Badge label={room.status} /></button>)}</div>
+    </Card>}
 
-      {tab === "lista" && (
-        <Card>
-          <div
-            style={{
-              display: "flex",
-              gap: "12px",
-              marginBottom: "16px",
-              flexWrap: "wrap",
-            }}
-          >
-            <div style={{ width: "180px" }}>
-              <Select
-                label="Filtrar por status"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-              >
-                <option value="">Todos os status</option>
-                <option>Livre</option>
-                <option>Ocupado</option>
-                <option>Manutenção</option>
-                <option>Reservado</option>
-              </Select>
-            </div>
-          </div>
-          <Table
-            headers={[
-              "Nº",
-              "Andar",
-              "Categoria",
-              "Capacidade",
-              "Tarifa/noite",
-              "Status",
-              "Ações",
-            ]}
-            rows={filtered.map((q) => [
-              q.numero,
-              `${q.andar}º`,
-              q.categoria,
-              `${q.capacidade} pax`,
-              q.tarifa,
-              <Badge label={q.status} color={statusColor[q.status]} />,
-              <div style={{ display: "flex", gap: "6px" }}>
-                <Btn
-                  small
-                  variant="secondary"
-                  onClick={() => {
-                    setSelected(q)
-                    setForm({
-                      numero: q.numero,
-                      andar: q.andar,
-                      categoria: q.categoria,
-                      capacidade: String(q.capacidade),
-                      status: q.status,
-                      tarifa: q.tarifa,
-                      obs: q.obs,
-                    })
-                    setModal("edit")
-                  }}
-                >
-                  Editar
-                </Btn>
-                <Btn
-                  small
-                  variant="danger"
-                  onClick={() =>
-                    setQuartos(quartos.filter((x) => x.id !== q.id))
-                  }
-                >
-                  Excluir
-                </Btn>
-              </div>,
-            ])}
-          />
-        </Card>
-      )}
+    {tab === "lista" && <Card>
+      <div className="ops-filters"><div className="ops-filter-search"><Input label="Buscar por número" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Ex.: 205" /></div><div className="ops-filter"><Select label="Status" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}><option value="">Todos</option>{roomStatuses.map((status) => <option key={status}>{status}</option>)}</Select></div><div className="ops-filter"><Select label="Categoria" value={categoryFilter} onChange={(event) => { setCategoryFilter(event.target.value); setPage(1); }}><option value="">Todas</option>{categories.map((category) => <option key={category.id}>{category.name}</option>)}</Select></div></div>
+      <Table headers={["Número", "Andar", "Categoria", "Capacidade", "Status", "Tarifa", "Ações"]} rows={paginatedRooms.map((room) => [room.number, room.floor, room.category, `${room.capacity} hóspedes`, <Badge label={room.status} />, formatMoney(room.rate), <div className="table-actions"><Btn small variant="ghost" onClick={() => { setSelectedRoom(room); setRoomModal("view"); }}>Consultar</Btn><Btn small variant="secondary" onClick={() => openEditRoom(room)}>Atualizar</Btn><Btn small variant="danger" disabled={room.status === "Ocupado" || room.status === "Reservado"} onClick={() => setRooms((current) => current.filter((item) => item.id !== room.id))}>Excluir</Btn></div>])} />
+      <div className="pagination"><span>{filteredRooms.length === 0 ? "0" : `${(page - 1) * 20 + 1}–${Math.min(page * 20, filteredRooms.length)}`} de {filteredRooms.length} quartos</span><div><Btn small variant="ghost" disabled={page === 1} onClick={() => setPage((current) => current - 1)}>Anterior</Btn><Btn small variant="ghost" disabled={page === totalPages} onClick={() => setPage((current) => current + 1)}>Próxima</Btn></div></div>
+    </Card>}
 
-      {tab === "categorias" && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "16px",
-          }}
-        >
-          {["Standard", "Luxo", "Suíte"].map((cat) => {
-            const items = quartos.filter((q) => q.categoria === cat)
-            return (
-              <Card key={cat}>
-                <SectionTitle>{cat}</SectionTitle>
-                <p
-                  style={{
-                    fontFamily: SERIF,
-                    fontSize: "0.82rem",
-                    color: "#7a8a6a",
-                    marginBottom: "10px",
-                  }}
-                >
-                  {items.length} quartos cadastrados
-                </p>
-                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                  {items.map((q) => (
-                    <Badge
-                      key={q.id}
-                      label={`${q.numero} · ${q.status}`}
-                      color={statusColor[q.status]}
-                    />
-                  ))}
-                </div>
-              </Card>
-            )
-          })}
-        </div>
-      )}
+    {tab === "categorias" && <Card>
+      <Table headers={["Nome", "Descrição", "Capacidade padrão", "Tarifa padrão", "Quartos vinculados", "Ações"]} rows={categories.map((category) => {
+        const linked = rooms.filter((room) => room.category === category.name).length;
+        return [category.name, category.description, `${category.capacity} hóspedes`, formatMoney(category.rate), String(linked), <div className="table-actions"><Btn small variant="ghost" onClick={() => openCategory(category, "view")}>Consultar</Btn><Btn small variant="secondary" onClick={() => openCategory(category, "edit")}>Atualizar</Btn><Btn small variant="danger" disabled={linked > 0} onClick={() => setCategories((current) => current.filter((item) => item.id !== category.id))}>Excluir</Btn></div>];
+      })} />
+      <Alert type="info">Categorias com quartos vinculados não podem ser excluídas.</Alert>
+    </Card>}
 
-      {(modal === "new" || modal === "edit") && (
-        <Modal
-          title={modal === "new" ? "Cadastrar Quarto" : "Editar Quarto"}
-          onClose={() => setModal(null)}
-        >
-          <FormGrid cols={2}>
-            <Input
-              label="Número *"
-              value={form.numero}
-              onChange={(e) => setForm({ ...form, numero: e.target.value })}
-            />
-            <Input
-              label="Andar"
-              value={form.andar}
-              onChange={(e) => setForm({ ...form, andar: e.target.value })}
-            />
-            <Select
-              label="Categoria"
-              value={form.categoria}
-              onChange={(e) => setForm({ ...form, categoria: e.target.value })}
-            >
-              <option>Standard</option>
-              <option>Luxo</option>
-              <option>Suíte</option>
-            </Select>
-            <Input
-              label="Capacidade (pax)"
-              type="number"
-              min="1"
-              value={form.capacidade}
-              onChange={(e) => setForm({ ...form, capacidade: e.target.value })}
-            />
-            <Input
-              label="Tarifa diária"
-              placeholder="R$ 0,00"
-              value={form.tarifa}
-              onChange={(e) => setForm({ ...form, tarifa: e.target.value })}
-            />
-            <Select
-              label="Status"
-              value={form.status}
-              onChange={(e) => setForm({ ...form, status: e.target.value })}
-            >
-              <option>Livre</option>
-              <option>Ocupado</option>
-              <option>Manutenção</option>
-              <option>Reservado</option>
-            </Select>
-            <FullCol>
-              <Input
-                label="Observações"
-                value={form.obs}
-                onChange={(e) => setForm({ ...form, obs: e.target.value })}
-                placeholder="Vista, acessibilidade, etc."
-              />
-            </FullCol>
-            <FormActions>
-              <Btn variant="ghost" onClick={() => setModal(null)}>
-                Cancelar
-              </Btn>
-              <Btn onClick={save}>Salvar</Btn>
-            </FormActions>
-          </FormGrid>
-        </Modal>
-      )}
+    {(roomModal === "new" || roomModal === "edit") && <Modal wide title={roomModal === "new" ? "Cadastrar Quarto" : `Atualizar Quarto ${selectedRoom?.number}`} onClose={() => setRoomModal(null)}>
+      <SectionTitle>Dados do quarto</SectionTitle>
+      <FormGrid cols={2}><Input label="Número *" value={roomForm.number} onChange={(event) => setRoomForm({ ...roomForm, number: event.target.value })} /><Input label="Andar *" value={roomForm.floor} onChange={(event) => setRoomForm({ ...roomForm, floor: event.target.value })} /><Select label="Categoria *" value={roomForm.category} onChange={(event) => { const category = categories.find((item) => item.name === event.target.value); setRoomForm({ ...roomForm, category: event.target.value, capacity: String(category?.capacity ?? roomForm.capacity), rate: String(category?.rate ?? roomForm.rate) }); }}>{categories.map((category) => <option key={category.id}>{category.name}</option>)}</Select><Input label="Capacidade *" type="number" min="1" value={roomForm.capacity} onChange={(event) => setRoomForm({ ...roomForm, capacity: event.target.value })} /><Select label="Status *" disabled={roomModal === "edit" && (selectedRoom?.status === "Ocupado" || selectedRoom?.status === "Reservado")} value={roomForm.status} onChange={(event) => setRoomForm({ ...roomForm, status: event.target.value as RoomStatus })}>{roomStatuses.map((status) => <option key={status}>{status}</option>)}</Select><Input label="Tarifa" type="number" min="0" step="0.01" value={roomForm.rate} onChange={(event) => setRoomForm({ ...roomForm, rate: event.target.value })} /><FullCol><Textarea label="Observações" value={roomForm.notes} onChange={(event) => setRoomForm({ ...roomForm, notes: event.target.value })} /></FullCol></FormGrid>
+      {roomModal === "edit" && (selectedRoom?.status === "Ocupado" || selectedRoom?.status === "Reservado") && <p className="inline-state">O status atual é controlado pela reserva ou hospedagem ativa. Alterações manuais são restritas à Recepção e Governança.</p>}
+      <SectionTitle>Características adicionais</SectionTitle>
+      <FormGrid cols={3}><Input label="Vista" value={roomForm.view} onChange={(event) => setRoomForm({ ...roomForm, view: event.target.value })} /><Select label="Tipo de cama" value={roomForm.bedType} onChange={(event) => setRoomForm({ ...roomForm, bedType: event.target.value })}><option>Solteiro</option><option>Casal</option><option>Queen</option><option>King</option></Select><Check label="Acessibilidade" checked={roomForm.accessibility} onChange={(checked) => setRoomForm({ ...roomForm, accessibility: checked })} /><Check label="Varanda" checked={roomForm.balcony} onChange={(checked) => setRoomForm({ ...roomForm, balcony: checked })} /><Check label="Frigobar" checked={roomForm.minibar} onChange={(checked) => setRoomForm({ ...roomForm, minibar: checked })} /><Check label="Ar-condicionado" checked={roomForm.airConditioning} onChange={(checked) => setRoomForm({ ...roomForm, airConditioning: checked })} /></FormGrid>
+      <FormActions><Btn variant="ghost" onClick={() => setRoomModal(null)}>Cancelar</Btn><Btn disabled={!roomForm.number || !roomForm.floor || !roomForm.category || !roomForm.capacity} onClick={saveRoom}>{roomModal === "new" ? "Salvar" : "Atualizar"}</Btn></FormActions>
+    </Modal>}
 
-      {modal === "view" && selected && (
-        <Modal
-          title={`Quarto ${selected.numero}`}
-          onClose={() => setModal(null)}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-              marginBottom: "16px",
-            }}
-          >
-            {[
-              ["Número", selected.numero],
-              ["Andar", `${selected.andar}º`],
-              ["Categoria", selected.categoria],
-              ["Capacidade", `${selected.capacidade} pessoas`],
-              ["Tarifa", `${selected.tarifa} / noite`],
-              ["Observações", selected.obs || "—"],
-            ].map(([k, v]) => (
-              <div
-                key={k}
-                style={{
-                  display: "flex",
-                  gap: "8px",
-                  paddingBottom: "8px",
-                  borderBottom: "1px solid #f0f2ee",
-                }}
-              >
-                <span
-                  style={{
-                    fontFamily: SERIF,
-                    fontWeight: 700,
-                    fontSize: "0.82rem",
-                    color: "#7a8a6a",
-                    minWidth: "100px",
-                  }}
-                >
-                  {k}
-                </span>
-                <span
-                  style={{
-                    fontFamily: SERIF,
-                    fontSize: "0.85rem",
-                    color: "#374151",
-                  }}
-                >
-                  {v}
-                </span>
-              </div>
-            ))}
-            <div style={{ display: "flex", gap: "8px" }}>
-              <span
-                style={{
-                  fontFamily: SERIF,
-                  fontWeight: 700,
-                  fontSize: "0.82rem",
-                  color: "#7a8a6a",
-                  minWidth: "100px",
-                }}
-              >
-                Status
-              </span>
-              <Badge
-                label={selected.status}
-                color={statusColor[selected.status]}
-              />
-            </div>
-          </div>
-          <div
-            style={
-              {
-                display: "flex",
-                justify: "flex-end",
-                gap: "8px",
-              } as React.CSSProperties
-            }
-          >
-            <Btn variant="ghost" onClick={() => setModal(null)}>
-              Fechar
-            </Btn>
-            <Btn
-              variant="secondary"
-              onClick={() => {
-                setForm({
-                  numero: selected.numero,
-                  andar: selected.andar,
-                  categoria: selected.categoria,
-                  capacidade: String(selected.capacidade),
-                  status: selected.status,
-                  tarifa: selected.tarifa,
-                  obs: selected.obs,
-                })
-                setModal("edit")
-              }}
-            >
-              Editar
-            </Btn>
-          </div>
-        </Modal>
-      )}
-    </div>
-  )
+    {roomModal === "view" && selectedRoom && <Modal title={`Quarto ${selectedRoom.number}`} onClose={() => setRoomModal(null)}><div className="detail-list"><Detail label="Número" value={selectedRoom.number} /><Detail label="Andar" value={selectedRoom.floor} /><Detail label="Categoria" value={selectedRoom.category} /><Detail label="Capacidade" value={`${selectedRoom.capacity} hóspedes`} /><Detail label="Status" value={selectedRoom.status} /><Detail label="Tarifa" value={formatMoney(selectedRoom.rate)} /><Detail label="Características" value={[selectedRoom.accessibility && "Acessível", selectedRoom.view && `Vista ${selectedRoom.view}`, selectedRoom.bedType, selectedRoom.balcony && "Varanda", selectedRoom.minibar && "Frigobar", selectedRoom.airConditioning && "Ar-condicionado"].filter(Boolean).join(" · ")} /><Detail label="Observações" value={selectedRoom.notes || "—"} /></div><FormActions><Btn variant="ghost" onClick={() => setRoomModal(null)}>Fechar</Btn><Btn variant="secondary" onClick={() => openEditRoom(selectedRoom)}>Atualizar</Btn></FormActions></Modal>}
+
+    {(categoryModal === "new" || categoryModal === "edit") && <Modal title={categoryModal === "new" ? "Cadastrar Categoria de Quarto" : "Atualizar Categoria de Quarto"} onClose={() => setCategoryModal(null)}><FormGrid cols={2}><FullCol><Input label="Nome *" value={categoryForm.name} onChange={(event) => setCategoryForm({ ...categoryForm, name: event.target.value })} /></FullCol><FullCol><Textarea label="Descrição" value={categoryForm.description} onChange={(event) => setCategoryForm({ ...categoryForm, description: event.target.value })} /></FullCol><Input label="Capacidade padrão *" type="number" min="1" value={categoryForm.capacity} onChange={(event) => setCategoryForm({ ...categoryForm, capacity: event.target.value })} /><Input label="Tarifa padrão *" type="number" min="0" step="0.01" value={categoryForm.rate} onChange={(event) => setCategoryForm({ ...categoryForm, rate: event.target.value })} /><FullCol><Textarea label="Observações" value={categoryForm.notes} onChange={(event) => setCategoryForm({ ...categoryForm, notes: event.target.value })} /></FullCol></FormGrid><FormActions><Btn variant="ghost" onClick={() => setCategoryModal(null)}>Cancelar</Btn><Btn disabled={!categoryForm.name || !categoryForm.capacity || !categoryForm.rate} onClick={saveCategory}>{categoryModal === "new" ? "Salvar" : "Atualizar"}</Btn></FormActions></Modal>}
+
+    {categoryModal === "view" && selectedCategory && <Modal title={selectedCategory.name} onClose={() => setCategoryModal(null)}><div className="detail-list"><Detail label="Descrição" value={selectedCategory.description} /><Detail label="Capacidade padrão" value={`${selectedCategory.capacity} hóspedes`} /><Detail label="Tarifa padrão" value={formatMoney(selectedCategory.rate)} /><Detail label="Observações" value={selectedCategory.notes || "—"} /></div>{rooms.some((room) => room.category === selectedCategory.name) && <Alert type="warning">Não é possível excluir esta categoria porque existem quartos vinculados.</Alert>}<FormActions><Btn variant="ghost" onClick={() => setCategoryModal(null)}>Fechar</Btn><Btn variant="secondary" onClick={() => openCategory(selectedCategory, "edit")}>Atualizar</Btn></FormActions></Modal>}
+  </div>;
 }
+
+function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) { return <label className="check-field"><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />{label}</label>; }
+function Detail({ label, value }: { label: string; value: string }) { return <div className="summary-item"><span>{label}</span><strong>{value || "—"}</strong></div>; }

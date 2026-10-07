@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   PageHeader, Card, Btn, Input, Select, Table, Modal,
-  Badge, SectionTitle, Tabs, FormGrid, FullCol, FormActions,
+  Badge, SectionTitle, Tabs, FormGrid, FullCol, FormActions, KpiCard, Icon,
 } from "../ui";
 
 const SERIF = "'Inria Serif', Georgia, serif";
@@ -114,7 +114,7 @@ export default function Estoque() {
   });
   const [fp, setFp] = useState(emptyProduto());
   const fp_ = (k: keyof ReturnType<typeof emptyProduto>, v: string) =>
-      setFp((prev) => ({ ...prev, [k]: v }));
+    setFp((prev) => ({ ...prev, [k]: v }));
 
   /* formulário movimentação */
   const [fm, setFm] = useState({ idProduto: "", quantidade: "", responsavel: "", observacoes: "" });
@@ -123,10 +123,10 @@ export default function Estoque() {
   const produtosFiltrados = produtos.filter((p) => {
     const nivel = nivelEstoque(p);
     return (
-        (!filtroCategoria || p.categoria === filtroCategoria) &&
-        (!filtroStatus    || p.status === filtroStatus) &&
-        (!filtroNivel     || nivel === filtroNivel) &&
-        (!busca           || p.nome.toLowerCase().includes(busca.toLowerCase()) || p.codigo.toLowerCase().includes(busca.toLowerCase()))
+      (!filtroCategoria || p.categoria === filtroCategoria) &&
+      (!filtroStatus    || p.status === filtroStatus) &&
+      (!filtroNivel     || nivel === filtroNivel) &&
+      (!busca           || p.nome.toLowerCase().includes(busca.toLowerCase()) || p.codigo.toLowerCase().includes(busca.toLowerCase()))
     );
   });
 
@@ -152,7 +152,7 @@ export default function Estoque() {
   };
 
   const inativar = (id: number) =>
-      setProdutos(produtos.map((p) => p.id === id ? { ...p, status: p.status === "Ativo" ? "Inativo" : "Ativo" } : p));
+    setProdutos(produtos.map((p) => p.id === id ? { ...p, status: p.status === "Ativo" ? "Inativo" : "Ativo" } : p));
 
   const saveMovimentacao = () => {
     if (!fm.idProduto || !fm.quantidade || !fm.responsavel) return;
@@ -191,398 +191,388 @@ export default function Estoque() {
   const totalMov       = movimentacoes.length;
 
   return (
-      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-        <PageHeader
-            title="Estoque — RF32 a RF38"
-            actions={
-              <div style={{ display: "flex", gap: "8px" }}>
-                <Btn variant="secondary" onClick={() => { setFm({ idProduto: "", quantidade: "", responsavel: "", observacoes: "" }); setModalMov("Saída"); }}>
-                  − Registrar Saída
-                </Btn>
-                <Btn variant="secondary" onClick={() => { setFm({ idProduto: "", quantidade: "", responsavel: "", observacoes: "" }); setModalMov("Entrada"); }}>
-                  + Registrar Entrada
-                </Btn>
-                <Btn onClick={() => { setFp(emptyProduto()); setModalProduto("new"); }}>
-                  + Novo Produto
-                </Btn>
-              </div>
-            }
-        />
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      <PageHeader
+        title="Estoque"
+        actions={
+          <div style={{ display: "flex", gap: "8px" }}>
+            <Btn variant="secondary" onClick={() => { setFm({ idProduto: "", quantidade: "", responsavel: "", observacoes: "" }); setModalMov("Saída"); }}>
+              − Registrar Saída
+            </Btn>
+            <Btn variant="secondary" onClick={() => { setFm({ idProduto: "", quantidade: "", responsavel: "", observacoes: "" }); setModalMov("Entrada"); }}>
+              + Registrar Entrada
+            </Btn>
+            <Btn onClick={() => { setFp(emptyProduto()); setModalProduto("new"); }}>
+              + Novo Produto
+            </Btn>
+          </div>
+        }
+      />
 
-        {/* KPIs */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
-          {[
-            { label: "Produtos ativos",    value: String(totalAtivos),   color: "#3e5525", icon: "📦" },
-            { label: "Em nível crítico",   value: String(totalCriticos), color: "#dc2626", icon: "🔴" },
-            { label: "Abaixo do mínimo",   value: String(totalBaixo),    color: "#d97706", icon: "⚠" },
-            { label: "Movimentações hoje", value: String(totalMov),      color: "#2563eb", icon: "🔄" },
-          ].map((s) => (
-              <div key={s.label} style={{ background: "#fff", borderRadius: "14px", padding: "18px 20px", boxShadow: "0 1px 3px rgba(0,0,0,0.07)", borderTop: `3px solid ${s.color}` }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                  <p style={{ fontFamily: SERIF, fontSize: "0.72rem", color: "#7a8a6a", textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</p>
-                  <span>{s.icon}</span>
-                </div>
-                <p style={{ fontFamily: SERIF, fontWeight: 700, fontSize: "1.75rem", color: s.color }}>{s.value}</p>
-              </div>
-          ))}
-        </div>
+      {/* KPIs */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
+        <KpiCard label="Produtos ativos" value={String(totalAtivos)} icon="package" />
+        <KpiCard label="Em nível crítico" value={String(totalCriticos)} icon="octagon-alert" tone={totalCriticos > 0 ? "danger" : "default"} />
+        <KpiCard label="Abaixo do mínimo" value={String(totalBaixo)} icon="triangle-alert" tone={totalBaixo > 0 ? "warn" : "default"} />
+        <KpiCard label="Movimentações hoje" value={String(totalMov)} icon="arrow-left-right" />
+      </div>
 
-        {/* Tabs */}
-        <Tabs
-            tabs={[
-              { id: "produtos",      label: `Produtos (${totalAtivos})` },
-              { id: "movimentacoes", label: "Movimentações" },
-              { id: "alertas",       label: alertas.length > 0 ? `⚠ Alertas (${alertas.length})` : "Alertas" },
-            ]}
-            active={tab}
-            onChange={setTab}
-        />
+      {/* Tabs */}
+      <Tabs
+        tabs={[
+          { id: "produtos",      label: `Produtos (${totalAtivos})` },
+          { id: "movimentacoes", label: "Movimentações" },
+          { id: "alertas",       label: alertas.length > 0 ? `Alertas (${alertas.length})` : "Alertas" },
+        ]}
+        active={tab}
+        onChange={setTab}
+      />
 
-        {/* ══ ABA: PRODUTOS ══════════════════════════════════════════════ */}
-        {tab === "produtos" && (
-            <Card>
-              {/* filtros */}
-              <div style={{ display: "flex", gap: "12px", marginBottom: "16px", flexWrap: "wrap", alignItems: "flex-end" }}>
-                <div style={{ flex: "1 1 180px" }}>
-                  <Input label="Buscar" placeholder="Nome ou código…" value={busca} onChange={(e) => setBusca(e.target.value)} />
-                </div>
-                <div style={{ width: "160px" }}>
-                  <Select label="Categoria" value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)}>
-                    <option value="">Todas</option>
-                    {categorias.map((c) => <option key={c}>{c}</option>)}
-                  </Select>
-                </div>
-                <div style={{ width: "140px" }}>
-                  <Select label="Nível" value={filtroNivel} onChange={(e) => setFiltroNivel(e.target.value)}>
-                    <option value="">Todos</option>
-                    <option>Crítico</option>
-                    <option>Baixo</option>
-                    <option>OK</option>
-                    <option>Excesso</option>
-                  </Select>
-                </div>
-                <div style={{ width: "130px" }}>
-                  <Select label="Status" value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)}>
-                    <option value="">Todos</option>
-                    <option>Ativo</option>
-                    <option>Inativo</option>
-                  </Select>
-                </div>
-              </div>
-
-              <Table
-                  headers={["Código", "Produto", "Categoria", "Quantidade", "Mín / Máx", "Localização", "Nível", "Ações"]}
-                  rows={produtosFiltrados.map((p) => {
-                    const nivel = nivelEstoque(p);
-                    const pct   = pctEstoque(p);
-                    return [
-                      p.codigo,
-                      <div>
-                        <p style={{ fontFamily: SERIF, fontWeight: 700, fontSize: "0.85rem", color: "#1a1a1a" }}>{p.nome}</p>
-                        {p.fornecedor && <p style={{ fontFamily: SERIF, fontSize: "0.7rem", color: "#9aaa8a" }}>{p.fornecedor}</p>}
-                      </div>,
-                      <Badge label={p.categoria} color={categoriaBadge[p.categoria]} />,
-                      <div>
-                        <p style={{ fontFamily: SERIF, fontWeight: 700, fontSize: "0.95rem", color: nivel === "Crítico" ? "#dc2626" : "#1a1a1a" }}>
-                          {p.quantidade} {p.unidade}
-                        </p>
-                        {/* barra de nível */}
-                        <div style={{ width: "80px", height: "5px", background: "#f0f2ee", borderRadius: "3px", marginTop: "4px" }}>
-                          <div style={{
-                            height: "100%", width: `${pct}%`, borderRadius: "3px",
-                            background: nivel === "Crítico" ? "#dc2626" : nivel === "Baixo" ? "#d97706" : nivel === "Excesso" ? "#2563eb" : "#3e5525",
-                          }} />
-                        </div>
-                      </div>,
-                      <span style={{ fontFamily: SERIF, fontSize: "0.8rem", color: "#7a8a6a" }}>
-                  {p.estoqueMinimo} / {p.estoqueMaximo} {p.unidade}
-                </span>,
-                      p.localizacao || "—",
-                      <Badge label={nivel} color={nivelColor(nivel)} />,
-                      <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
-                        <Btn small variant="ghost"     onClick={() => { setSelected(p); setModalProduto("view"); }}>Ver</Btn>
-                        <Btn small variant="secondary" onClick={() => openEdit(p)}>Editar</Btn>
-                        <Btn small variant={p.status === "Ativo" ? "danger" : "ghost"} onClick={() => inativar(p.id)}>
-                          {p.status === "Ativo" ? "Inativar" : "Ativar"}
-                        </Btn>
-                      </div>,
-                    ];
-                  })}
-              />
-            </Card>
-        )}
-
-        {/* ══ ABA: MOVIMENTAÇÕES ═════════════════════════════════════════ */}
-        {tab === "movimentacoes" && (
-            <Card>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                <SectionTitle>Histórico de Movimentações (insert only)</SectionTitle>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <Btn small variant="secondary" onClick={() => { setFm({ idProduto: "", quantidade: "", responsavel: "", observacoes: "" }); setModalMov("Saída"); }}>− Saída</Btn>
-                  <Btn small onClick={() => { setFm({ idProduto: "", quantidade: "", responsavel: "", observacoes: "" }); setModalMov("Entrada"); }}>+ Entrada</Btn>
-                </div>
-              </div>
-              <Table
-                  headers={["Data / Hora", "Produto", "Tipo", "Quantidade", "Responsável", "Observações"]}
-                  rows={movimentacoes.map((m) => [
-                    m.dataHora,
-                    m.nomeProduto,
-                    <Badge label={m.tipo} color={m.tipo === "Entrada" ? "green" : "red"} />,
-                    <span style={{ fontFamily: SERIF, fontWeight: 700, fontSize: "0.88rem", color: m.tipo === "Entrada" ? "#15803d" : "#b91c1c" }}>
-                {m.tipo === "Entrada" ? "+" : "−"}{m.quantidade}
-              </span>,
-                    m.responsavel,
-                    m.observacoes || "—",
-                  ])}
-              />
-            </Card>
-        )}
-
-        {/* ══ ABA: ALERTAS ═══════════════════════════════════════════════ */}
-        {tab === "alertas" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {alertas.length === 0 ? (
-                  <Card>
-                    <p style={{ fontFamily: SERIF, fontSize: "0.9rem", color: "#9aaa8a", textAlign: "center", padding: "32px 0" }}>
-                      ✅ Nenhum produto abaixo do estoque mínimo.
-                    </p>
-                  </Card>
-              ) : (
-                  alertas.map((p) => {
-                    const nivel   = nivelEstoque(p);
-                    const urgente = nivel === "Crítico";
-                    return (
-                        <div
-                            key={p.id}
-                            style={{
-                              background: urgente ? "#fef2f2" : "#fffbeb",
-                              borderLeft: `4px solid ${urgente ? "#dc2626" : "#d97706"}`,
-                              borderRadius: "0 14px 14px 0",
-                              padding: "16px 20px",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              gap: "16px",
-                              flexWrap: "wrap",
-                            }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                            <span style={{ fontSize: "1.5rem" }}>{urgente ? "🔴" : "⚠"}</span>
-                            <div>
-                              <p style={{ fontFamily: SERIF, fontWeight: 700, fontSize: "0.95rem", color: "#1a1a1a", marginBottom: "2px" }}>
-                                {p.nome}
-                                <span style={{ fontFamily: SERIF, fontWeight: 400, fontSize: "0.78rem", color: "#9aaa8a", marginLeft: "8px" }}>
-                          {p.codigo} · {p.categoria}
-                        </span>
-                              </p>
-                              <p style={{ fontFamily: SERIF, fontSize: "0.82rem", color: urgente ? "#b91c1c" : "#92400e" }}>
-                                Estoque atual: <strong>{p.quantidade} {p.unidade}</strong> — mínimo: {p.estoqueMinimo} {p.unidade}
-                                {p.quantidade === 0 && " — ZERADO"}
-                              </p>
-                              {p.fornecedor && (
-                                  <p style={{ fontFamily: SERIF, fontSize: "0.75rem", color: "#9aaa8a", marginTop: "2px" }}>
-                                    Fornecedor: {p.fornecedor} · Localização: {p.localizacao}
-                                  </p>
-                              )}
-                            </div>
-                          </div>
-                          <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
-                            <Badge label={nivel} color={nivelColor(nivel)} />
-                            <Btn small onClick={() => { setFm({ idProduto: String(p.id), quantidade: "", responsavel: "", observacoes: "Reposição por alerta automático" }); setModalMov("Entrada"); }}>
-                              + Repor
-                            </Btn>
-                          </div>
-                        </div>
-                    );
-                  })
-              )}
-
-              {alertas.length > 0 && (
-                  <Card>
-                    <SectionTitle>Resumo de alertas</SectionTitle>
-                    <Table
-                        headers={["Código", "Produto", "Categoria", "Atual", "Mínimo", "Déficit", "Nível"]}
-                        rows={alertas.map((p) => {
-                          const nivel = nivelEstoque(p);
-                          return [
-                            p.codigo,
-                            p.nome,
-                            <Badge label={p.categoria} color={categoriaBadge[p.categoria]} />,
-                            `${p.quantidade} ${p.unidade}`,
-                            `${p.estoqueMinimo} ${p.unidade}`,
-                            `${p.estoqueMinimo - p.quantidade} ${p.unidade}`,
-                            <Badge label={nivel} color={nivelColor(nivel)} />,
-                          ];
-                        })}
-                    />
-                  </Card>
-              )}
+      {/* ══ ABA: PRODUTOS ══════════════════════════════════════════════ */}
+      {tab === "produtos" && (
+        <Card>
+          {/* filtros */}
+          <div style={{ display: "flex", gap: "12px", marginBottom: "16px", flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div style={{ flex: "1 1 180px" }}>
+              <Input label="Buscar" placeholder="Nome ou código…" value={busca} onChange={(e) => setBusca(e.target.value)} />
             </div>
-        )}
+            <div style={{ width: "160px" }}>
+              <Select label="Categoria" value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)}>
+                <option value="">Todas</option>
+                {categorias.map((c) => <option key={c}>{c}</option>)}
+              </Select>
+            </div>
+            <div style={{ width: "140px" }}>
+              <Select label="Nível" value={filtroNivel} onChange={(e) => setFiltroNivel(e.target.value)}>
+                <option value="">Todos</option>
+                <option>Crítico</option>
+                <option>Baixo</option>
+                <option>OK</option>
+                <option>Excesso</option>
+              </Select>
+            </div>
+            <div style={{ width: "130px" }}>
+              <Select label="Status" value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)}>
+                <option value="">Todos</option>
+                <option>Ativo</option>
+                <option>Inativo</option>
+              </Select>
+            </div>
+          </div>
 
-        {/* ══ MODAL: Cadastrar / Editar Produto ══════════════════════════ */}
-        {(modalProduto === "new" || modalProduto === "edit") && (
-            <Modal
-                title={modalProduto === "new" ? "Cadastrar Produto — RF32" : `Editar Produto — ${selected?.nome}`}
-                onClose={() => setModalProduto(null)}
-                wide
-            >
-              <FormGrid cols={2}>
-                <Input label="Código *" placeholder="LMP-001" value={fp.codigo} onChange={(e) => fp_("codigo", e.target.value)} />
-                <Select label="Categoria *" value={fp.categoria} onChange={(e) => fp_("categoria", e.target.value as Categoria)}>
-                  {categorias.map((c) => <option key={c}>{c}</option>)}
-                </Select>
-                <FullCol>
-                  <Input label="Nome do produto *" value={fp.nome} onChange={(e) => fp_("nome", e.target.value)} />
-                </FullCol>
-                <Select label="Unidade de medida *" value={fp.unidade} onChange={(e) => fp_("unidade", e.target.value)}>
-                  <option value="un">un (unidade)</option>
-                  <option value="kg">kg (quilograma)</option>
-                  <option value="L">L (litro)</option>
-                  <option value="cx">cx (caixa)</option>
-                  <option value="pct">pct (pacote)</option>
-                  <option value="m">m (metro)</option>
-                  <option value="par">par</option>
-                </Select>
-                <Input label="Quantidade inicial *" type="number" min="0" value={fp.quantidade} onChange={(e) => fp_("quantidade", e.target.value)} />
-                <Input label="Estoque mínimo *" type="number" min="0" value={fp.estoqueMinimo} onChange={(e) => fp_("estoqueMinimo", e.target.value)}
-                       helpText="Alerta de reposição ao atingir este valor" />
-                <Input label="Estoque máximo" type="number" min="0" value={fp.estoqueMaximo} onChange={(e) => fp_("estoqueMaximo", e.target.value)} />
-                <Input label="Localização (dep./prateleira)" placeholder="Dep. A1" value={fp.localizacao} onChange={(e) => fp_("localizacao", e.target.value)} />
-                <FullCol>
-                  <Input label="Fornecedor" value={fp.fornecedor} onChange={(e) => fp_("fornecedor", e.target.value)} />
-                </FullCol>
-                <FullCol>
-                  <Input label="Observações" placeholder="Informações adicionais sobre o produto" value={fp.observacoes} onChange={(e) => fp_("observacoes", e.target.value)} />
-                </FullCol>
-                <FormActions>
-                  <Btn variant="ghost" onClick={() => setModalProduto(null)}>Cancelar</Btn>
-                  <Btn onClick={saveProduto}>Salvar</Btn>
-                </FormActions>
-              </FormGrid>
-            </Modal>
-        )}
-
-        {/* ══ MODAL: Visualizar Produto ═══════════════════════════════════ */}
-        {modalProduto === "view" && selected && (() => {
-          const nivel = nivelEstoque(selected);
-          const pct   = pctEstoque(selected);
-          return (
-              <Modal title={`${selected.codigo} — ${selected.nome}`} onClose={() => setModalProduto(null)} wide>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
-                  {[
-                    ["Código",       selected.codigo],
-                    ["Categoria",    selected.categoria],
-                    ["Unidade",      selected.unidade],
-                    ["Fornecedor",   selected.fornecedor || "—"],
-                    ["Localização",  selected.localizacao || "—"],
-                    ["Cadastrado em",selected.dataCadastro],
-                    ["Observações",  selected.observacoes || "—"],
-                    ["Status",       selected.status],
-                  ].map(([k, v]) => (
-                      <div key={k} style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                        <span style={{ fontFamily: SERIF, fontWeight: 700, fontSize: "0.72rem", color: "#7a8a6a", textTransform: "uppercase", letterSpacing: "0.05em" }}>{k}</span>
-                        <span style={{ fontFamily: SERIF, fontSize: "0.87rem", color: "#1a1a1a" }}>{v}</span>
-                      </div>
-                  ))}
-                </div>
-
-                {/* Nível de estoque visual */}
-                <div style={{ background: "#f8faf6", borderRadius: "12px", padding: "16px 20px", marginBottom: "16px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                    <SectionTitle>Nível de estoque</SectionTitle>
-                    <Badge label={nivel} color={nivelColor(nivel)} />
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                    <span style={{ fontFamily: SERIF, fontSize: "0.8rem", color: "#7a8a6a" }}>Atual: <strong>{selected.quantidade} {selected.unidade}</strong></span>
-                    <span style={{ fontFamily: SERIF, fontSize: "0.8rem", color: "#7a8a6a" }}>Mín: {selected.estoqueMinimo} · Máx: {selected.estoqueMaximo}</span>
-                  </div>
-                  <div style={{ height: "12px", background: "#e2ecd8", borderRadius: "6px" }}>
+          <Table
+            headers={["Código", "Produto", "Categoria", "Quantidade", "Mín / Máx", "Localização", "Nível", "Ações"]}
+            rows={produtosFiltrados.map((p) => {
+              const nivel = nivelEstoque(p);
+              const pct   = pctEstoque(p);
+              return [
+                p.codigo,
+                <div>
+                  <p style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "0.85rem", color: "var(--text-strong)" }}>{p.nome}</p>
+                  {p.fornecedor && <p style={{ fontFamily: "var(--font-sans)", fontSize: "0.7rem", color: "var(--text-muted)" }}>{p.fornecedor}</p>}
+                </div>,
+                <Badge label={p.categoria} color={categoriaBadge[p.categoria]} />,
+                <div>
+                  <p style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "0.95rem", color: nivel === "Crítico" ? "var(--danger-fg)" : "var(--text-strong)" }}>
+                    {p.quantidade} {p.unidade}
+                  </p>
+                  {/* barra de nível */}
+                  <div style={{ width: "80px", height: "5px", background: "var(--bg-page)", borderRadius: "3px", marginTop: "4px" }}>
                     <div style={{
-                      height: "100%", width: `${pct}%`, borderRadius: "6px",
-                      background: nivel === "Crítico" ? "#dc2626" : nivel === "Baixo" ? "#d97706" : nivel === "Excesso" ? "#2563eb" : "#3e5525",
-                      transition: "width 0.3s",
+                      height: "100%", width: `${pct}%`, borderRadius: "3px",
+                      background: nivel === "Crítico" ? "var(--danger-fg)" : nivel === "Baixo" ? "var(--warn-fg)" : nivel === "Excesso" ? "var(--info-fg)" : "var(--brand-700)",
                     }} />
                   </div>
-                  <p style={{ fontFamily: SERIF, fontSize: "0.72rem", color: "#9aaa8a", marginTop: "4px" }}>{pct}% da capacidade máxima</p>
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-                  <Btn variant="ghost" onClick={() => setModalProduto(null)}>Fechar</Btn>
-                  <Btn variant="secondary" onClick={() => openEdit(selected)}>Editar</Btn>
-                </div>
-              </Modal>
-          );
-        })()}
-
-        {/* ══ MODAL: Entrada / Saída de Estoque ══════════════════════════ */}
-        {modalMov && (
-            <Modal
-                title={modalMov === "Entrada" ? "Registrar Entrada — RF36" : "Registrar Saída — RF37"}
-                onClose={() => setModalMov(null)}
-            >
-              <div
-                  style={{
-                    background: modalMov === "Entrada" ? "#f0fdf4" : "#fef2f2",
-                    borderRadius: "10px",
-                    padding: "10px 14px",
-                    marginBottom: "18px",
-                    fontFamily: SERIF,
-                    fontSize: "0.82rem",
-                    color: modalMov === "Entrada" ? "#15803d" : "#b91c1c",
-                    borderLeft: `4px solid ${modalMov === "Entrada" ? "#22c55e" : "#ef4444"}`,
-                  }}
-              >
-                {modalMov === "Entrada"
-                    ? "A quantidade informada será somada ao estoque atual do produto."
-                    : "A quantidade informada será subtraída do estoque atual. (Registro imutável — insert only)"}
-              </div>
-
-              <FormGrid cols={1}>
-                <Select
-                    label="Produto *"
-                    value={fm.idProduto}
-                    onChange={(e) => setFm({ ...fm, idProduto: e.target.value })}
-                >
-                  <option value="">Selecione o produto…</option>
-                  {produtos.filter((p) => p.status === "Ativo").map((p) => (
-                      <option key={p.id} value={String(p.id)}>
-                        {p.codigo} — {p.nome} (atual: {p.quantidade} {p.unidade})
-                      </option>
-                  ))}
-                </Select>
-
-                <Input
-                    label={`Quantidade (${fm.idProduto ? produtos.find((p) => String(p.id) === fm.idProduto)?.unidade ?? "" : "un"}) *`}
-                    type="number"
-                    min="1"
-                    value={fm.quantidade}
-                    onChange={(e) => setFm({ ...fm, quantidade: e.target.value })}
-                />
-                <Input
-                    label="Responsável *"
-                    placeholder="Nome do responsável pela movimentação"
-                    value={fm.responsavel}
-                    onChange={(e) => setFm({ ...fm, responsavel: e.target.value })}
-                />
-                <Input
-                    label="Observações"
-                    placeholder="Motivo, nota fiscal, pedido, etc."
-                    value={fm.observacoes}
-                    onChange={(e) => setFm({ ...fm, observacoes: e.target.value })}
-                />
-                <FormActions>
-                  <Btn variant="ghost" onClick={() => setModalMov(null)}>Cancelar</Btn>
-                  <Btn
-                      variant={modalMov === "Entrada" ? "primary" : "danger"}
-                      onClick={saveMovimentacao}
-                  >
-                    {modalMov === "Entrada" ? "Confirmar Entrada" : "Confirmar Saída"}
+                </div>,
+                <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                  {p.estoqueMinimo} / {p.estoqueMaximo} {p.unidade}
+                </span>,
+                p.localizacao || "—",
+                <Badge label={nivel} color={nivelColor(nivel)} />,
+                <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+                  <Btn small variant="ghost"     onClick={() => { setSelected(p); setModalProduto("view"); }}>Ver</Btn>
+                  <Btn small variant="secondary" onClick={() => openEdit(p)}>Editar</Btn>
+                  <Btn small variant={p.status === "Ativo" ? "danger" : "ghost"} onClick={() => inativar(p.id)}>
+                    {p.status === "Ativo" ? "Inativar" : "Ativar"}
                   </Btn>
-                </FormActions>
-              </FormGrid>
-            </Modal>
-        )}
-      </div>
+                </div>,
+              ];
+            })}
+          />
+        </Card>
+      )}
+
+      {/* ══ ABA: MOVIMENTAÇÕES ═════════════════════════════════════════ */}
+      {tab === "movimentacoes" && (
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+            <SectionTitle>Histórico de Movimentações (insert only)</SectionTitle>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <Btn small variant="secondary" onClick={() => { setFm({ idProduto: "", quantidade: "", responsavel: "", observacoes: "" }); setModalMov("Saída"); }}>− Saída</Btn>
+              <Btn small onClick={() => { setFm({ idProduto: "", quantidade: "", responsavel: "", observacoes: "" }); setModalMov("Entrada"); }}>+ Entrada</Btn>
+            </div>
+          </div>
+          <Table
+            headers={["Data / Hora", "Produto", "Tipo", "Quantidade", "Responsável", "Observações"]}
+            rows={movimentacoes.map((m) => [
+              m.dataHora,
+              m.nomeProduto,
+              <Badge label={m.tipo} color={m.tipo === "Entrada" ? "green" : "red"} />,
+              <span style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "0.88rem", color: m.tipo === "Entrada" ? "var(--ok-fg)" : "var(--danger-fg)" }}>
+                {m.tipo === "Entrada" ? "+" : "−"}{m.quantidade}
+              </span>,
+              m.responsavel,
+              m.observacoes || "—",
+            ])}
+          />
+        </Card>
+      )}
+
+      {/* ══ ABA: ALERTAS ═══════════════════════════════════════════════ */}
+      {tab === "alertas" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {alertas.length === 0 ? (
+            <Card>
+              <p style={{ fontFamily: "var(--font-sans)", fontSize: "0.9rem", color: "var(--text-muted)", textAlign: "center", padding: "32px 0" }}>
+                Nenhum produto abaixo do estoque mínimo.
+              </p>
+            </Card>
+          ) : (
+            alertas.map((p) => {
+              const nivel   = nivelEstoque(p);
+              const urgente = nivel === "Crítico";
+              return (
+                <div
+                  key={p.id}
+                  style={{
+                    background: urgente ? "var(--danger-bg)" : "var(--warn-bg)",
+                    borderLeft: `4px solid ${urgente ? "var(--danger-fg)" : "var(--warn-fg)"}`,
+                    borderRadius: "0 14px 14px 0",
+                    padding: "16px 20px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "16px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                    <span style={{ display: "flex", color: urgente ? "var(--danger-fg)" : "var(--warn-fg)" }}><Icon name={urgente ? "octagon-alert" : "triangle-alert"} /></span>
+                    <div>
+                      <p style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "0.95rem", color: "var(--text-strong)", marginBottom: "2px" }}>
+                        {p.nome}
+                        <span style={{ fontFamily: "var(--font-sans)", fontWeight: 400, fontSize: "0.78rem", color: "var(--text-muted)", marginLeft: "8px" }}>
+                          {p.codigo} · {p.categoria}
+                        </span>
+                      </p>
+                      <p style={{ fontFamily: "var(--font-sans)", fontSize: "0.82rem", color: urgente ? "var(--danger-fg)" : "var(--warn-fg)" }}>
+                        Estoque atual: <strong>{p.quantidade} {p.unidade}</strong> — mínimo: {p.estoqueMinimo} {p.unidade}
+                        {p.quantidade === 0 && " — ZERADO"}
+                      </p>
+                      {p.fornecedor && (
+                        <p style={{ fontFamily: "var(--font-sans)", fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                          Fornecedor: {p.fornecedor} · Localização: {p.localizacao}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                    <Badge label={nivel} color={nivelColor(nivel)} />
+                    <Btn small onClick={() => { setFm({ idProduto: String(p.id), quantidade: "", responsavel: "", observacoes: "Reposição por alerta automático" }); setModalMov("Entrada"); }}>
+                      + Repor
+                    </Btn>
+                  </div>
+                </div>
+              );
+            })
+          )}
+
+          {alertas.length > 0 && (
+            <Card>
+              <SectionTitle>Resumo de alertas</SectionTitle>
+              <Table
+                headers={["Código", "Produto", "Categoria", "Atual", "Mínimo", "Déficit", "Nível"]}
+                rows={alertas.map((p) => {
+                  const nivel = nivelEstoque(p);
+                  return [
+                    p.codigo,
+                    p.nome,
+                    <Badge label={p.categoria} color={categoriaBadge[p.categoria]} />,
+                    `${p.quantidade} ${p.unidade}`,
+                    `${p.estoqueMinimo} ${p.unidade}`,
+                    `${p.estoqueMinimo - p.quantidade} ${p.unidade}`,
+                    <Badge label={nivel} color={nivelColor(nivel)} />,
+                  ];
+                })}
+              />
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* ══ MODAL: Cadastrar / Editar Produto ══════════════════════════ */}
+      {(modalProduto === "new" || modalProduto === "edit") && (
+        <Modal
+          title={modalProduto === "new" ? "Cadastrar Produto" : `Editar Produto — ${selected?.nome}`}
+          onClose={() => setModalProduto(null)}
+          wide
+        >
+          <FormGrid cols={2}>
+            <Input label="Código *" placeholder="LMP-001" value={fp.codigo} onChange={(e) => fp_("codigo", e.target.value)} />
+            <Select label="Categoria *" value={fp.categoria} onChange={(e) => fp_("categoria", e.target.value as Categoria)}>
+              {categorias.map((c) => <option key={c}>{c}</option>)}
+            </Select>
+            <FullCol>
+              <Input label="Nome do produto *" value={fp.nome} onChange={(e) => fp_("nome", e.target.value)} />
+            </FullCol>
+            <Select label="Unidade de medida *" value={fp.unidade} onChange={(e) => fp_("unidade", e.target.value)}>
+              <option value="un">un (unidade)</option>
+              <option value="kg">kg (quilograma)</option>
+              <option value="L">L (litro)</option>
+              <option value="cx">cx (caixa)</option>
+              <option value="pct">pct (pacote)</option>
+              <option value="m">m (metro)</option>
+              <option value="par">par</option>
+            </Select>
+            <Input label="Quantidade inicial *" type="number" min="0" value={fp.quantidade} onChange={(e) => fp_("quantidade", e.target.value)} />
+            <Input label="Estoque mínimo *" type="number" min="0" value={fp.estoqueMinimo} onChange={(e) => fp_("estoqueMinimo", e.target.value)}
+              helpText="Alerta de reposição ao atingir este valor" />
+            <Input label="Estoque máximo" type="number" min="0" value={fp.estoqueMaximo} onChange={(e) => fp_("estoqueMaximo", e.target.value)} />
+            <Input label="Localização (dep./prateleira)" placeholder="Dep. A1" value={fp.localizacao} onChange={(e) => fp_("localizacao", e.target.value)} />
+            <FullCol>
+              <Input label="Fornecedor" value={fp.fornecedor} onChange={(e) => fp_("fornecedor", e.target.value)} />
+            </FullCol>
+            <FullCol>
+              <Input label="Observações" placeholder="Informações adicionais sobre o produto" value={fp.observacoes} onChange={(e) => fp_("observacoes", e.target.value)} />
+            </FullCol>
+            <FormActions>
+              <Btn variant="ghost" onClick={() => setModalProduto(null)}>Cancelar</Btn>
+              <Btn onClick={saveProduto}>Salvar</Btn>
+            </FormActions>
+          </FormGrid>
+        </Modal>
+      )}
+
+      {/* ══ MODAL: Visualizar Produto ═══════════════════════════════════ */}
+      {modalProduto === "view" && selected && (() => {
+        const nivel = nivelEstoque(selected);
+        const pct   = pctEstoque(selected);
+        return (
+          <Modal title={`${selected.codigo} — ${selected.nome}`} onClose={() => setModalProduto(null)} wide>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
+              {[
+                ["Código",       selected.codigo],
+                ["Categoria",    selected.categoria],
+                ["Unidade",      selected.unidade],
+                ["Fornecedor",   selected.fornecedor || "—"],
+                ["Localização",  selected.localizacao || "—"],
+                ["Cadastrado em",selected.dataCadastro],
+                ["Observações",  selected.observacoes || "—"],
+                ["Status",       selected.status],
+              ].map(([k, v]) => (
+                <div key={k} style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <span style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{k}</span>
+                  <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.87rem", color: "var(--text-strong)" }}>{v}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Nível de estoque visual */}
+            <div style={{ background: "var(--bg-card)", borderRadius: "12px", padding: "16px 20px", marginBottom: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                <SectionTitle>Nível de estoque</SectionTitle>
+                <Badge label={nivel} color={nivelColor(nivel)} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.8rem", color: "var(--text-muted)" }}>Atual: <strong>{selected.quantidade} {selected.unidade}</strong></span>
+                <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.8rem", color: "var(--text-muted)" }}>Mín: {selected.estoqueMinimo} · Máx: {selected.estoqueMaximo}</span>
+              </div>
+              <div style={{ height: "12px", background: "var(--border)", borderRadius: "6px" }}>
+                <div style={{
+                  height: "100%", width: `${pct}%`, borderRadius: "6px",
+                  background: nivel === "Crítico" ? "var(--danger-fg)" : nivel === "Baixo" ? "var(--warn-fg)" : nivel === "Excesso" ? "var(--info-fg)" : "var(--brand-700)",
+                  transition: "width 0.3s",
+                }} />
+              </div>
+              <p style={{ fontFamily: "var(--font-sans)", fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "4px" }}>{pct}% da capacidade máxima</p>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+              <Btn variant="ghost" onClick={() => setModalProduto(null)}>Fechar</Btn>
+              <Btn variant="secondary" onClick={() => openEdit(selected)}>Editar</Btn>
+            </div>
+          </Modal>
+        );
+      })()}
+
+      {/* ══ MODAL: Entrada / Saída de Estoque ══════════════════════════ */}
+      {modalMov && (
+        <Modal
+          title={modalMov === "Entrada" ? "Registrar Entrada" : "Registrar Saída"}
+          onClose={() => setModalMov(null)}
+        >
+          <div
+            style={{
+              background: modalMov === "Entrada" ? "var(--ok-bg)" : "var(--danger-bg)",
+              borderRadius: "10px",
+              padding: "10px 14px",
+              marginBottom: "18px",
+              fontFamily: "var(--font-sans)",
+              fontSize: "0.82rem",
+              color: modalMov === "Entrada" ? "var(--ok-fg)" : "var(--danger-fg)",
+              borderLeft: `4px solid ${modalMov === "Entrada" ? "var(--ok-fg)" : "var(--danger-fg)"}`,
+            }}
+          >
+            {modalMov === "Entrada"
+              ? "A quantidade informada será somada ao estoque atual do produto."
+              : "A quantidade informada será subtraída do estoque atual. (Registro imutável — insert only)"}
+          </div>
+
+          <FormGrid cols={1}>
+            <Select
+              label="Produto *"
+              value={fm.idProduto}
+              onChange={(e) => setFm({ ...fm, idProduto: e.target.value })}
+            >
+              <option value="">Selecione o produto…</option>
+              {produtos.filter((p) => p.status === "Ativo").map((p) => (
+                <option key={p.id} value={String(p.id)}>
+                  {p.codigo} — {p.nome} (atual: {p.quantidade} {p.unidade})
+                </option>
+              ))}
+            </Select>
+
+            <Input
+              label={`Quantidade (${fm.idProduto ? produtos.find((p) => String(p.id) === fm.idProduto)?.unidade ?? "" : "un"}) *`}
+              type="number"
+              min="1"
+              value={fm.quantidade}
+              onChange={(e) => setFm({ ...fm, quantidade: e.target.value })}
+            />
+            <Input
+              label="Responsável *"
+              placeholder="Nome do responsável pela movimentação"
+              value={fm.responsavel}
+              onChange={(e) => setFm({ ...fm, responsavel: e.target.value })}
+            />
+            <Input
+              label="Observações"
+              placeholder="Motivo, nota fiscal, pedido, etc."
+              value={fm.observacoes}
+              onChange={(e) => setFm({ ...fm, observacoes: e.target.value })}
+            />
+            <FormActions>
+              <Btn variant="ghost" onClick={() => setModalMov(null)}>Cancelar</Btn>
+              <Btn
+                variant={modalMov === "Entrada" ? "primary" : "danger"}
+                onClick={saveMovimentacao}
+              >
+                {modalMov === "Entrada" ? "Confirmar Entrada" : "Confirmar Saída"}
+              </Btn>
+            </FormActions>
+          </FormGrid>
+        </Modal>
+      )}
+    </div>
   );
 }

@@ -1,59 +1,49 @@
-import type { User } from "../App"
-import type { Page } from "./AppShell"
+import type { User } from "../App";
+import type { Page } from "./AppShell";
 
-const SERIF = "'Inria Serif', Georgia, serif"
+const SERIF = "'Inria Serif', Georgia, serif";
 
 const pageTitles: Record<Page, string> = {
-  dashboard: "Dashboard",
-  hospedes: "Hóspedes",
-  reservas: "Reservas",
-  quartos: "Quartos",
-  checkinout: "Check-in / Check-out",
-  consumos: "Consumos do Hóspede",
-  estoque: "Controle de Estoque",
-  pacotes: "Pacotes & Promoções",
-  financeiro: "Financeiro",
+  dashboard:    "Dashboard",
+  hospedes:     "Hóspedes",
+  reservas:     "Reservas",
+  quartos:      "Quartos",
+  checkinout:   "Check-in / Check-out",
+  consumos:     "Consumos",
+  estoque:      "Estoque",
+  pacotes:      "Pacotes",
+  financeiro:   "Financeiro",
   funcionarios: "Funcionários",
-  limpeza: "Limpeza & Manutenção",
-  eventos: "Eventos & Conferências",
+  limpeza:      "Limpeza & Manutenção",
+  eventos:      "Eventos",
   comunicacoes: "Comunicações",
-  fiscal: "Fiscal",
-  usuarios: "Usuários & Acesso",
-  relatorios: "Relatórios",
-}
+  fiscal:       "Fiscal",
+  usuarios:     "Usuários & Acesso",
+  relatorios:   "Relatórios",
+};
 
 type Props = {
-  user: User
-  onLogout: () => void
-  onMenuToggle: () => void
-  currentPage: Page
-}
+  user: User;
+  onLogout: () => void;
+  onMenuToggle: () => void;
+  currentPage: Page;
+};
 
-export default function TopBar({
-  user,
-  onLogout,
-  onMenuToggle,
-  currentPage,
-}: Props) {
-  const today = new Date().toLocaleDateString("pt-BR", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  })
+export default function TopBar({ user, onLogout, onMenuToggle, currentPage }: Props) {
+  const today = "30/09/2026";
 
   return (
     <header
       style={{
         height: "64px",
-        background: "#ffffff",
-        borderBottom: "1.5px solid #e8f0e0",
+        background: "var(--bg-card)",
+        borderBottom: "1.5px solid var(--border)",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
         padding: "0 24px",
         flexShrink: 0,
-        boxShadow: "0 1px 4px rgba(62,85,37,0.06)",
+        boxShadow: "var(--shadow-card)",
       }}
     >
       {/* Left */}
@@ -65,7 +55,7 @@ export default function TopBar({
             width: "36px",
             height: "36px",
             borderRadius: "9px",
-            border: "1.5px solid #e2ecd8",
+            border: "1.5px solid var(--border)",
             background: "transparent",
             cursor: "pointer",
             display: "flex",
@@ -84,7 +74,7 @@ export default function TopBar({
                 display: "block",
                 width: "16px",
                 height: "1.5px",
-                background: "#3e5525",
+                background: "var(--brand-700)",
                 borderRadius: "2px",
               }}
             />
@@ -94,10 +84,10 @@ export default function TopBar({
         <div>
           <p
             style={{
-              fontFamily: SERIF,
+              fontFamily: "var(--font-sans)",
               fontWeight: 700,
               fontSize: "1rem",
-              color: "#2d3d1a",
+              color: "var(--brand-900)",
               lineHeight: 1.2,
             }}
           >
@@ -105,10 +95,10 @@ export default function TopBar({
           </p>
           <p
             style={{
-              fontFamily: SERIF,
+              fontFamily: "var(--font-sans)",
               fontWeight: 400,
               fontSize: "0.7rem",
-              color: "#9aaa8a",
+              color: "var(--text-muted)",
               textTransform: "capitalize",
             }}
           >
@@ -120,19 +110,13 @@ export default function TopBar({
       {/* Right */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         {/* User info */}
-        <div
-          style={{
-            textAlign: "right",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
+        <div style={{ textAlign: "right", display: "flex", flexDirection: "column" }}>
           <p
             style={{
-              fontFamily: SERIF,
+              fontFamily: "var(--font-sans)",
               fontWeight: 700,
               fontSize: "0.82rem",
-              color: "#2d3d1a",
+              color: "var(--brand-900)",
               lineHeight: 1.2,
             }}
           >
@@ -140,10 +124,10 @@ export default function TopBar({
           </p>
           <p
             style={{
-              fontFamily: SERIF,
+              fontFamily: "var(--font-sans)",
               fontWeight: 400,
               fontSize: "0.7rem",
-              color: "#7a8a6a",
+              color: "var(--text-muted)",
             }}
           >
             {user.role}
@@ -156,16 +140,16 @@ export default function TopBar({
             width: "36px",
             height: "36px",
             borderRadius: "50%",
-            background: "linear-gradient(135deg, #3e5525, #6b8f3e)",
+            background: "linear-gradient(135deg, var(--brand-700), var(--brand-700))",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontFamily: SERIF,
+            fontFamily: "var(--font-sans)",
             fontWeight: 700,
             fontSize: "0.9rem",
-            color: "#ffffff",
+            color: "var(--bg-card)",
             flexShrink: 0,
-            boxShadow: "0 2px 6px rgba(62,85,37,0.3)",
+            boxShadow: "var(--shadow-card)",
           }}
         >
           {user.name.charAt(0).toUpperCase()}
@@ -175,33 +159,33 @@ export default function TopBar({
         <button
           onClick={onLogout}
           style={{
-            fontFamily: SERIF,
+            fontFamily: "var(--font-sans)",
             fontWeight: 700,
             fontSize: "0.78rem",
-            color: "#6b7280",
-            background: "#f0f2ee",
+            color: "var(--text-muted)",
+            background: "var(--bg-page)",
             borderWidth: "1.5px",
             borderStyle: "solid",
-            borderColor: "#d1d5db",
+            borderColor: "var(--border)",
             borderRadius: "8px",
             padding: "6px 14px",
             cursor: "pointer",
             transition: "all 0.15s",
           }}
           onMouseEnter={(e) => {
-            ;(e.currentTarget as HTMLElement).style.background = "#fee2e2"
-            ;(e.currentTarget as HTMLElement).style.borderColor = "#fca5a5"
-            ;(e.currentTarget as HTMLElement).style.color = "#dc2626"
+            (e.currentTarget as HTMLElement).style.background = "var(--danger-bg)";
+            (e.currentTarget as HTMLElement).style.borderColor = "var(--danger-bg)";
+            (e.currentTarget as HTMLElement).style.color = "var(--danger-fg)";
           }}
           onMouseLeave={(e) => {
-            ;(e.currentTarget as HTMLElement).style.background = "#f0f2ee"
-            ;(e.currentTarget as HTMLElement).style.borderColor = "#d1d5db"
-            ;(e.currentTarget as HTMLElement).style.color = "#6b7280"
+            (e.currentTarget as HTMLElement).style.background = "var(--bg-page)";
+            (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+            (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
           }}
         >
           Sair
         </button>
       </div>
     </header>
-  )
+  );
 }
