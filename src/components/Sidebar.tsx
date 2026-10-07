@@ -50,9 +50,10 @@ type Props = {
   currentPage: Page;
   onNavigate: (page: Page) => void;
   isOpen: boolean;
+  allowedPages: string[];
 };
 
-export default function Sidebar({ currentPage, onNavigate, isOpen }: Props) {
+export default function Sidebar({ currentPage, onNavigate, isOpen, allowedPages }: Props) {
   return (
     <aside
       style={{
@@ -141,7 +142,9 @@ export default function Sidebar({ currentPage, onNavigate, isOpen }: Props) {
         }}
       >
         {groups.map((group) => {
-          const items = navItems.filter((n) => n.group === group);
+          const items = navItems.filter(
+            (item) => item.group === group && allowedPages.includes(item.id),
+          );
           if (!items.length) return null;
           return (
             <div key={group}>

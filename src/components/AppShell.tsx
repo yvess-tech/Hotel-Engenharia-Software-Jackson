@@ -62,11 +62,12 @@ export default function AppShell({ user, onLogout }: Props) {
       }}
     >
       <HotelOperationsProvider>
-        <Sidebar
-          currentPage={currentPage}
-          onNavigate={setCurrentPage}
-          isOpen={sidebarOpen}
-        />
+      <Sidebar
+        currentPage={currentPage}
+        onNavigate={setCurrentPage}
+        isOpen={sidebarOpen}
+        allowedPages={user.permissions}
+      />
         <div
           className="app-content"
           style={{
