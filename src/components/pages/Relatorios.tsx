@@ -175,7 +175,7 @@ function calculateTotals(records: MonthlyRecord[]): Totals {
 
 export default function Relatorios() {
   const { activeAccount, registerLog } = useAccessControl();
-  const [tab, setTab] = useState<Tab>("dashboard");
+  const [tab, setTab] = useState<Tab>("relatorios");
   const [reportType, setReportType] = useState<ReportType>("ocupacao");
   const [start, setStart] = useState("2026-01");
   const [end, setEnd] = useState("2026-09");
@@ -341,7 +341,7 @@ export default function Relatorios() {
 
   const exportCsv = () => {
     const escapeCell = (value: string | number) =>
-      `"${String(value).replaceAll('"', '""')}"`;
+      `"${String(value).replace(/"/g, '""')}"`;
     const csv = [exportHeaders(), ...exportRows()]
       .map((row) => row.map(escapeCell).join(";"))
       .join("\n");
@@ -384,7 +384,7 @@ export default function Relatorios() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Relatórios & Dashboard — RF131 a RF141"
+        title="Relatórios"
         actions={
           tab === "relatorios" ? (
             <div className="flex flex-wrap gap-2">
@@ -401,7 +401,6 @@ export default function Relatorios() {
 
       <Tabs
         tabs={[
-          { id: "dashboard", label: "Dashboard gerencial" },
           { id: "relatorios", label: "Gerar relatório" },
           { id: "historico", label: "Relatórios consultados" },
         ]}

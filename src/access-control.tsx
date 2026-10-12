@@ -59,6 +59,7 @@ interface AccessControlValue {
   profiles: AccessProfile[];
   logs: OperationLog[];
   activeAccount: Account | null;
+  activeSession: SessionUser | null;
   setAccounts: Dispatch<SetStateAction<Account[]>>;
   setProfiles: Dispatch<SetStateAction<AccessProfile[]>>;
   authenticate: (identifier: string, password: string) => AuthenticationResult;
@@ -104,7 +105,22 @@ const initialProfiles: AccessProfile[] = [
     id: 2,
     name: "Gerente",
     description: "Gestão operacional, financeira e acompanhamento de resultados.",
-    permissions: allPermissions.filter((permission) => permission !== "usuarios"),
+    permissions: [
+      "dashboard",
+      "hospedes",
+      "reservas",
+      "quartos",
+      "checkinout",
+      "consumos",
+      "estoque",
+      "pacotes",
+      "financeiro",
+      "funcionarios",
+      "limpeza",
+      "eventos",
+      "comunicacoes",
+      "relatorios",
+    ],
     status: "Ativo",
   },
   {
@@ -339,13 +355,36 @@ export function AccessControlProvider({ children }: { children: ReactNode }) {
     setActiveAccount(null);
   };
 
+  const currentActiveAccount = activeAccount
+    ? accounts.find((account) => account.id === activeAccount.id) ?? activeAccount
+    : null;
+  const currentProfiles = currentActiveAccount
+    ? profiles.filter(
+        (profile) =>
+          currentActiveAccount.profileIds.includes(profile.id) &&
+          profile.status === "Ativo",
+      )
+    : [];
+  const activeSession: SessionUser | null = currentActiveAccount
+    ? {
+        id: currentActiveAccount.id,
+        name: currentActiveAccount.name,
+        email: currentActiveAccount.email,
+        role: currentProfiles.length
+          ? currentProfiles.map((profile) => profile.name).join(", ")
+          : "Sem perfil de acesso",
+        permissions: [...new Set(currentProfiles.flatMap((profile) => profile.permissions))],
+      }
+    : null;
+
   return (
     <AccessControlContext.Provider
       value={{
         accounts,
         profiles,
         logs,
-        activeAccount,
+        activeAccount: currentActiveAccount,
+        activeSession,
         setAccounts,
         setProfiles,
         authenticate,

@@ -19,6 +19,9 @@ import Fiscal from "./pages/Fiscal";
 import Usuarios from "./pages/Usuarios";
 import Relatorios from "./pages/Relatorios";
 import { HotelOperationsProvider } from "./HotelOperationsContext";
+import PresentationTour from "./tour/PresentationTour";
+import { DemoEngineProvider } from "./demo/DemoEngineContext";
+import OperationalDemoPanel from "./demo/OperationalDemoPanel";
 
 export type Page =
   | "dashboard" | "hospedes" | "reservas" | "quartos" | "checkinout"
@@ -49,6 +52,7 @@ type Props = { user: User; onLogout: () => void };
 export default function AppShell({ user, onLogout }: Props) {
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [presentationOpen, setPresentationOpen] = useState(false);
 
   const PageComponent = pageComponents[currentPage];
 
@@ -62,6 +66,7 @@ export default function AppShell({ user, onLogout }: Props) {
       }}
     >
       <HotelOperationsProvider>
+      <DemoEngineProvider>
       <Sidebar
         currentPage={currentPage}
         onNavigate={setCurrentPage}
@@ -83,6 +88,7 @@ export default function AppShell({ user, onLogout }: Props) {
             onLogout={onLogout}
             onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
             currentPage={currentPage}
+            onPresent={() => setPresentationOpen(true)}
           />
           <main
             style={{
@@ -91,9 +97,20 @@ export default function AppShell({ user, onLogout }: Props) {
               padding: "24px",
             }}
           >
-            <PageComponent />
+            <div data-tour-page={currentPage}>
+              <PageComponent />
+            </div>
           </main>
         </div>
+        <PresentationTour
+          currentPage={currentPage}
+          allowedPages={user.permissions}
+          launcherOpen={presentationOpen}
+          onCloseLauncher={() => setPresentationOpen(false)}
+          onNavigate={setCurrentPage}
+        />
+        <OperationalDemoPanel currentPage={currentPage} allowedPages={user.permissions} onNavigate={setCurrentPage} />
+      </DemoEngineProvider>
       </HotelOperationsProvider>
     </div>
   );

@@ -57,6 +57,20 @@ const emptyProfile = () => ({
   permissions: [] as string[],
 });
 
+const mockUser = (profileId = "") => ({
+  name: "Operador Demo",
+  email: "operador.demo@pacaasnovos.com.br",
+  login: "operador.demo",
+  password: "Demo1234",
+  profileId,
+});
+
+const mockProfile = () => ({
+  name: "Perfil Demo Recepcao",
+  description: "Perfil de exemplo com acesso aos cadastros usados na apresentacao.",
+  permissions: ["hospedes", "reservas", "checkinout", "financeiro"],
+});
+
 function formatDate(value?: string) {
   if (!value) return "Nunca";
   return new Date(value).toLocaleString("pt-BR", {
@@ -135,8 +149,8 @@ export default function Usuarios() {
   const openNew = () => {
     setSelectedId(null);
     setError("");
-    if (tab === "usuarios") setUserForm(emptyUser());
-    else setProfileForm(emptyProfile());
+    if (tab === "usuarios") setUserForm(mockUser(String(profiles[0]?.id ?? "")));
+    else setProfileForm(mockProfile());
     setModalMode("new");
   };
 
@@ -331,19 +345,20 @@ export default function Usuarios() {
   const toggleProfile = (profile: AccessProfile) => {
     if (!selectedUser) return;
     const associated = selectedUser.profileIds.includes(profile.id);
-    if (associated && selectedUser.profileIds.length === 1) {
-      setError("O usuário deve permanecer associado a pelo menos um perfil.");
-      return;
-    }
-    setError("");
+    const nextProfileIds = associated
+      ? selectedUser.profileIds.filter((id) => id !== profile.id)
+      : [...selectedUser.profileIds, profile.id];
+    setError(
+      nextProfileIds.length
+        ? ""
+        : `${selectedUser.name} está temporariamente sem perfil. Selecione um novo vínculo para restaurar o menu lateral.`,
+    );
     setAccounts((current) =>
       current.map((account) =>
         account.id === selectedUser.id
           ? {
               ...account,
-              profileIds: associated
-                ? account.profileIds.filter((id) => id !== profile.id)
-                : [...account.profileIds, profile.id],
+              profileIds: nextProfileIds,
             }
           : account,
       ),
@@ -785,6 +800,25 @@ export default function Usuarios() {
       {modalMode === "profiles" && selectedUser && (
         <Modal wide title={`Perfis de ${selectedUser.name}`} onClose={closeModal}>
           <div className="space-y-3">
+            {selectedUser.id === activeAccount?.id && (
+              <Alert type="info">
+                Este é o usuário da sessão atual. Cada associação ou remoção atualiza
+                imediatamente o perfil exibido no topo e as opções disponíveis no menu
+                lateral.
+              </Alert>
+            )}
+            <div className="rounded-lg bg-surface p-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-primary/70">
+                Vínculo atual
+              </p>
+              <p className="mt-1 font-bold text-primary">
+                {profileNames(selectedUser)}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                Para trocar o perfil, remova o vínculo atual e associe uma das opções
+                disponíveis abaixo.
+              </p>
+            </div>
             {profiles
               .filter((profile) => profile.status === "Ativo")
               .map((profile) => {
@@ -792,11 +826,28 @@ export default function Usuarios() {
                 return (
                   <div
                     key={profile.id}
-                    className="flex items-center justify-between gap-4 rounded-lg bg-surface p-3"
+                    className={`flex items-center justify-between gap-4 rounded-lg border p-3 ${
+                      associated
+                        ? "border-primary bg-primary/5"
+                        : "border-gray-200 bg-surface"
+                    }`}
                   >
-                    <div>
-                      <p className="font-bold text-primary">{profile.name}</p>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-bold text-primary">{profile.name}</p>
+                        <Badge
+                          label={associated ? "Vinculado" : "Disponível"}
+                          color={associated ? "green" : "gray"}
+                        />
+                      </div>
                       <p className="text-sm text-gray-600">{profile.description}</p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Menu:{" "}
+                        {modules
+                          .filter((module) => profile.permissions.includes(module.id))
+                          .map((module) => module.label)
+                          .join(", ")}
+                      </p>
                     </div>
                     <Btn
                       small

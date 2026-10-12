@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   PageHeader, Card, Btn, Input, Select, Table, Modal,
-  Badge, SectionTitle, Tabs, FormGrid, FullCol, FormActions, KpiCard, Icon,
+  Alert, Badge, SectionTitle, Tabs, FormGrid, FullCol, FormActions, KpiCard, Icon,
 } from "../ui";
 
 const SERIF = "'Inria Serif', Georgia, serif";
@@ -99,6 +99,7 @@ export default function Estoque() {
   const [modalProduto, setModalProduto] = useState<"new" | "edit" | "view" | null>(null);
   const [modalMov, setModalMov]         = useState<TipoMov | null>(null);
   const [selected, setSelected]         = useState<Produto | null>(null);
+  const [movError, setMovError]         = useState("");
 
   /* filtros */
   const [filtroCategoria, setFiltroCategoria] = useState("");
@@ -111,6 +112,11 @@ export default function Estoque() {
     codigo: "", nome: "", categoria: "Limpeza" as Categoria,
     unidade: "un", quantidade: "", estoqueMinimo: "", estoqueMaximo: "",
     localizacao: "", fornecedor: "", observacoes: "",
+  });
+  const mockProduto = () => ({
+    codigo: "AME-900", nome: "Kit boas-vindas demo", categoria: "Amenities" as Categoria,
+    unidade: "un", quantidade: "60", estoqueMinimo: "20", estoqueMaximo: "120",
+    localizacao: "Dep. A3", fornecedor: "Distribuidora Pacaas", observacoes: "Produto exemplo para apresentação.",
   });
   const [fp, setFp] = useState(emptyProduto());
   const fp_ = (k: keyof ReturnType<typeof emptyProduto>, v: string) =>
@@ -137,10 +143,14 @@ export default function Estoque() {
 
   /* ── ações ── */
   const saveProduto = () => {
+    const quantidade = Number(fp.quantidade);
+    const estoqueMinimo = Number(fp.estoqueMinimo);
+    const estoqueMaximo = Number(fp.estoqueMaximo);
+    if (!fp.codigo.trim() || !fp.nome.trim() || !Number.isFinite(quantidade) || !Number.isFinite(estoqueMinimo) || !Number.isFinite(estoqueMaximo) || quantidade < 0 || estoqueMinimo < 0 || estoqueMaximo < 0) return;
     const base = {
       codigo: fp.codigo, nome: fp.nome, categoria: fp.categoria,
-      unidade: fp.unidade, quantidade: Number(fp.quantidade),
-      estoqueMinimo: Number(fp.estoqueMinimo), estoqueMaximo: Number(fp.estoqueMaximo),
+      unidade: fp.unidade, quantidade,
+      estoqueMinimo, estoqueMaximo,
       localizacao: fp.localizacao, fornecedor: fp.fornecedor, observacoes: fp.observacoes,
     };
     if (modalProduto === "new") {
@@ -154,13 +164,35 @@ export default function Estoque() {
   const inativar = (id: number) =>
     setProdutos(produtos.map((p) => p.id === id ? { ...p, status: p.status === "Ativo" ? "Inativo" : "Ativo" } : p));
 
+  const openMovimentacao = (tipo: TipoMov) => {
+    const produto = tipo === "SaÃ­da"
+      ? produtos.find((p) => p.status === "Ativo" && p.quantidade > 0)
+      : produtos.find((p) => p.status === "Ativo");
+    setFm({
+      idProduto: produto ? String(produto.id) : "",
+      quantidade: tipo === "Entrada" ? "24" : "2",
+      responsavel: tipo === "Entrada" ? "Almoxarifado Demo" : "Recepção Demo",
+      observacoes: tipo === "Entrada" ? "Entrada demonstrativa de reposição." : "Saída demonstrativa para abastecimento.",
+    });
+    setModalMov(tipo);
+  };
+
   const saveMovimentacao = () => {
+    setMovError("");
     if (!fm.idProduto || !fm.quantidade || !fm.responsavel) return;
     const produto = produtos.find((p) => p.id === Number(fm.idProduto));
     if (!produto) return;
     const qty = Number(fm.quantidade);
+    if (!Number.isFinite(qty) || qty <= 0) {
+      setMovError("Informe uma quantidade válida maior que zero.");
+      return;
+    }
+    if (modalMov === "Saída" && qty > produto.quantidade) {
+      setMovError(`Saída bloqueada: o estoque atual de ${produto.nome} é ${produto.quantidade} ${produto.unidade}.`);
+      return;
+    }
     const delta = modalMov === "Entrada" ? qty : -qty;
-    setProdutos(produtos.map((p) => p.id === produto.id ? { ...p, quantidade: Math.max(0, p.quantidade + delta) } : p));
+    setProdutos(produtos.map((p) => p.id === produto.id ? { ...p, quantidade: p.quantidade + delta } : p));
     setMovimentacoes([
       {
         id: Date.now(), idProduto: produto.id, nomeProduto: produto.nome,
@@ -196,13 +228,13 @@ export default function Estoque() {
         title="Estoque"
         actions={
           <div style={{ display: "flex", gap: "8px" }}>
-            <Btn variant="secondary" onClick={() => { setFm({ idProduto: "", quantidade: "", responsavel: "", observacoes: "" }); setModalMov("Saída"); }}>
+            <Btn variant="secondary" onClick={() => openMovimentacao("Saída")}>
               − Registrar Saída
             </Btn>
-            <Btn variant="secondary" onClick={() => { setFm({ idProduto: "", quantidade: "", responsavel: "", observacoes: "" }); setModalMov("Entrada"); }}>
+            <Btn variant="secondary" onClick={() => openMovimentacao("Entrada")}>
               + Registrar Entrada
             </Btn>
-            <Btn onClick={() => { setFp(emptyProduto()); setModalProduto("new"); }}>
+            <Btn onClick={() => { setFp(mockProduto()); setModalProduto("new"); }}>
               + Novo Produto
             </Btn>
           </div>
@@ -308,8 +340,8 @@ export default function Estoque() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
             <SectionTitle>Histórico de Movimentações (insert only)</SectionTitle>
             <div style={{ display: "flex", gap: "8px" }}>
-              <Btn small variant="secondary" onClick={() => { setFm({ idProduto: "", quantidade: "", responsavel: "", observacoes: "" }); setModalMov("Saída"); }}>− Saída</Btn>
-              <Btn small onClick={() => { setFm({ idProduto: "", quantidade: "", responsavel: "", observacoes: "" }); setModalMov("Entrada"); }}>+ Entrada</Btn>
+              <Btn small variant="secondary" onClick={() => openMovimentacao("Saída")}>− Saída</Btn>
+              <Btn small onClick={() => openMovimentacao("Entrada")}>+ Entrada</Btn>
             </div>
           </div>
           <Table
@@ -562,6 +594,7 @@ export default function Estoque() {
               onChange={(e) => setFm({ ...fm, observacoes: e.target.value })}
             />
             <FormActions>
+              {movError && <Alert type="error">{movError}</Alert>}
               <Btn variant="ghost" onClick={() => setModalMov(null)}>Cancelar</Btn>
               <Btn
                 variant={modalMov === "Entrada" ? "primary" : "danger"}

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import LoginPage from "./components/LoginPage";
 import AppShell from "./components/AppShell";
 import {
@@ -10,18 +9,16 @@ import {
 export type User = SessionUser;
 
 function AppContent() {
-  const [user, setUser] = useState<User | null>(null);
-  const { authenticate, recoverPassword, endSession } = useAccessControl();
+  const { authenticate, recoverPassword, endSession, activeSession: user } =
+    useAccessControl();
 
   const handleLogin = (email: string, password: string) => {
     const result = authenticate(email, password);
-    if (result.user) setUser(result.user);
     return result.error;
   };
 
   const handleLogout = () => {
     endSession();
-    setUser(null);
   };
 
   if (!user) {

@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   PageHeader, Card, Btn, Input, Select, Table, Modal,
-  Badge, SectionTitle, Tabs, FormGrid, FullCol, FormActions, Icon, formatDisplayDate,
+  Alert, Badge, SectionTitle, Tabs, FormGrid, FullCol, FormActions, Icon, formatDisplayDate,
 } from "../ui";
+import { countNights, formatMoney, reservationBaseValue, useHotelOperations, type Client } from "../HotelOperationsContext";
+import { useDemoEngine } from "../demo/DemoEngineContext";
 
 const SERIF = "'Inria Serif', Georgia, serif";
 
@@ -51,41 +53,53 @@ const emptyForm = (): Omit<Hospede, "id" | "status" | "documentos"> => ({
   tipoQuartoPref: "", andarPref: "", fumante: "Não", observacoesPref: "",
 });
 
-const initialData: Hospede[] = [
-  {
-    id: 1,
-    nome: "Ana Souza", cpf: "123.456.789-00", tipoDoc: "RG", numDoc: "1234567",
-    dataNasc: "1990-04-15", nacionalidade: "Brasileira", genero: "Feminino",
-    cep: "76801-000", logradouro: "Av. das Palmeiras", numero: "100",
-    complemento: "", bairro: "Centro", cidade: "Porto Velho", estado: "RO",
-    email: "ana@email.com", tel: "(69) 99999-0001", telEmergencia: "(69) 98888-9999", nomeEmergencia: "Carlos Souza",
-    tipoQuartoPref: "Suíte", andarPref: "Alto", fumante: "Não", observacoesPref: "Prefere cama queen",
-    status: "Ativo", documentos: [{ nome: "RG digitalizado", tipo: "PDF", data: "10/01/2026" }],
-  },
-  {
-    id: 2,
-    nome: "Pedro Lima", cpf: "987.654.321-00", tipoDoc: "Passaporte", numDoc: "AB123456",
-    dataNasc: "1985-08-22", nacionalidade: "Brasileira", genero: "Masculino",
-    cep: "76820-000", logradouro: "Rua do Comércio", numero: "200",
-    complemento: "Apto 4", bairro: "Olaria", cidade: "Porto Velho", estado: "RO",
-    email: "pedro@email.com", tel: "(69) 98888-0002", telEmergencia: "", nomeEmergencia: "",
-    tipoQuartoPref: "Luxo", andarPref: "Qualquer", fumante: "Não", observacoesPref: "",
-    status: "Ativo", documentos: [],
-  },
-  {
-    id: 3,
-    nome: "Maria Costa", cpf: "456.789.123-00", tipoDoc: "Passaporte", numDoc: "PT789012",
-    dataNasc: "1978-12-03", nacionalidade: "Portuguesa", genero: "Feminino",
-    cep: "", logradouro: "", numero: "", complemento: "",
-    bairro: "", cidade: "Lisboa", estado: "",
-    email: "maria@email.com", tel: "(69) 97777-0003", telEmergencia: "", nomeEmergencia: "",
-    tipoQuartoPref: "Standard", andarPref: "Baixo", fumante: "Não", observacoesPref: "Alergica a plumas",
-    status: "Ativo", documentos: [{ nome: "Passaporte", tipo: "JPG", data: "05/09/2026" }],
-  },
-];
+const mockForm = (): ReturnType<typeof emptyForm> => ({
+  nome: "Mariana Alves Ferreira", cpf: "529.982.247-25", tipoDoc: "RG", numDoc: "1458296 SSP/RO", dataNasc: "1990-05-18",
+  nacionalidade: "Brasileira", genero: "Feminino",
+  cep: "76820-408", logradouro: "Rua das Seringueiras", numero: "245", complemento: "Apto 302",
+  bairro: "Centro", cidade: "Porto Velho", estado: "RO",
+  email: "mariana.ferreira.demo@pacaasnovos.com.br", tel: "(69) 99234-1188", telEmergencia: "(69) 99988-4411", nomeEmergencia: "Paulo Ferreira",
+  tipoQuartoPref: "Luxo", andarPref: "Médio (3º-5º)", fumante: "Não", observacoesPref: "Prefere quarto silencioso e travesseiro extra.",
+});
 
 type ModalType = "new" | "edit" | "view" | "hist" | null;
 type FormTab = "pessoal" | "endereco" | "contato" | "preferencias" | "documentos";
+
+function clientToGuest(client: Client): Hospede {
+  return {
+    id: client.id, nome: client.name, cpf: client.cpf, tipoDoc: client.documentType,
+    numDoc: client.documentNumber, dataNasc: client.birthDate, nacionalidade: client.nationality,
+    genero: client.gender, cep: client.postalCode, logradouro: client.street,
+    numero: client.addressNumber, complemento: client.complement, bairro: client.district,
+    cidade: client.city, estado: client.state, email: client.email, tel: client.phone,
+    telEmergencia: client.emergencyPhone, nomeEmergencia: client.emergencyContact,
+    tipoQuartoPref: client.preferredRoomType, andarPref: client.preferredFloor,
+    fumante: client.smoker, observacoesPref: client.preferences, status: client.status,
+    documentos: client.documents.map((document) => ({ nome: document.name, tipo: document.type, data: document.date })),
+  };
+}
+
+function onlyDigits(value: string, maxLength: number) {
+  return value.replace(/\D/g, "").slice(0, maxLength);
+}
+
+function formatCpf(value: string) {
+  const digits = onlyDigits(value, 11);
+  return digits
+    .replace(/^(\d{3})(\d)/, "$1.$2")
+    .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
+}
+
+function formatCep(value: string) {
+  return onlyDigits(value, 8).replace(/^(\d{5})(\d)/, "$1-$2");
+}
+
+function formatPhone(value: string) {
+  const digits = onlyDigits(value, 11);
+  if (digits.length <= 10) return digits.replace(/^(\d{2})(\d{0,4})(\d{0,4}).*/, (_match, ddd, first, second) => `${ddd ? `(${ddd}) ` : ""}${first}${second ? `-${second}` : ""}`.trim());
+  return digits.replace(/^(\d{2})(\d{0,5})(\d{0,4}).*/, (_match, ddd, first, second) => `${ddd ? `(${ddd}) ` : ""}${first}${second ? `-${second}` : ""}`.trim());
+}
 
 /* ── utilitários de exibição ─────────────────────────────────────────── */
 function Field({ label, value }: { label: string; value: string }) {
@@ -103,12 +117,16 @@ function Field({ label, value }: { label: string; value: string }) {
 
 /* ── componente principal ────────────────────────────────────────────── */
 export default function Hospedes() {
-  const [data, setData] = useState<Hospede[]>(initialData);
+  const { clients, setClients, reservations, rooms, stays, createClient, updateClient } = useHotelOperations();
+  const data = clients.map(clientToGuest);
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState<ModalType>(null);
   const [selected, setSelected] = useState<Hospede | null>(null);
   const [formTab, setFormTab] = useState<FormTab>("pessoal");
   const [form, setForm] = useState(emptyForm());
+  const [validation, setValidation] = useState("");
+  const [demoScenarioKey, setDemoScenarioKey] = useState("");
+  const demo = useDemoEngine();
 
   const filtered = data.filter((h) =>
     h.nome.toLowerCase().includes(search.toLowerCase()) ||
@@ -117,12 +135,15 @@ export default function Hospedes() {
   );
 
   const openNew = () => {
-    setForm(emptyForm());
+    setDemoScenarioKey("");
+    setForm(mockForm());
     setFormTab("pessoal");
+    setValidation("");
     setModal("new");
   };
 
   const openEdit = (h: Hospede) => {
+    setDemoScenarioKey("");
     setSelected(h);
     setForm({
       nome: h.nome, cpf: h.cpf, tipoDoc: h.tipoDoc, numDoc: h.numDoc,
@@ -138,13 +159,207 @@ export default function Hospedes() {
   };
 
   const f = (k: keyof ReturnType<typeof emptyForm>, v: string) =>
-    setForm((prev) => ({ ...prev, [k]: v }));
+    setForm((prev) => ({
+      ...prev,
+      [k]: k === "cpf" ? formatCpf(v) : k === "cep" ? formatCep(v) : k === "tel" || k === "telEmergencia" ? formatPhone(v) : v,
+    }));
+
+  useEffect(() => {
+    const command = demo.activeCommand;
+    if (!command || command.target !== "hospedes") return;
+    const payload = command.payload;
+    const scenarioKey = demo.scenario?.scenarioKey ?? "";
+    const existing = clients.find((client) => client.email === String(payload.email ?? "") && client.scenarioKey === scenarioKey);
+    const fillPersonal = () => setForm((current) => ({
+      ...current,
+      nome: String(payload.name ?? ""),
+      cpf: String(payload.cpf ?? ""),
+      numDoc: String(payload.documentNumber ?? ""),
+      dataNasc: String(payload.birthDate ?? ""),
+      genero: String(payload.gender ?? ""),
+    }));
+    const fillContact = () => setForm((current) => ({
+      ...current,
+      tel: String(payload.phone ?? ""),
+      email: String(payload.email ?? ""),
+      nomeEmergencia: String(payload.emergencyContact ?? ""),
+      telEmergencia: String(payload.emergencyPhone ?? ""),
+    }));
+    const fillAddress = () => setForm((current) => ({
+      ...current,
+      cep: String(payload.postalCode ?? ""),
+      logradouro: String(payload.street ?? ""),
+      numero: String(payload.addressNumber ?? ""),
+      bairro: String(payload.district ?? ""),
+      cidade: String(payload.city ?? ""),
+      estado: String(payload.state ?? ""),
+    }));
+    const fillPreferences = () => setForm((current) => ({
+      ...current,
+      tipoQuartoPref: String(payload.preferredRoomType ?? ""),
+      andarPref: String(payload.preferredFloor ?? ""),
+      observacoesPref: String(payload.preferences ?? ""),
+    }));
+
+    if (command.command === "open-client-form") {
+      setSelected(null);
+      setDemoScenarioKey(scenarioKey);
+      setValidation("");
+      setForm(emptyForm());
+      setFormTab("pessoal");
+      setModal("new");
+      demo.resolveCommand(command.id, { status: "completed", message: "Formulario de cadastro aberto." });
+    } else if (command.command === "fill-client-personal") {
+      setDemoScenarioKey(scenarioKey);
+      setModal("new");
+      setFormTab("pessoal");
+      fillPersonal();
+      demo.resolveCommand(command.id, { status: "completed", message: "Dados pessoais preenchidos." });
+    } else if (command.command === "fill-client-contact") {
+      setDemoScenarioKey(scenarioKey);
+      setModal("new");
+      setFormTab("contato");
+      fillContact();
+      demo.resolveCommand(command.id, { status: "completed", message: "Contatos preenchidos." });
+    } else if (command.command === "fill-client-address") {
+      setDemoScenarioKey(scenarioKey);
+      setModal("new");
+      setFormTab("endereco");
+      fillAddress();
+      demo.resolveCommand(command.id, { status: "completed", message: "Endereco preenchido." });
+    } else if (command.command === "fill-client-preferences") {
+      setDemoScenarioKey(scenarioKey);
+      setModal("new");
+      setFormTab("preferencias");
+      fillPreferences();
+      demo.resolveCommand(command.id, { status: "completed", message: "Preferencias prontas para revisao." });
+    } else if (command.command === "save-client") {
+      if (existing) {
+        setSearch(existing.name);
+        setModal(null);
+        demo.resolveCommand(command.id, { status: "completed", message: "Hospede ja existia neste cenario e foi localizado.", ids: { clientId: existing.id } });
+        return;
+      }
+      const input = {
+        name: String(payload.name ?? ""), cpf: String(payload.cpf ?? ""), documentType: "RG", documentNumber: String(payload.documentNumber ?? ""),
+        birthDate: String(payload.birthDate ?? ""), nationality: "Brasileira", gender: String(payload.gender ?? ""),
+        postalCode: String(payload.postalCode ?? ""), street: String(payload.street ?? ""), addressNumber: String(payload.addressNumber ?? ""),
+        complement: "", district: String(payload.district ?? ""), city: String(payload.city ?? ""), state: String(payload.state ?? ""),
+        email: String(payload.email ?? ""), phone: String(payload.phone ?? ""), emergencyPhone: String(payload.emergencyPhone ?? ""),
+        emergencyContact: String(payload.emergencyContact ?? ""), preferredRoomType: String(payload.preferredRoomType ?? ""),
+        preferredFloor: String(payload.preferredFloor ?? ""), smoker: "NÃ£o", preferences: String(payload.preferences ?? ""),
+        scenarioKey: scenarioKey || undefined,
+        documents: [],
+      };
+      const result = createClient(input);
+      if (!result.ok || !result.client) {
+        setValidation(result.error ?? "Nao foi possivel salvar o hospede.");
+        setFormTab("pessoal");
+        setModal("new");
+        demo.resolveCommand(command.id, { status: "error", message: result.error ?? "Nao foi possivel salvar o hospede." });
+        return;
+      }
+      setSearch(result.client.name);
+      setModal(null);
+      demo.resolveCommand(command.id, { status: "completed", message: "Hospede salvo e exibido na tabela.", ids: { clientId: result.client.id } });
+    }
+  }, [demo.activeCommand]);
+
+  useEffect(() => {
+    const command = demo.activeCommand;
+    if (!command || command.target !== "hospedes" || command.command !== "prefill-client-form-disabled") return;
+    const delay = command.speed === "slow" ? 520 : command.speed === "fast" ? 70 : 220;
+    const payload = command.payload;
+    const timers: number[] = [];
+    setSelected(null);
+    setDemoScenarioKey(demo.scenario?.scenarioKey ?? "");
+    setValidation("");
+    setForm(emptyForm());
+    setFormTab("pessoal");
+    setModal("new");
+    const schedule = (position: number, action: () => void) => timers.push(window.setTimeout(action, delay * position));
+    schedule(1, () => setForm((current) => ({ ...current, nome: String(payload.name ?? "") })));
+    schedule(2, () => setForm((current) => ({ ...current, cpf: String(payload.cpf ?? "") })));
+    schedule(3, () => {
+      setFormTab("contato");
+      setForm((current) => ({ ...current, tel: String(payload.phone ?? ""), email: String(payload.email ?? "") }));
+    });
+    schedule(4, () => {
+      setFormTab("endereco");
+      setForm((current) => ({
+        ...current,
+        cep: String(payload.postalCode ?? ""), logradouro: String(payload.street ?? ""),
+        numero: String(payload.addressNumber ?? ""), bairro: String(payload.district ?? ""),
+        cidade: String(payload.city ?? ""), estado: String(payload.state ?? ""),
+      }));
+    });
+    schedule(5, () => {
+      setFormTab("preferencias");
+      setForm((current) => ({ ...current, observacoesPref: String(payload.preferences ?? "") }));
+    });
+    schedule(6, () => {
+      setFormTab("pessoal");
+      demo.resolveCommand(command.id, {
+        status: "running",
+        message: "Formulário real preenchido. Revise as abas e use Salvar Hóspede; nenhum registro foi gravado automaticamente.",
+      });
+    });
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [demo.activeCommand]);
+
+  useEffect(() => {
+    const command = demo.activeCommand;
+    if (!command || command.target !== "hospedes" || command.command !== "open-client-history") return;
+    const guest = data.find((item) => item.id === demo.scenario?.ids.clientId);
+    if (!guest) {
+      demo.resolveCommand(command.id, { status: "error", message: "Cliente do cenário não encontrado." });
+      return;
+    }
+    setSelected(guest);
+    setModal("hist");
+    demo.resolveCommand(command.id, { status: "running", message: "Histórico do cliente aberto e vinculado à hospedagem real." });
+  }, [demo.activeCommand]);
 
   const save = () => {
-    if (modal === "new") {
-      setData([...data, { id: Date.now(), ...form, status: "Ativo", documentos: [] }]);
-    } else if (modal === "edit" && selected) {
-      setData(data.map((h) => h.id === selected.id ? { ...h, ...form } : h));
+    const cepDigits = onlyDigits(form.cep, 8);
+    const phoneDigits = onlyDigits(form.tel, 11);
+    const emergencyDigits = onlyDigits(form.telEmergencia, 11);
+    if (!form.email.includes("@") || !form.email.includes(".")) {
+      setValidation("Informe um e-mail válido.");
+      setFormTab("contato");
+      return;
+    }
+    if (phoneDigits.length < 10) {
+      setValidation("Informe um telefone com DDD.");
+      setFormTab("contato");
+      return;
+    }
+    if (form.telEmergencia && emergencyDigits.length < 10) {
+      setValidation("Informe um telefone de emergência com DDD ou deixe o campo vazio.");
+      setFormTab("contato");
+      return;
+    }
+    if (form.cep && cepDigits.length !== 8) {
+      setValidation("Informe o CEP no formato 00000-000 ou deixe o campo vazio.");
+      setFormTab("endereco");
+      return;
+    }
+    const input = {
+      name: form.nome, cpf: form.cpf, documentType: form.tipoDoc, documentNumber: form.numDoc,
+      birthDate: form.dataNasc, nationality: form.nacionalidade, gender: form.genero,
+      postalCode: form.cep, street: form.logradouro, addressNumber: form.numero, complement: form.complemento,
+      district: form.bairro, city: form.cidade, state: form.estado, email: form.email, phone: form.tel,
+      emergencyPhone: form.telEmergencia, emergencyContact: form.nomeEmergencia,
+      preferredRoomType: form.tipoQuartoPref, preferredFloor: form.andarPref, smoker: form.fumante,
+      preferences: form.observacoesPref,
+      scenarioKey: demoScenarioKey || undefined,
+      documents: selected?.documentos.map((document) => ({ name: document.nome, type: document.tipo, date: document.data })) ?? [],
+    };
+    const result = modal === "new" ? createClient(input) : selected ? updateClient(selected.id, input) : { ok: false, error: "Cliente não selecionado." };
+    if (!result.ok) {
+      setValidation(result.error ?? "Não foi possível salvar o cliente.");
+      setFormTab("pessoal");
+      return;
     }
     setModal(null);
   };
@@ -161,7 +376,7 @@ export default function Hospedes() {
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       <PageHeader
         title="Hóspedes"
-        actions={<Btn onClick={openNew}>+ Cadastrar Hóspede</Btn>}
+        actions={<span data-demo-target="new-client-button"><Btn onClick={openNew}>+ Cadastrar Hóspede</Btn></span>}
       />
 
       <Card>
@@ -206,11 +421,12 @@ export default function Hospedes() {
 
           {/* ── Dados Pessoais ── */}
           {formTab === "pessoal" && (
-            <FormGrid cols={2}>
+            <div data-demo-target="client-personal-section"><FormGrid cols={2}>
+              {validation && <FullCol><Alert type="error">{validation}</Alert></FullCol>}
               <FullCol>
-                <Input label="Nome completo *" value={form.nome} onChange={(e) => f("nome", e.target.value)} />
+                <Input data-demo-field="client-name" label="Nome completo *" value={form.nome} onChange={(e) => f("nome", e.target.value)} />
               </FullCol>
-              <Input label="CPF *" placeholder="000.000.000-00" value={form.cpf} onChange={(e) => f("cpf", e.target.value)} />
+              <Input data-demo-field="client-cpf" label="CPF *" placeholder="000.000.000-00" value={form.cpf} onChange={(e) => f("cpf", e.target.value)} />
               <Input label="Data de nascimento" type="date" value={form.dataNasc} onChange={(e) => f("dataNasc", e.target.value)} />
               <Select label="Tipo de documento *" value={form.tipoDoc} onChange={(e) => f("tipoDoc", e.target.value)}>
                 <option>RG</option>
@@ -237,12 +453,12 @@ export default function Hospedes() {
                 <Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn>
                 <Btn variant="secondary" onClick={() => setFormTab("endereco")}>Próximo →</Btn>
               </FormActions>
-            </FormGrid>
+            </FormGrid></div>
           )}
 
           {/* ── Endereço ── */}
           {formTab === "endereco" && (
-            <FormGrid cols={2}>
+            <div data-demo-target="client-address-section"><FormGrid cols={2}>
               <Input label="CEP" placeholder="00000-000" value={form.cep} onChange={(e) => f("cep", e.target.value)} />
               <Select label="Estado (UF)" value={form.estado} onChange={(e) => f("estado", e.target.value)}>
                 <option value="">Selecione</option>
@@ -262,12 +478,12 @@ export default function Hospedes() {
                 <Btn variant="ghost" onClick={() => setFormTab("pessoal")}>← Anterior</Btn>
                 <Btn variant="secondary" onClick={() => setFormTab("contato")}>Próximo →</Btn>
               </FormActions>
-            </FormGrid>
+            </FormGrid></div>
           )}
 
           {/* ── Contatos ── */}
           {formTab === "contato" && (
-            <FormGrid cols={2}>
+            <div data-demo-target="client-contact-section"><FormGrid cols={2}>
               <Input label="E-mail *" type="email" value={form.email} onChange={(e) => f("email", e.target.value)} />
               <Input label="Telefone / WhatsApp *" placeholder="(00) 00000-0000" value={form.tel} onChange={(e) => f("tel", e.target.value)} />
               <Input label="Nome do contato de emergência" value={form.nomeEmergencia} onChange={(e) => f("nomeEmergencia", e.target.value)} />
@@ -276,12 +492,12 @@ export default function Hospedes() {
                 <Btn variant="ghost" onClick={() => setFormTab("endereco")}>← Anterior</Btn>
                 <Btn variant="secondary" onClick={() => setFormTab("preferencias")}>Próximo →</Btn>
               </FormActions>
-            </FormGrid>
+            </FormGrid></div>
           )}
 
           {/* ── Preferências ── */}
           {formTab === "preferencias" && (
-            <FormGrid cols={2}>
+            <div data-demo-target="client-preferences-section"><FormGrid cols={2}>
               <Select label="Tipo de quarto preferido" value={form.tipoQuartoPref} onChange={(e) => f("tipoQuartoPref", e.target.value)}>
                 <option value="">Sem preferência</option>
                 <option>Standard</option>
@@ -306,7 +522,7 @@ export default function Hospedes() {
                 <Btn variant="ghost" onClick={() => setFormTab("contato")}>← Anterior</Btn>
                 <Btn variant="secondary" onClick={() => setFormTab("documentos")}>Próximo →</Btn>
               </FormActions>
-            </FormGrid>
+            </FormGrid></div>
           )}
 
           {/* ── Documentos ── */}
@@ -357,8 +573,12 @@ export default function Hospedes() {
                           </div>
                         </div>
                         <div style={{ display: "flex", gap: "6px" }}>
-                          <Btn small variant="ghost">Ver</Btn>
-                          <Btn small variant="danger">Excluir</Btn>
+                          <Btn small variant="ghost" onClick={() => window.alert(`Documento simulado: ${doc.nome} (${doc.tipo}). O protótipo preserva apenas os metadados locais.`)}>Ver</Btn>
+                          <Btn small variant="danger" onClick={() => {
+                            if (!selected) return;
+                            setClients((current) => current.map((client) => client.id === selected.id ? { ...client, documents: client.documents.filter((_, index) => index !== i) } : client));
+                            setSelected({ ...selected, documentos: selected.documentos.filter((_, index) => index !== i) });
+                          }}>Excluir</Btn>
                         </div>
                       </div>
                     ))}
@@ -369,7 +589,7 @@ export default function Hospedes() {
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
                 <Btn variant="ghost" onClick={() => setFormTab("preferencias")}>← Anterior</Btn>
                 <Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn>
-                <Btn onClick={save}>Salvar Hóspede</Btn>
+                <span data-demo-target="client-save-action"><Btn onClick={save}>Salvar Hóspede</Btn></span>
               </div>
             </div>
           )}
@@ -456,7 +676,7 @@ export default function Hospedes() {
                         <p style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "0.85rem", color: "var(--text-strong)" }}>{doc.nome}</p>
                         <p style={{ fontFamily: "var(--font-sans)", fontSize: "0.72rem", color: "var(--text-muted)" }}>{doc.tipo} · {doc.data}</p>
                       </div>
-                      <Btn small variant="ghost" onClick={() => {}}>Ver</Btn>
+                      <Btn small variant="ghost" onClick={() => window.alert(`Documento simulado: ${doc.nome} (${doc.tipo}). O protótipo preserva apenas os metadados locais.`)}>Ver</Btn>
                     </div>
                   ))
                 )}
@@ -476,12 +696,21 @@ export default function Hospedes() {
         <Modal title={`Histórico de Hospedagens — ${selected.nome}`} onClose={() => setModal(null)} wide>
           <SectionTitle>Estadias registradas</SectionTitle>
           <Table
-            headers={["Período", "Quarto", "Categoria", "Valor pago", "Status"]}
-            rows={[
-              ["01/06 – 05/06/2026", "205", "Luxo",     "R$ 1.200,00", <Badge label="Finalizado" color="green" />],
-              ["15/03 – 17/03/2026", "101", "Standard", "R$ 580,00",   <Badge label="Finalizado" color="green" />],
-            ]}
+            headers={["Reserva", "Quarto", "Entrada efetiva", "Saída efetiva", "Diárias", "Valor contratado", "Status"]}
+            rows={stays.filter((stay) => stay.clientId === selected.id && stay.status === "Encerrada").map((stay) => {
+              const reservation = reservations.find((item) => item.id === stay.reservationId);
+              return [
+                reservation?.code ?? "—",
+                rooms.find((room) => room.id === stay.roomId)?.number ?? "—",
+                new Date(stay.checkedInAt).toLocaleString("pt-BR"),
+                stay.checkedOutAt ? new Date(stay.checkedOutAt).toLocaleString("pt-BR") : "—",
+                reservation ? String(countNights(reservation.entry, reservation.exit)) : "—",
+                reservation ? formatMoney(reservationBaseValue(reservation)) : "—",
+                <Badge label="Finalizado" color="green" />,
+              ];
+            })}
           />
+          <Alert type="info">O histórico é gerado automaticamente a partir das hospedagens concluídas e permanece somente para consulta.</Alert>
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "16px" }}>
             <Btn variant="ghost" onClick={() => setModal(null)}>Fechar</Btn>
           </div>
