@@ -6,6 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test:financial": "node --experimental-strip-types --test src/domain/financial-rules.test.ts",
+    "test:events": "node --experimental-strip-types --test src/domain/event-rules.test.ts",
+    "test:operations": "node --experimental-strip-types --test src/domain/hotel-rules.test.ts",
+    "test:tour": "node --experimental-strip-types --test src/components/tour/tour-scripts.test.ts",
+    "test:demo": "node --experimental-strip-types --test src/components/demo/demo-routes.test.ts",
     "preview": "vite preview",
     "format": "oxfmt"
   },

@@ -454,17 +454,29 @@ export default function Funcionarios() {
   const openNew = () => {
     setSelectedId(null);
     setError("");
-    if (tab === "funcionarios") setFormFuncionario(emptyFuncionario());
-    if (tab === "cargos") setFormCargo(emptyCargo());
-    if (tab === "turnos") setFormTurno(emptyTurno());
-    if (tab === "atribuicoes") setFormAtribuicao(emptyAtribuicao());
+    if (tab === "funcionarios") setFormFuncionario({
+      ...emptyFuncionario(),
+      nome: "Patricia Nunes Demo",
+      cpf: "529.982.247-25",
+      nascimento: "1994-04-22",
+      email: "patricia.demo@pacaasnovos.com.br",
+      telefone: "(69) 99240-1122",
+      endereco: "Rua das Flores, 120 - Centro",
+      admissao: new Date().toISOString().slice(0, 10),
+      cargoId: String(cargos.find((item) => item.status === "Ativo")?.id ?? ""),
+      turnoId: String(turnos.find((item) => item.status === "Ativo")?.id ?? ""),
+      observacoes: "Funcionario exemplo para demonstracao do cadastro.",
+    });
+    if (tab === "cargos") setFormCargo({ nome: "Supervisor Demo", descricao: "Cargo de exemplo para demonstracao de permissoes.", salarioBase: "3200", permissoes: "Reservas, Hospedes, Relatorios" });
+    if (tab === "turnos") setFormTurno({ nome: "Turno Demo Manha", inicio: "07:00", fim: "15:00", intervalo: "60", dias: "Segunda a sexta", cargaSemanal: "40" });
+    if (tab === "atribuicoes") setFormAtribuicao({ funcionarioId: String(funcionarios.find((item) => item.status === "Ativo")?.id ?? ""), titulo: "Treinamento de recepcao demo", descricao: "Acompanhar atendimento, check-in e fechamento de caixa durante a demonstracao.", inicio: new Date().toISOString().slice(0, 10), fim: "", prioridade: "Média" });
     if (tab === "ponto") {
       setFormPonto({
-        funcionarioId: "",
+        funcionarioId: String(funcionarios.find((item) => item.status === "Ativo")?.id ?? ""),
         dataHora: new Date().toISOString().slice(0, 16),
         tipo: "Entrada",
         origem: "Recepção",
-        observacao: "",
+        observacao: "Registro de ponto demonstrativo.",
       });
     }
     setModalMode("new");

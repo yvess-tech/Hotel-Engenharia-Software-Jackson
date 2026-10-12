@@ -1,186 +1,93 @@
-import { StatCard, Card, SectionTitle, Badge, Icon, PageHeader } from "../ui";
-
-const SERIF = "'Inria Serif', Georgia, serif";
-
-const occupancyData = [
-  { day: "Seg", pct: 72 },
-  { day: "Ter", pct: 85 },
-  { day: "Qua", pct: 91 },
-  { day: "Qui", pct: 78 },
-  { day: "Sex", pct: 95 },
-  { day: "Sáb", pct: 100 },
-  { day: "Dom", pct: 68 },
-];
-
-const reservations = [
-  { guest: "Ana Souza",    room: "101", checkin: "13/09", checkout: "16/09", status: "Confirmada",   statusColor: "blue"  as const },
-  { guest: "Pedro Lima",   room: "205", checkin: "13/09", checkout: "14/09", status: "Check-in",     statusColor: "green" as const },
-  { guest: "Maria Costa",  room: "312", checkin: "14/09", checkout: "18/09", status: "Aguardando",   statusColor: "yellow" as const },
-  { guest: "João Silva",   room: "407", checkin: "12/09", checkout: "13/09", status: "Check-out",    statusColor: "gray"  as const },
-];
-
-const roomStatus = [
-  { label: "Livres",     count: 12, color: "var(--ok-fg)", pct: 24 },
-  { label: "Ocupados",   count: 28, color: "var(--info-fg)", pct: 56 },
-  { label: "Reservados", count: 7,  color: "var(--reserved-fg)", pct: 14 },
-  { label: "Manutenção", count: 3,  color: "var(--warn-fg)", pct: 6  },
-];
-
-const alerts = [
-  { msg: "Estoque de sabonetes abaixo do mínimo (12 un.)",           icon: "triangle-alert" as const, type: "warning" },
-  { msg: "Quarto 204 com manutenção pendente há 2 dias",             icon: "octagon-alert" as const, type: "error"   },
-  { msg: "3 check-outs previstos para hoje sem fatura gerada",       icon: "badge-check" as const, type: "info"    },
-];
-
-const alertStyle: Record<string, React.CSSProperties> = {
-  warning: { background: "var(--warn-bg)", borderLeft: "4px solid var(--warn-fg)" },
-  error:   { background: "var(--danger-bg)", borderLeft: "4px solid var(--danger-fg)" },
-  info:    { background: "var(--info-bg)", borderLeft: "4px solid var(--info-fg)" },
-};
+import { useState } from "react";
+import { Alert, Badge, Btn, Card, ConfirmDialog, PageHeader, SectionTitle, StatCard, Table } from "../ui";
+import { countNights, formatMoney, reservationBaseValue, today, useHotelOperations } from "../HotelOperationsContext";
 
 export default function Dashboard() {
-  const maxPct = Math.max(...occupancyData.map((d) => d.pct));
-  const average = Math.round(occupancyData.reduce((total, item) => total + item.pct, 0) / occupancyData.length);
+  const { rooms, reservations, stays, receipts, consumptions, housekeepingTasks, payables, cashSessions, resetDemonstrationData, getReservationFinancials, cashExpectedTotal } = useHotelOperations();
+  const [confirmReset, setConfirmReset] = useState(false);
+  const availableRooms = rooms.filter((room) => room.maintenanceStatus === "Disponível");
+  const occupiedRooms = rooms.filter((room) => room.occupancyStatus === "Ocupado");
+  const occupancyRate = availableRooms.length ? occupiedRooms.length / availableRooms.length * 100 : 0;
+  const activeOrCompleted = reservations.filter((reservation) => ["Hospedado", "Concluída"].includes(reservation.status));
+  const lodgingRevenue = activeOrCompleted.reduce((total, reservation) => total + reservationBaseValue(reservation), 0);
+  const serviceRevenue = consumptions.filter((item) => !item.includedInPackage).reduce((total, item) => total + item.value, 0);
+  const receivedRevenue = receipts.filter((receipt) => receipt.status === "Confirmado").reduce((total, receipt) => total + receipt.value, 0);
+  const pendingReceivables = reservations.reduce((total, reservation) => total + (getReservationFinancials(reservation.id)?.balance ?? 0), 0);
+  const pendingPayables = payables.reduce((total, payable) => total + (payable.canceledAt ? 0 : Math.max(0, payable.originalValue - payable.payments.reduce((sum, payment) => sum + payment.value, 0))), 0);
+  const openCash = cashSessions.find((session) => !session.closedAt);
+  const physicalCash = openCash ? cashExpectedTotal(openCash.id) : 0;
+  const revPar = availableRooms.length ? lodgingRevenue / availableRooms.length : 0;
+  const averageStay = stays.length ? stays.reduce((total, stay) => {
+    const reservation = reservations.find((item) => item.id === stay.reservationId);
+    return total + (reservation ? countNights(reservation.entry, reservation.exit) : 0);
+  }, 0) / stays.length : 0;
 
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-      <PageHeader title="Dashboard" />
-      {/* KPIs */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
-        <StatCard label="Taxa de Ocupação" value="88%"       sub="hoje"                          icon="hotel" />
-        <StatCard label="RevPAR"           value="R$ 312"    sub="por quarto disponível"         icon="banknote" />
-        <StatCard label="Receita Total"    value="R$ 47,8k"  sub="setembro / 2026"               icon="trending-up" />
-        <StatCard label="Média de Estadia" value="3,4 dias"  sub="últimos 30 dias"               icon="calendar-range" />
-      </div>
+  const recentReservations = [...reservations].sort((first, second) => second.id - first.id).slice(0, 5);
+  const pendingCleaning = housekeepingTasks.filter((task) => task.status !== "Concluída").length;
+  const blockedRooms = rooms.filter((room) => room.maintenanceStatus === "Bloqueado").length;
+  const departuresToday = stays.filter((stay) => stay.status === "Ativa" && stay.expectedExit === today()).length;
+  const roomBreakdown = [
+    { label: "Ocupados", value: occupiedRooms.length, status: "Ocupado" },
+    { label: "Livres e limpos", value: rooms.filter((room) => room.occupancyStatus === "Livre" && room.cleaningStatus === "Limpo" && room.maintenanceStatus === "Disponível").length, status: "Livre" },
+    { label: "Aguardando limpeza", value: rooms.filter((room) => room.cleaningStatus !== "Limpo").length, status: "Sujo" },
+    { label: "Bloqueados", value: blockedRooms, status: "Bloqueado" },
+  ];
 
-      {/* Charts row */}
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "16px" }}>
-        {/* Occupancy bar chart */}
-        <Card>
-          <SectionTitle>Ocupação — últimos 7 dias</SectionTitle>
-          <div style={{ position: "relative", display: "flex", alignItems: "flex-end", gap: "12px", height: "140px" }}>
-            <div style={{ position: "absolute", zIndex: 1, right: 0, bottom: `${(average / maxPct) * 100}%`, left: 0, borderTop: "1px dashed var(--gold-500)" }} />
-            {occupancyData.map((d) => (
-              <div
-                key={d.day}
-                style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", height: "100%" }}
-              >
-                <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.68rem", color: "var(--text-muted)" }}>{d.pct}%</span>
-                <div style={{ flex: 1, display: "flex", alignItems: "flex-end", width: "100%" }}>
-                  <div
-                    style={{
-                      width: "100%",
-                      height: `${(d.pct / maxPct) * 100}%`,
-                      background: d.day === "Qua" ? "var(--gold-500)" : d.pct >= 90 ? "var(--brand-900)" : "var(--brand-700)",
-                      borderRadius: "6px 6px 0 0",
-                      minHeight: "8px",
-                    }}
-                  />
-                </div>
-                <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.7rem", color: "var(--text-muted)" }}>{d.day}</span>
-              </div>
-            ))}
-          </div>
-          <div style={{ display: "flex", gap: "16px", marginTop: "12px", color: "var(--text-muted)", fontSize: "12px" }}>
-            <span>— Média: {average}%</span><span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><i style={{ width: "8px", height: "8px", borderRadius: "50%", background: "var(--gold-500)" }} />Hoje</span>
-          </div>
-        </Card>
+  return <div className="ops-page">
+    <PageHeader title="Dashboard" actions={<Btn variant="secondary" onClick={() => setConfirmReset(true)}>Restaurar dados de demonstração</Btn>} />
+    <Alert type="info">Os dados deste protótipo são armazenados localmente neste navegador e não representam um banco de dados de produção.</Alert>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <StatCard label="Taxa de ocupação" value={`${occupancyRate.toFixed(1)}%`} sub={`${occupiedRooms.length} de ${availableRooms.length} UHs disponíveis`} icon="hotel" />
+      <StatCard label="RevPAR operacional" value={formatMoney(revPar)} sub="receita de hospedagem / UHs disponíveis" icon="banknote" />
+      <StatCard label="Receita recebida" value={formatMoney(receivedRevenue)} sub={`${formatMoney(serviceRevenue)} em extras lançados`} icon="trending-up" />
+      <StatCard label="Média de permanência" value={`${averageStay.toFixed(1)} diárias`} sub={`${stays.length} hospedagens consideradas`} icon="calendar-range" />
+    </div>
 
-        {/* Room status */}
-        <Card>
-          <SectionTitle>Status dos Quartos</SectionTitle>
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {roomStatus.map((s) => (
-              <div key={s.label}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                    <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: s.color, display: "inline-block", flexShrink: 0 }} />
-                    <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.82rem", color: "var(--text-body)" }}>{s.label}</span>
-                  </div>
-                  <span style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "0.85rem", color: s.color }}>{s.count}</span>
-                </div>
-                <div style={{ height: "5px", background: "var(--bg-page)", borderRadius: "3px" }}>
-                  <div style={{ height: "100%", width: `${s.pct}%`, background: s.color, borderRadius: "3px" }} />
-                </div>
-              </div>
-            ))}
-            <div style={{ display: "flex", justifyContent: "space-between", paddingTop: "8px", borderTop: "1px solid var(--brand-100)", marginTop: "4px" }}>
-              <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.78rem", color: "var(--text-muted)" }}>Total de quartos</span>
-              <span style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "0.82rem", color: "var(--brand-700)" }}>50</span>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Recent reservations */}
+    <div className="dashboard-operations-grid">
       <Card>
-        <SectionTitle>Reservas recentes</SectionTitle>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "2px solid var(--border)" }}>
-                {["Hóspede", "Quarto", "Check-in", "Check-out", "Status"].map((h) => (
-                  <th
-                    key={h}
-                    style={{
-                      fontFamily: "var(--font-sans)",
-                      fontWeight: 700,
-                      fontSize: "0.72rem",
-                      color: "var(--text-muted)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.06em",
-                      padding: "0 0 8px",
-                      textAlign: "left",
-                    }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {reservations.map((r, i) => (
-                <tr key={i} style={{ borderBottom: "1px solid var(--brand-100)" }}>
-                  {[r.guest, r.room, r.checkin, r.checkout].map((cell, j) => (
-                    <td
-                      key={j}
-                      style={{ fontFamily: "var(--font-sans)", fontSize: "0.85rem", color: "var(--text-body)", padding: "9px 0" }}
-                    >
-                      {cell}
-                    </td>
-                  ))}
-                  <td style={{ padding: "9px 0" }}>
-                    <Badge label={r.status} color={r.statusColor} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <SectionTitle>Situação operacional dos quartos</SectionTitle>
+        <div className="detail-list">{roomBreakdown.map((item) => <div className="dashboard-status-row" key={item.label}><span>{item.label}</span><div><strong>{item.value}</strong><Badge label={item.status} /></div></div>)}</div>
       </Card>
-
-      {/* Alerts */}
       <Card>
-        <SectionTitle>Alertas do sistema</SectionTitle>
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          {alerts.map((a, i) => (
-            <div
-              key={i}
-              style={{
-                ...alertStyle[a.type],
-                borderRadius: "0 10px 10px 0",
-                padding: "10px 14px",
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-              }}
-            >
-              <span style={{ display: "flex", flexShrink: 0 }}><Icon name={a.icon} /></span>
-              <p style={{ fontFamily: "var(--font-sans)", fontSize: "0.83rem", color: "var(--text-body)" }}>{a.msg}</p>
-            </div>
-          ))}
+        <SectionTitle>Alertas operacionais</SectionTitle>
+        <div className="detail-list">
+          {pendingCleaning > 0 && <Alert type="warning">{pendingCleaning} tarefa(s) de limpeza aguardando conclusão.</Alert>}
+          {blockedRooms > 0 && <Alert type="error">{blockedRooms} quarto(s) bloqueado(s) por manutenção.</Alert>}
+          {departuresToday > 0 && <Alert type="info">{departuresToday} saída(s) prevista(s) para hoje.</Alert>}
+          {pendingCleaning === 0 && blockedRooms === 0 && departuresToday === 0 && <Alert type="success">Nenhuma pendência operacional crítica.</Alert>}
         </div>
       </Card>
     </div>
-  );
+
+    <Card>
+      <SectionTitle>Reservas recentes</SectionTitle>
+      <Table headers={["Reserva", "Responsável", "Quarto", "Entrada", "Saída", "Contratação", "Valor", "Status"]} rows={recentReservations.map((reservation) => [
+        reservation.code,
+        reservation.guest,
+        rooms.find((room) => room.id === reservation.roomId)?.number ?? "—",
+        reservation.entry,
+        reservation.exit,
+        reservation.packageSnapshot?.name ?? "Tarifa convencional",
+        formatMoney(reservationBaseValue(reservation)),
+        <Badge label={reservation.status} />,
+      ])} />
+    </Card>
+
+    <Card>
+      <SectionTitle>Composição financeira do protótipo</SectionTitle>
+      <div className="summary-grid">
+        <Summary label="Hospedagem contratada" value={formatMoney(lodgingRevenue)} />
+        <Summary label="Consumos extras" value={formatMoney(serviceRevenue)} />
+        <Summary label="Recebimentos efetivos" value={formatMoney(receivedRevenue)} />
+        <Summary label="Contas a receber pendentes" value={formatMoney(pendingReceivables)} />
+        <Summary label="Contas a pagar pendentes" value={formatMoney(pendingPayables)} />
+        <Summary label="Saldo fisico do caixa" value={formatMoney(physicalCash)} />
+      </div>
+    </Card>
+    {confirmReset && <ConfirmDialog title="Restaurar dados de demonstração" description="Todos os dados operacionais armazenados localmente serão substituídos pelo conjunto inicial de demonstração." onCancel={() => setConfirmReset(false)} onConfirm={() => { resetDemonstrationData(); setConfirmReset(false); }} />}
+  </div>;
+}
+
+function Summary({ label, value }: { label: string; value: string }) {
+  return <div className="summary-item"><span>{label}</span><strong>{value}</strong></div>;
 }

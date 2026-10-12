@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Badge,
@@ -16,6 +16,8 @@ import {
   Tabs,
   Textarea,
 } from "../ui";
+import { useHotelOperations } from "../HotelOperationsContext";
+import { useDemoEngine } from "../demo/DemoEngineContext";
 
 type Tab = "limpeza" | "manutencao";
 type Status = "Pendente" | "Em andamento" | "Concluída" | "Cancelada";
@@ -38,6 +40,7 @@ interface TarefaLimpeza {
   condicaoQuarto?: string;
   registro?: string;
   motivoCancelamento?: string;
+  sourceTaskId?: number;
 }
 
 interface Manutencao {
@@ -57,6 +60,12 @@ interface Manutencao {
   servicoRealizado?: string;
   custo?: number;
   motivoCancelamento?: string;
+}
+
+interface OperationsSnapshot {
+  tarefas: TarefaLimpeza[];
+  manutencoes: Manutencao[];
+  updatedAt: string;
 }
 
 const initialTarefas: TarefaLimpeza[] = [
@@ -159,6 +168,28 @@ const initialManutencoes: Manutencao[] = [
   },
 ];
 
+const OPERATIONS_STORAGE_KEY = "hotel-pacaas-limpeza-manutencao";
+const OPERATIONS_CHANNEL = "hotel-pacaas-operacoes";
+
+function loadOperations(): OperationsSnapshot {
+  if (typeof window === "undefined") {
+    return { tarefas: initialTarefas, manutencoes: initialManutencoes, updatedAt: "" };
+  }
+  try {
+    const stored = window.localStorage.getItem(OPERATIONS_STORAGE_KEY);
+    if (!stored) {
+      return { tarefas: initialTarefas, manutencoes: initialManutencoes, updatedAt: "" };
+    }
+    const snapshot = JSON.parse(stored) as OperationsSnapshot;
+    if (!Array.isArray(snapshot.tarefas) || !Array.isArray(snapshot.manutencoes)) {
+      throw new Error("Invalid operations snapshot");
+    }
+    return snapshot;
+  } catch {
+    return { tarefas: initialTarefas, manutencoes: initialManutencoes, updatedAt: "" };
+  }
+}
+
 const statusColor: Record<Status, "green" | "yellow" | "blue" | "gray"> = {
   Pendente: "yellow",
   "Em andamento": "blue",
@@ -206,9 +237,20 @@ function formatDate(value?: string) {
 }
 
 export default function LimpezaManutencao() {
+  const { rooms, setRooms, housekeepingTasks, completeHousekeeping, setRoomMaintenance } = useHotelOperations();
+  const demo = useDemoEngine();
+  const storedOperations = useRef(loadOperations());
   const [tab, setTab] = useState<Tab>("limpeza");
-  const [tarefas, setTarefas] = useState<TarefaLimpeza[]>(initialTarefas);
-  const [manutencoes, setManutencoes] = useState<Manutencao[]>(initialManutencoes);
+  const [tarefas, setTarefas] = useState<TarefaLimpeza[]>(storedOperations.current.tarefas);
+  const [manutencoes, setManutencoes] = useState<Manutencao[]>(
+    storedOperations.current.manutencoes,
+  );
+  const [lastSync, setLastSync] = useState(
+    storedOperations.current.updatedAt || new Date().toISOString(),
+  );
+  const channelRef = useRef<BroadcastChannel | null>(null);
+  const applyingRemoteUpdate = useRef(false);
+  const lastSyncRef = useRef(lastSync);
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [busca, setBusca] = useState("");
@@ -226,8 +268,93 @@ export default function LimpezaManutencao() {
   const [motivoCancelamento, setMotivoCancelamento] = useState("");
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    setTarefas((current) => {
+      const knownSourceIds = new Set(current.map((item) => item.sourceTaskId).filter(Boolean));
+      const generated = housekeepingTasks
+        .filter((task) => !knownSourceIds.has(task.id))
+        .map<TarefaLimpeza>((task) => ({
+          id: 100000 + task.id,
+          sourceTaskId: task.id,
+          codigo: task.code,
+          quarto: rooms.find((room) => room.id === task.roomId)?.number ?? "—",
+          tipo: "Saída",
+          responsavel: "A definir",
+          agendamento: task.scheduledAt,
+          prioridade: task.priority,
+          observacoes: task.notes,
+          status: task.status,
+          conclusao: task.completedAt,
+          executadoPor: task.completedBy,
+          registro: task.status === "Concluída" ? task.notes : undefined,
+          condicaoQuarto: task.status === "Concluída" ? "Liberado" : undefined,
+        }));
+      return generated.length ? [...generated, ...current] : current;
+    });
+  }, [housekeepingTasks, rooms]);
+
+  useEffect(() => {
+    const applySnapshot = (snapshot: OperationsSnapshot) => {
+      if (!snapshot.updatedAt || snapshot.updatedAt <= lastSyncRef.current) return;
+      applyingRemoteUpdate.current = true;
+      lastSyncRef.current = snapshot.updatedAt;
+      setLastSync(snapshot.updatedAt);
+      setTarefas(snapshot.tarefas);
+      setManutencoes(snapshot.manutencoes);
+    };
+
+    if ("BroadcastChannel" in window) {
+      const channel = new BroadcastChannel(OPERATIONS_CHANNEL);
+      channel.onmessage = (event: MessageEvent<OperationsSnapshot>) =>
+        applySnapshot(event.data);
+      channelRef.current = channel;
+    }
+
+    const synchronizationTimer = window.setInterval(
+      () => applySnapshot(loadOperations()),
+      5000,
+    );
+
+    return () => {
+      window.clearInterval(synchronizationTimer);
+      channelRef.current?.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (applyingRemoteUpdate.current) {
+      applyingRemoteUpdate.current = false;
+      return;
+    }
+    const snapshot: OperationsSnapshot = {
+      tarefas,
+      manutencoes,
+      updatedAt: new Date().toISOString(),
+    };
+    window.localStorage.setItem(OPERATIONS_STORAGE_KEY, JSON.stringify(snapshot));
+    channelRef.current?.postMessage(snapshot);
+    lastSyncRef.current = snapshot.updatedAt;
+    setLastSync(snapshot.updatedAt);
+  }, [tarefas, manutencoes]);
+
   const selectedTarefa = tarefas.find((item) => item.id === selectedId) ?? null;
   const selectedManutencao = manutencoes.find((item) => item.id === selectedId) ?? null;
+  const roomByNumber = (number: string) => rooms.find((room) => room.number === number);
+  const roomOptions = rooms
+    .slice()
+    .sort((first, second) => first.number.localeCompare(second.number, "pt-BR", { numeric: true }));
+  const maintenanceLocations = [
+    ...roomOptions.map((room) => room.number),
+    "Recepção",
+    "Restaurante",
+    "Salão Ipê",
+    "Área técnica",
+  ];
+  const roomSummary = (number: string) => {
+    const room = roomByNumber(number);
+    if (!room) return "Local não vinculado";
+    return `${room.category} · ${room.occupancyStatus} · ${room.cleaningStatus} · ${room.maintenanceStatus}`;
+  };
 
   const tarefasFiltradas = tarefas.filter((item) => {
     const termo = busca.toLowerCase();
@@ -262,8 +389,23 @@ export default function LimpezaManutencao() {
   const openNew = () => {
     setSelectedId(null);
     setError("");
-    if (tab === "limpeza") setFormTarefa(emptyTarefa());
-    else setFormManutencao(emptyManutencao());
+    if (tab === "limpeza") setFormTarefa({
+      ...emptyTarefa(),
+      quarto: roomOptions.find((room) => room.cleaningStatus !== "Limpo" || room.status === "Livre")?.number ?? roomOptions[0]?.number ?? "",
+      responsavel: "LÃºcia Santos",
+      agendamento: new Date().toISOString().slice(0, 16),
+      prioridade: "Alta",
+      observacoes: "Preparar quarto para check-in demonstrativo.",
+    });
+    else setFormManutencao({
+      ...emptyManutencao(),
+      quarto: roomOptions.find((room) => room.maintenanceStatus === "Disponível" && room.occupancyStatus === "Livre")?.number ?? roomOptions[0]?.number ?? "Recepção",
+      categoria: "ElÃ©trica",
+      descricao: "Troca preventiva de lampada e teste de tomada para demonstracao.",
+      responsavel: "Roberto Alves",
+      agendamento: new Date().toISOString().slice(0, 16),
+      prioridade: "Média",
+    });
     setModalMode("new");
   };
 
@@ -322,6 +464,35 @@ export default function LimpezaManutencao() {
     setModalMode("complete");
   };
 
+  useEffect(() => {
+    const command = demo.activeCommand;
+    if (!command || command.target !== "limpeza" || command.command !== "open-housekeeping") return;
+    const source = housekeepingTasks.find((item) => item.id === demo.scenario?.ids.housekeepingTaskId);
+    if (!source) {
+      demo.resolveCommand(command.id, { status: "error", message: "Tarefa de limpeza do cenário não encontrada." });
+      return;
+    }
+    const id = 100000 + source.id;
+    setTab("limpeza");
+    setTarefas((current) => current.some((item) => item.sourceTaskId === source.id) ? current : [{
+      id, sourceTaskId: source.id, codigo: source.code,
+      quarto: rooms.find((room) => room.id === source.roomId)?.number ?? "—",
+      tipo: "Saída", responsavel: "Governança", agendamento: source.scheduledAt,
+      prioridade: source.priority, observacoes: source.notes, status: source.status,
+    }, ...current]);
+    setSelectedId(id);
+    setCompletion({
+      executadoPor: "Governança",
+      dataHora: new Date().toISOString().slice(0, 16),
+      condicaoQuarto: "Liberado",
+      descricao: "Limpeza de saída concluída e quarto vistoriado.",
+      custo: "",
+    });
+    setError("");
+    setModalMode("complete");
+    demo.resolveCommand(command.id, { status: "running", message: "Tarefa de limpeza aberta. Revise e confirme a conclusão." });
+  }, [demo.activeCommand]);
+
   const openCancel = (id: number) => {
     setSelectedId(id);
     setMotivoCancelamento("");
@@ -336,6 +507,15 @@ export default function LimpezaManutencao() {
         setError("Informe quarto, responsável e agendamento.");
         return;
       }
+      const room = roomByNumber(formTarefa.quarto);
+      if (!room) {
+        setError("Selecione um quarto cadastrado.");
+        return;
+      }
+      if (formTarefa.tipo !== "Estadia" && room.occupancyStatus === "Ocupado") {
+        setError(`O quarto ${room.number} está ocupado. Para hóspede em permanência, use limpeza de estadia.`);
+        return;
+      }
       if (modalMode === "new") {
         setTarefas((current) => [
           {
@@ -345,6 +525,7 @@ export default function LimpezaManutencao() {
           },
           ...current,
         ]);
+        setRooms((current) => current.map((room) => room.number === formTarefa.quarto ? { ...room, cleaningStatus: formTarefa.status === "Em andamento" ? "Em limpeza" : room.cleaningStatus } : room));
       } else if (selectedId) {
         setTarefas((current) =>
           current.map((item) =>
@@ -372,6 +553,11 @@ export default function LimpezaManutencao() {
         setError("Preencha todos os campos obrigatórios.");
         return;
       }
+      const selectedRoom = roomByNumber(formManutencao.quarto);
+      if (selectedRoom?.occupancyStatus === "Ocupado") {
+        setError(`O quarto ${selectedRoom.number} está ocupado. Não é possível bloqueá-lo para manutenção neste fluxo.`);
+        return;
+      }
       if (modalMode === "new") {
         setManutencoes((current) => [
           {
@@ -382,6 +568,7 @@ export default function LimpezaManutencao() {
           },
           ...current,
         ]);
+        if (selectedRoom) setRoomMaintenance(formManutencao.quarto, true);
       } else if (selectedId) {
         setManutencoes((current) =>
           current.map((item) =>
@@ -400,6 +587,34 @@ export default function LimpezaManutencao() {
       return;
     }
     if (tab === "limpeza") {
+      const task = tarefas.find((item) => item.id === selectedId);
+      const room = rooms.find((item) => item.number === task?.quarto);
+      if (completion.condicaoQuarto === "Liberado" && room?.occupancyStatus === "Ocupado") {
+        setError(`O quarto ${room.number} ainda está ocupado. Registre como limpeza de estadia ou finalize o check-out antes de liberar.`);
+        return;
+      }
+      if (task?.sourceTaskId) {
+        const result = completeHousekeeping(task.sourceTaskId, completion.executadoPor, completion.descricao);
+        if (!result.ok) {
+          setError(result.error ?? "Não foi possível liberar o quarto.");
+          return;
+        }
+        if (completion.condicaoQuarto !== "Liberado") {
+          setRooms((current) => current.map((room) => room.number === task.quarto ? {
+            ...room,
+            cleaningStatus: completion.condicaoQuarto === "Necessita inspeção" ? "Em limpeza" : "Sujo",
+            maintenanceStatus: completion.condicaoQuarto === "Bloqueado para manutenção" ? "Bloqueado" : room.maintenanceStatus,
+            status: completion.condicaoQuarto === "Bloqueado para manutenção" ? "Em manutenção" : room.status,
+          } : room));
+        }
+      } else if (task) {
+        setRooms((current) => current.map((room) => room.number === task.quarto ? {
+          ...room,
+          cleaningStatus: completion.condicaoQuarto === "Liberado" ? "Limpo" : completion.condicaoQuarto === "Necessita inspeção" ? "Em limpeza" : "Sujo",
+          maintenanceStatus: completion.condicaoQuarto === "Bloqueado para manutenção" ? "Bloqueado" : room.maintenanceStatus,
+          status: completion.condicaoQuarto === "Bloqueado para manutenção" ? "Em manutenção" : room.status,
+        } : room));
+      }
       setTarefas((current) =>
         current.map((item) =>
           item.id === selectedId
@@ -416,6 +631,8 @@ export default function LimpezaManutencao() {
         ),
       );
     } else {
+      const maintenance = manutencoes.find((item) => item.id === selectedId);
+      if (maintenance) setRoomMaintenance(maintenance.quarto, false);
       setManutencoes((current) =>
         current.map((item) =>
           item.id === selectedId
@@ -448,6 +665,8 @@ export default function LimpezaManutencao() {
         ),
       );
     } else {
+      const maintenance = manutencoes.find((item) => item.id === selectedId);
+      if (maintenance) setRoomMaintenance(maintenance.quarto, false);
       setManutencoes((current) =>
         current.map((item) =>
           item.id === selectedId
@@ -476,10 +695,24 @@ export default function LimpezaManutencao() {
         title="Limpeza & Manutenção"
         actions={
           <Btn onClick={openNew}>
-            {tab === "limpeza" ? "Nova tarefa de limpeza" : "Nova manutenção"}
+            {tab === "limpeza" ? "+ Nova tarefa de limpeza" : "+ Nova manutenção"}
           </Btn>
         }
       />
+
+      <Card className="border-l-4 border-l-primary">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <Badge label="Ao vivo" color="green" />
+            <p className="text-sm font-bold text-primary">
+              Painel compartilhado entre recepção e governança
+            </p>
+          </div>
+          <p className="text-xs text-gray-500">
+            Sincronização em até 5 segundos · última atualização {formatDate(lastSync)}
+          </p>
+        </div>
+      </Card>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {statItems.map((item) => (
@@ -558,7 +791,7 @@ export default function LimpezaManutencao() {
             ]}
             rows={tarefasFiltradas.map((item) => [
               item.codigo,
-              item.quarto,
+              <div><strong>{item.quarto}</strong><p className="text-xs text-muted">{roomSummary(item.quarto)}</p></div>,
               item.tipo,
               item.responsavel,
               formatDate(item.agendamento),
@@ -599,7 +832,7 @@ export default function LimpezaManutencao() {
             ]}
             rows={manutencoesFiltradas.map((item) => [
               item.codigo,
-              item.quarto,
+              <div><strong>{item.quarto}</strong><p className="text-xs text-muted">{roomSummary(item.quarto)}</p></div>,
               item.tipo,
               item.categoria,
               item.responsavel,
@@ -646,14 +879,20 @@ export default function LimpezaManutencao() {
           <FormGrid cols={2}>
             {tab === "limpeza" ? (
               <>
-                <Input
+                <Select
                   label="Quarto *"
-                  placeholder="Ex.: 204"
                   value={formTarefa.quarto}
                   onChange={(event) =>
                     setFormTarefa((current) => ({ ...current, quarto: event.target.value }))
                   }
-                />
+                >
+                  <option value="">Selecione um quarto cadastrado</option>
+                  {roomOptions.map((room) => (
+                    <option key={room.id} value={room.number}>
+                      {room.number} — {room.category} · {room.occupancyStatus} · {room.cleaningStatus} · {room.maintenanceStatus}
+                    </option>
+                  ))}
+                </Select>
                 <Select
                   label="Tipo de limpeza *"
                   value={formTarefa.tipo}
@@ -740,9 +979,8 @@ export default function LimpezaManutencao() {
               </>
             ) : (
               <>
-                <Input
+                <Select
                   label="Quarto ou local *"
-                  placeholder="Ex.: 108 ou Salão Ipê"
                   value={formManutencao.quarto}
                   onChange={(event) =>
                     setFormManutencao((current) => ({
@@ -750,7 +988,14 @@ export default function LimpezaManutencao() {
                       quarto: event.target.value,
                     }))
                   }
-                />
+                >
+                  <option value="">Selecione</option>
+                  {maintenanceLocations.map((location) => (
+                    <option key={location} value={location}>
+                      {location}{roomByNumber(location) ? ` — ${roomSummary(location)}` : " — área comum"}
+                    </option>
+                  ))}
+                </Select>
                 <Select
                   label="Tipo *"
                   value={formManutencao.tipo}
@@ -892,12 +1137,20 @@ export default function LimpezaManutencao() {
                   <Info label="Orientações" value={selectedTarefa.observacoes || "Sem observações."} />
                 </FullCol>
                 {selectedTarefa.registro && (
-                  <FullCol>
-                    <Info
-                      label={`Registro da limpeza — ${selectedTarefa.condicaoQuarto}`}
-                      value={selectedTarefa.registro}
-                    />
-                  </FullCol>
+                  <>
+                    <FullCol>
+                      <Info
+                        label={`Registro da limpeza — ${selectedTarefa.condicaoQuarto}`}
+                        value={selectedTarefa.registro}
+                      />
+                    </FullCol>
+                    <FullCol>
+                      <Alert type="success">
+                        Conclusão registrada por {selectedTarefa.executadoPor} em{" "}
+                        {formatDate(selectedTarefa.conclusao)}. Este registro é imutável.
+                      </Alert>
+                    </FullCol>
+                  </>
                 )}
                 {selectedTarefa.motivoCancelamento && (
                   <FullCol>
@@ -929,12 +1182,20 @@ export default function LimpezaManutencao() {
                     <Info label="Descrição" value={selectedManutencao.descricao} />
                   </FullCol>
                   {selectedManutencao.servicoRealizado && (
-                    <FullCol>
-                      <Info
-                        label={`Serviço realizado em ${formatDate(selectedManutencao.conclusao)}`}
-                        value={`${selectedManutencao.servicoRealizado} Custo: ${(selectedManutencao.custo ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.`}
-                      />
-                    </FullCol>
+                    <>
+                      <FullCol>
+                        <Info
+                          label={`Serviço realizado em ${formatDate(selectedManutencao.conclusao)}`}
+                          value={`${selectedManutencao.servicoRealizado} Custo: ${(selectedManutencao.custo ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.`}
+                        />
+                      </FullCol>
+                      <FullCol>
+                        <Alert type="success">
+                          Conclusão registrada por {selectedManutencao.executadoPor} em{" "}
+                          {formatDate(selectedManutencao.conclusao)}. Este registro é imutável.
+                        </Alert>
+                      </FullCol>
+                    </>
                   )}
                   {selectedManutencao.motivoCancelamento && (
                     <FullCol>
@@ -962,6 +1223,12 @@ export default function LimpezaManutencao() {
           onClose={closeModal}
         >
           <FormGrid cols={2}>
+            <FullCol>
+              <Alert type="warning">
+                Após confirmar, data, hora, responsável e detalhes da conclusão não poderão
+                ser editados.
+              </Alert>
+            </FullCol>
             <Input
               label="Executado por *"
               value={completion.executadoPor}

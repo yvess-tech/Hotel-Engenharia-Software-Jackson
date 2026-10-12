@@ -1,22 +1,41 @@
-import { useState } from "react";
 import LoginPage from "./components/LoginPage";
 import AppShell from "./components/AppShell";
+import {
+  AccessControlProvider,
+  useAccessControl,
+  type SessionUser,
+} from "./access-control";
 
-export type User = {
-  name: string;
-  role: string;
-  email: string;
-};
+export type User = SessionUser;
 
-export default function App() {
-  const [user, setUser] = useState<User | null>(null);
+function AppContent() {
+  const { authenticate, recoverPassword, endSession, activeSession: user } =
+    useAccessControl();
 
-  const handleLogin = (email: string, _password: string) => {
-    setUser({ name: "João Carlos", role: "Administrador", email });
+  const handleLogin = (email: string, password: string) => {
+    const result = authenticate(email, password);
+    return result.error;
   };
 
-  const handleLogout = () => setUser(null);
+  const handleLogout = () => {
+    endSession();
+  };
 
-  if (!user) return <LoginPage onLogin={handleLogin} />;
+  if (!user) {
+    return (
+      <LoginPage
+        onLogin={handleLogin}
+        onRecoverPassword={recoverPassword}
+      />
+    );
+  }
   return <AppShell user={user} onLogout={handleLogout} />;
+}
+
+export default function App() {
+  return (
+    <AccessControlProvider>
+      <AppContent />
+    </AccessControlProvider>
+  );
 }

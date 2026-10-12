@@ -1,5 +1,6 @@
 import type { User } from "../App";
 import type { Page } from "./AppShell";
+import { Btn, Icon } from "./ui";
 
 const SERIF = "'Inria Serif', Georgia, serif";
 
@@ -27,10 +28,11 @@ type Props = {
   onLogout: () => void;
   onMenuToggle: () => void;
   currentPage: Page;
+  onPresent: () => void;
 };
 
-export default function TopBar({ user, onLogout, onMenuToggle, currentPage }: Props) {
-  const today = "30/09/2026";
+export default function TopBar({ user, onLogout, onMenuToggle, currentPage, onPresent }: Props) {
+  const today = new Date().toLocaleDateString("pt-BR");
 
   return (
     <header
@@ -109,6 +111,9 @@ export default function TopBar({ user, onLogout, onMenuToggle, currentPage }: Pr
 
       {/* Right */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div className="presentation-trigger">
+          <Btn variant="secondary" small onClick={onPresent}><Icon name="presentation" size={16} /><span>Tour do Sistema</span></Btn>
+        </div>
         {/* User info */}
         <div style={{ textAlign: "right", display: "flex", flexDirection: "column" }}>
           <p

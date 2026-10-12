@@ -3,7 +3,10 @@ import { useState, type ReactNode, type InputHTMLAttributes, type SelectHTMLAttr
 export type IconName =
   | "hotel" | "banknote" | "trending-up" | "calendar-range" | "package"
   | "octagon-alert" | "triangle-alert" | "arrow-left-right" | "gift"
-  | "badge-check" | "percent" | "circle-pause" | "paperclip" | "file-text" | "x" | "chevron-down";
+  | "badge-check" | "percent" | "circle-pause" | "paperclip" | "file-text" | "x" | "chevron-down"
+  | "eye" | "pencil" | "history" | "trash" | "download" | "printer" | "send"
+  | "rotate-ccw" | "log-in" | "log-out" | "users" | "key-round" | "link" | "unlink"
+  | "presentation";
 
 export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   const paths: Record<IconName, ReactNode> = {
@@ -23,6 +26,21 @@ export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
     "file-text": <><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5Z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8M16 17H8M10 9H8"/></>,
     x: <><path d="M18 6 6 18M6 6l12 12"/></>,
     "chevron-down": <path d="m6 9 6 6 6-6"/>,
+    eye: <><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.22 10.22 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.22 10.22 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/></>,
+    pencil: <><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></>,
+    history: <><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l4 2"/></>,
+    trash: <><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5"/></>,
+    download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></>,
+    printer: <><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></>,
+    send: <><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></>,
+    "rotate-ccw": <><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></>,
+    "log-in": <><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></>,
+    "log-out": <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></>,
+    users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></>,
+    "key-round": <><path d="M2.6 15.4a6 6 0 1 0 8-8L2 16v4h4l1-1v-2h2l1.4-1.4"/><circle cx="16.5" cy="7.5" r=".5"/></>,
+    link: <><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></>,
+    unlink: <><path d="m18.84 12.25 1.7-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71M5.17 11.75l-1.71 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71M8 2v3M2 8h3M16 19v3M19 16h3"/></>,
+    presentation: <><path d="M2 3h20M4 3v13h16V3M8 21l4-5 4 5M8 9h2v3H8zM14 7h2v5h-2z"/></>,
   };
   return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
 }
@@ -31,7 +49,7 @@ const rfMap: Record<string, string> = {
   "Hóspedes": "RF01–RF08", "Reservas": "RF09–RF20", "Quartos": "RF21–RF28",
   "Check-in / Check-out": "RF29–RF36", "Consumos": "RF37–RF40", "Estoque": "RF41–RF47",
   "Pacotes": "RF48–RF59", "Financeiro": "RF60–RF76", "Funcionários": "RF77–RF96",
-  "Limpeza & Manutenção": "RF97–RF106", "Eventos": "RF107–RF118", "Comunicações": "RF119–RF121",
+  "Limpeza & Manutenção": "RF79–RF88", "Eventos": "RF89–RF100", "Comunicações": "RF101–RF103",
   "Fiscal": "RF122–RF132", "Usuários & Acesso": "RF133–RF148", "Relatórios": "RF149–RF159",
 };
 
@@ -52,13 +70,41 @@ export function StatCard(props: { label: string; value: string; sub?: string; ic
 }
 
 type BtnVariant = "primary" | "secondary" | "danger" | "ghost";
+
+function recordActionIcon(label: string): IconName | null {
+  const action = label.trim().toLocaleLowerCase("pt-BR");
+  if (/^(ver|ver detalhes|visualizar|visualizar fatura|consultar)$/.test(action)) return "eye";
+  if (/^(editar|atualizar)$/.test(action)) return "pencil";
+  if (action === "histórico") return "history";
+  if (/^(cancelar|cancelar reserva|rejeitar)$/.test(action)) return "x";
+  if (action === "excluir") return "trash";
+  if (action === "inativar") return "circle-pause";
+  if (/^(ativar|aprovar|registrar limpeza|registrar execução|conciliar)$/.test(action)) return "badge-check";
+  if (action === "baixar") return "download";
+  if (action === "imprimir") return "printer";
+  if (/^(enviar)$/.test(action)) return "send";
+  if (/^(reenviar|reemitir|estornar)$/.test(action)) return "rotate-ccw";
+  if (action === "iniciar check-in") return "log-in";
+  if (action === "realizar check-out") return "log-out";
+  if (action === "emitir fatura") return "file-text";
+  if (/^(pagar|receber)$/.test(action)) return "banknote";
+  if (action === "perfis") return "users";
+  if (action === "atualizar senha") return "key-round";
+  if (action === "associar perfil") return "link";
+  if (action === "remover perfil") return "unlink";
+  if (action === "+ repor") return "package";
+  return null;
+}
+
 export function Btn({ children, onClick, variant = "primary", type = "button", small, fullWidth, disabled }: { children: ReactNode; onClick?: () => void; variant?: BtnVariant; type?: "button" | "submit"; small?: boolean; fullWidth?: boolean; disabled?: boolean }) {
   const [confirming, setConfirming] = useState(false);
+  const actionLabel = small && typeof children === "string" ? children.trim() : "";
+  const actionIcon = actionLabel ? recordActionIcon(actionLabel) : null;
   const activate = () => {
     if (disabled) return;
     variant === "danger" && onClick ? setConfirming(true) : onClick?.();
   };
-  return <><button type={type} disabled={disabled} onClick={activate} className={`ds-button ds-button--${variant}${small ? " ds-button--small" : ""}${fullWidth ? " ds-button--full" : ""}`}>{children}</button>{confirming && <ConfirmDialog title="Confirmar ação" description="Esta ação pode alterar ou remover informações. Deseja continuar?" onCancel={() => setConfirming(false)} onConfirm={() => { setConfirming(false); onClick?.(); }}/>}</>;
+  return <><button type={type} disabled={disabled} onClick={activate} aria-label={actionIcon ? actionLabel : undefined} title={actionIcon ? actionLabel : undefined} data-tooltip={actionIcon ? actionLabel : undefined} className={`ds-button ds-button--${variant}${small ? " ds-button--small" : ""}${fullWidth ? " ds-button--full" : ""}${actionIcon ? " ds-button--record-action" : ""}`}>{actionIcon ? <Icon name={actionIcon} size={16}/> : children}</button>{confirming && <ConfirmDialog title="Confirmar ação" description="Esta ação pode alterar ou remover informações. Deseja continuar?" onCancel={() => setConfirming(false)} onConfirm={() => { setConfirming(false); onClick?.(); }}/>}</>;
 }
 
 function FieldLabel({ children }: { children: ReactNode }) { return <label className="field-label">{children}</label>; }
@@ -74,12 +120,12 @@ export function Select({ label, children, ...props }: { label?: string } & Selec
 
 type StatusTone = "ok" | "info" | "reserved" | "warn" | "danger" | "neutral";
 const statusTones: Record<string, StatusTone> = {
-  Livre: "ok", Ativo: "ok", OK: "ok", Vigente: "ok", "Concluída": "ok", Concluído: "ok", Confirmado: "ok", "Documento conferido": "ok", Disponível: "ok", Enviado: "ok", Pago: "ok", Recebido: "ok", Conciliado: "ok", Aprovado: "ok",
+  Livre: "ok", Limpo: "ok", Ativo: "ok", Ativa: "ok", OK: "ok", Vigente: "ok", "Concluída": "ok", Concluído: "ok", Confirmado: "ok", "Documento conferido": "ok", Disponível: "ok", Enviado: "ok", Enviada: "ok", Pago: "ok", Recebido: "ok", Conciliado: "ok", Aprovado: "ok",
   Ocupado: "info", Hospedado: "info", Confirmada: "info", "Check-in": "info", Entrada: "info",
   Reservado: "reserved",
-  Manutenção: "warn", "Em manutenção": "warn", "Documento pendente": "warn", Aguardando: "warn", Baixo: "warn", Pendente: "warn", Médio: "warn",
-  Crítico: "danger", Cancelada: "danger", Cancelado: "danger", Estornado: "danger", Falha: "danger", Divergente: "danger", Saída: "danger", Urgente: "danger",
-  Finalizado: "neutral", Inativo: "neutral",
+  Manutenção: "warn", "Em manutenção": "warn", "Em limpeza": "warn", "Documento pendente": "warn", Aguardando: "warn", Baixo: "warn", Pendente: "warn", Médio: "warn",
+  Crítico: "danger", Erro: "danger", Sujo: "danger", Bloqueado: "danger", Bloqueada: "danger", Cancelada: "danger", Cancelado: "danger", Estornado: "danger", Falha: "danger", Divergente: "danger", Saída: "danger", Urgente: "danger",
+  Finalizado: "neutral", Inativo: "neutral", Simulada: "neutral", "Não executada": "neutral",
 };
 export function StatusBadge({ status, tone }: { status: string; tone?: StatusTone }) { return <span className={`status-badge status-badge--${tone ?? statusTones[status] ?? "neutral"}`}>{status}</span>; }
 export function Badge({ label }: { label: string; color?: "green" | "red" | "yellow" | "blue" | "gray" | "purple" }) { return <StatusBadge status={label}/>; }
@@ -93,7 +139,7 @@ export function Table({ headers, rows }: { headers: string[]; rows: ReactNode[][
 }
 
 export function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
-  return <div className="modal-overlay" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}><div className={`modal-panel${wide ? " modal-panel--wide" : ""}`} role="dialog" aria-modal="true" aria-label={title}><div className="modal-header"><h2>{title}</h2><button className="modal-close" onClick={onClose} aria-label="Fechar"><Icon name="x" size={18}/></button></div><div className="modal-content">{children}</div></div></div>;
+  return <div className="modal-overlay"><div className={`modal-panel${wide ? " modal-panel--wide" : ""}`} role="dialog" aria-modal="true" aria-label={title}><div className="modal-header"><h2>{title}</h2><button className="modal-close" onClick={onClose} aria-label="Fechar"><Icon name="x" size={18}/></button></div><div className="modal-content">{children}</div></div></div>;
 }
 
 export function ConfirmDialog({ title, description, onConfirm, onCancel }: { title: string; description: string; onConfirm: () => void; onCancel: () => void }) {

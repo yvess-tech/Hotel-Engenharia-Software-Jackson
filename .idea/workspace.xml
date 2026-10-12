@@ -7,6 +7,33 @@
     <list default="true" id="d066661a-c5ce-4082-b4d7-22267333271e" name="Changes" comment="teste de segurança">
       <change beforePath="$PROJECT_DIR$/.gitattributes" beforeDir="false" afterPath="$PROJECT_DIR$/.gitattributes" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/assets/images/login-hero.webp" beforeDir="false" afterPath="$PROJECT_DIR$/src/assets/images/login-hero.webp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/AppShell.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/AppShell.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/HotelOperationsContext.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/HotelOperationsContext.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/LoginPage.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/LoginPage.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/Sidebar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/Sidebar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/TopBar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/TopBar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/CheckInOut.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/CheckInOut.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Comunicacoes.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Comunicacoes.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Consumos.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Consumos.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Dashboard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Dashboard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Estoque.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Estoque.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Eventos.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Eventos.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Financeiro.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Financeiro.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Fiscal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Fiscal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Funcionarios.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Funcionarios.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Hospedes.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Hospedes.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/LimpezaManutencao.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/LimpezaManutencao.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Pacotes.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Pacotes.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Quartos.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Quartos.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Relatorios.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Relatorios.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Reservas.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Reservas.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Usuarios.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Usuarios.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/ui.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/ui.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/index.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/index.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vite.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/vite.config.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -14,7 +41,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="81" />
+    <option name="cachedIndexableFilesCount" value="99" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
@@ -59,15 +86,18 @@
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;feat/us-3/projeto-final&quot;,
     &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;npm.dev.executor&quot;: &quot;Run&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;database.data.views.appearance&quot;,
+    &quot;npm.dev.executor&quot;: &quot;Debug&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;settings.sync&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
     &quot;ts.external.directory.path&quot;: &quot;F:\\Desenvolvimento\\Hotel-Engenharia-Software-Jackson\\node_modules\\typescript\\lib&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
@@ -100,7 +130,12 @@
       <updated>1789322755257</updated>
       <workItem from="1789322756392" duration="5406000" />
       <workItem from="1791253409042" duration="1688000" />
-      <workItem from="1791255538589" duration="1289000" />
+      <workItem from="1791255538589" duration="1687000" />
+      <workItem from="1791678517593" duration="435000" />
+      <workItem from="1791750860751" duration="444000" />
+      <workItem from="1791751482951" duration="877000" />
+      <workItem from="1791752462849" duration="7216000" />
+      <workItem from="1791815379660" duration="8946000" />
     </task>
     <task id="LOCAL-00001" summary="Versão 1  projeto de hotel">
       <option name="closed" value="true" />
@@ -142,7 +177,15 @@
       <option name="project" value="LOCAL" />
       <updated>1791256036845</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="teste de segurança">
+      <option name="closed" value="true" />
+      <created>1791256931255</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1791256931255</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

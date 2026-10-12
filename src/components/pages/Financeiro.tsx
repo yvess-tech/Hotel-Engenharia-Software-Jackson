@@ -1,742 +1,376 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  PageHeader, Card, Btn, Input, Select, Table, Modal,
-  Badge, SectionTitle, Tabs, FormGrid, FullCol, FormActions, KpiCard, StatusBadge, formatDisplayDate,
+  Alert, Badge, Btn, Card, FormActions, FormGrid, FullCol, Input, Modal, PageHeader,
+  SectionTitle, Select, Table, Tabs, Textarea, formatDisplayDate,
 } from "../ui";
+import {
+  PAYMENT_METHODS,
+  derivePayableStatus,
+  formatMoney,
+  isCashPayment,
+  paymentMethodLabel,
+  pendingBalance,
+  reservationBaseValue,
+  today,
+  useHotelOperations,
+  type CashMovement,
+  type CostCenter,
+  type PayableAccount,
+  type Reservation,
+} from "../HotelOperationsContext";
+import { useDemoEngine } from "../demo/DemoEngineContext";
 
-const SERIF = "'Inria Serif', Georgia, serif";
+type Tab = "receber" | "pagar" | "caixa" | "centros" | "conciliacao";
+type ModalType = "receber" | "receberEvento" | "newPagar" | "editPagar" | "payPagar" | "abrirCaixa" | "fecharCaixa" | "movCaixa" | "newCentro" | "editCentro" | "concilia" | null;
 
-/* ── tipos ───────────────────────────────────────────────────────────── */
-type SituacaoPagar    = "Pendente" | "Pago" | "Vencido" | "Cancelado";
-type SituacaoReceber  = "Pendente" | "Recebido" | "Parcial" | "Vencido" | "Cancelado";
-type SituacaoCaixa    = "Aberto" | "Fechado";
-type SituacaoConcilia = "Conciliado" | "Divergente" | "Pendente";
-type Tab = "pagar" | "receber" | "caixa" | "centrocusto" | "conciliacao";
+const methodOptions = PAYMENT_METHODS.map((method) => ({ value: method.id, label: method.label }));
+const emptyPayable = { description: "", supplier: "", category: "Operacional", costCenterId: "", originalValue: "", dueDate: today(), notes: "" };
+const emptyPayment = { value: "", method: "pix", responsible: "Administracao", notes: "", date: today() };
+const emptyReceipt = { value: "", method: "pix", responsible: "Recepcao", notes: "", date: today() };
 
-interface ContaPagar {
-  id: number;
-  descricao: string;
-  fornecedor: string;
-  valor: number;
-  vencimento: string;
-  pagamento: string;
-  formaPagamento: string;
-  centroCusto: string;
-  situacao: SituacaoPagar;
-  observacoes: string;
-  dataCadastro: string;
-}
-
-interface ContaReceber {
-  id: number;
-  descricao: string;
-  cliente: string;
-  valor: number;
-  valorRecebido: number;
-  vencimento: string;
-  recebimento: string;
-  formaPagamento: string;
-  centroCusto: string;
-  situacao: SituacaoReceber;
-  observacoes: string;
-  dataCadastro: string;
-}
-
-interface Caixa {
-  id: number;
-  data: string;
-  operador: string;
-  valorAbertura: number;
-  valorFechamento: number | null;
-  entradas: number;
-  saidas: number;
-  situacao: SituacaoCaixa;
-  observacoes: string;
-}
-
-interface CentroCusto {
-  id: number;
-  codigo: string;
-  nome: string;
-  descricao: string;
-  ativo: boolean;
-  receitas: number;
-  despesas: number;
-}
-
-interface ConciliacaoBancaria {
-  id: number;
-  data: string;
-  descricao: string;
-  valorBanco: number;
-  valorSistema: number;
-  tipo: "Crédito" | "Débito";
-  situacao: SituacaoConcilia;
-  observacoes: string;
-}
-
-/* ── helpers ─────────────────────────────────────────────────────────── */
-const fmt = (v: number) =>
-  "R$ " + v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-const situacaoPagarColor: Record<SituacaoPagar, "yellow" | "green" | "red" | "gray"> = {
-  Pendente:  "yellow",
-  Pago:      "green",
-  Vencido:   "red",
-  Cancelado: "gray",
-};
-const situacaoReceberColor: Record<SituacaoReceber, "yellow" | "green" | "blue" | "red" | "gray"> = {
-  Pendente:  "yellow",
-  Recebido:  "green",
-  Parcial:   "blue",
-  Vencido:   "red",
-  Cancelado: "gray",
-};
-const conciliaColor: Record<SituacaoConcilia, "green" | "red" | "yellow"> = {
-  Conciliado: "green",
-  Divergente: "red",
-  Pendente:   "yellow",
-};
-
-const centrosNomes = ["Hospedagem", "Restaurante", "Eventos", "Spa", "Manutenção", "Geral"];
-const formasPagamento = ["Dinheiro", "PIX", "Cartão de débito", "Cartão de crédito", "TED/DOC", "Boleto", "Cheque"];
-
-/* ── dados iniciais ──────────────────────────────────────────────────── */
-const initialPagar: ContaPagar[] = [
-  { id: 1, descricao: "Fornecedor lavanderia – setembro",  fornecedor: "Lavanderia Brilho",   valor: 1200, vencimento: "2026-09-25", pagamento: "",           formaPagamento: "TED/DOC",            centroCusto: "Hospedagem",  situacao: "Pendente",  observacoes: "",                    dataCadastro: "2026-09-01" },
-  { id: 2, descricao: "Energia elétrica – setembro",       fornecedor: "ENERGISA",            valor: 3400, vencimento: "2026-09-20", pagamento: "",           formaPagamento: "Boleto",             centroCusto: "Geral",       situacao: "Pendente",  observacoes: "",                    dataCadastro: "2026-09-05" },
-  { id: 3, descricao: "Internet fibra – setembro",         fornecedor: "Claro Empresas",      valor: 580,  vencimento: "2026-09-10", pagamento: "2026-09-10", formaPagamento: "Débito automático", centroCusto: "Geral",       situacao: "Pago",      observacoes: "",                    dataCadastro: "2026-09-01" },
-  { id: 4, descricao: "Insumos de limpeza",                fornecedor: "Distribuidora Clean", valor: 890,  vencimento: "2026-09-18", pagamento: "",           formaPagamento: "PIX",               centroCusto: "Hospedagem",  situacao: "Pendente",  observacoes: "3 parcelas restantes",dataCadastro: "2026-09-10" },
-  { id: 5, descricao: "Aluguel de equipamentos – eventos", fornecedor: "Som & Luz RO",        valor: 2500, vencimento: "2026-09-05", pagamento: "",           formaPagamento: "TED/DOC",            centroCusto: "Eventos",     situacao: "Vencido",   observacoes: "",                    dataCadastro: "2026-08-28" },
-];
-
-const initialReceber: ContaReceber[] = [
-  { id: 1, descricao: "Reserva #1001 – Ana Lima",       cliente: "Ana Lima",          valor: 1500,  valorRecebido: 1500,  vencimento: "2026-09-13", recebimento: "2026-09-13", formaPagamento: "PIX",              centroCusto: "Hospedagem",  situacao: "Recebido", observacoes: "",                  dataCadastro: "2026-09-01" },
-  { id: 2, descricao: "Evento corporativo – TechNorte", cliente: "TechNorte LTDA",    valor: 8500,  valorRecebido: 4250,  vencimento: "2026-09-20", recebimento: "",           formaPagamento: "TED/DOC",           centroCusto: "Eventos",     situacao: "Parcial",  observacoes: "50% antecipado",    dataCadastro: "2026-09-05" },
-  { id: 3, descricao: "Reserva #1005 – Carlos Mota",   cliente: "Carlos Mota",       valor: 2400,  valorRecebido: 0,     vencimento: "2026-09-25", recebimento: "",           formaPagamento: "Cartão de crédito", centroCusto: "Hospedagem",  situacao: "Pendente", observacoes: "",                  dataCadastro: "2026-09-10" },
-  { id: 4, descricao: "Pacote spa – Fernanda Reis",     cliente: "Fernanda Reis",     valor: 600,   valorRecebido: 0,     vencimento: "2026-09-01", recebimento: "",           formaPagamento: "Dinheiro",          centroCusto: "Spa",         situacao: "Vencido",  observacoes: "Hóspede saiu sem pagar",dataCadastro: "2026-08-30" },
-];
-
-const initialCaixas: Caixa[] = [
-  { id: 1, data: "2026-09-17", operador: "João Carlos",  valorAbertura: 5000, valorFechamento: null,   entradas: 3200, saidas: 1100, situacao: "Aberto",  observacoes: "" },
-  { id: 2, data: "2026-09-16", operador: "Maria Costa",  valorAbertura: 5000, valorFechamento: 18200,  entradas: 8450, saidas: 2050, situacao: "Fechado", observacoes: "" },
-  { id: 3, data: "2026-09-15", operador: "João Carlos",  valorAbertura: 5000, valorFechamento: 16700,  entradas: 6900, saidas: 1800, situacao: "Fechado", observacoes: "" },
-];
-
-const initialCentros: CentroCusto[] = [
-  { id: 1, codigo: "CC-001", nome: "Hospedagem",  descricao: "Receitas e despesas de diárias e serviços de quarto", ativo: true,  receitas: 32400, despesas: 8200  },
-  { id: 2, codigo: "CC-002", nome: "Restaurante", descricao: "Alimentação: café da manhã, almoço, jantar",          ativo: true,  receitas: 12600, despesas: 5400  },
-  { id: 3, codigo: "CC-003", nome: "Eventos",     descricao: "Eventos corporativos e sociais",                      ativo: true,  receitas: 8500,  despesas: 2100  },
-  { id: 4, codigo: "CC-004", nome: "Spa",         descricao: "Massagens e tratamentos estéticos",                   ativo: true,  receitas: 4800,  despesas: 1200  },
-  { id: 5, codigo: "CC-005", nome: "Manutenção",  descricao: "Reparos, reformas e infraestrutura",                  ativo: true,  receitas: 0,     despesas: 3800  },
-  { id: 6, codigo: "CC-006", nome: "Geral",       descricao: "Despesas administrativas e gerais",                   ativo: true,  receitas: 0,     despesas: 7200  },
-];
-
-const initialConciliacao: ConciliacaoBancaria[] = [
-  { id: 1, data: "2026-09-16", descricao: "PIX recebido – Ana Lima",          valorBanco: 1500, valorSistema: 1500, tipo: "Crédito", situacao: "Conciliado", observacoes: "" },
-  { id: 2, data: "2026-09-16", descricao: "TED – Fornecedor lavanderia",       valorBanco: 1200, valorSistema: 1200, tipo: "Débito",  situacao: "Conciliado", observacoes: "" },
-  { id: 3, data: "2026-09-15", descricao: "TED – TechNorte LTDA",              valorBanco: 4250, valorSistema: 4250, tipo: "Crédito", situacao: "Conciliado", observacoes: "" },
-  { id: 4, data: "2026-09-14", descricao: "Débito automático – Internet",      valorBanco: 580,  valorSistema: 580,  tipo: "Débito",  situacao: "Conciliado", observacoes: "" },
-  { id: 5, data: "2026-09-13", descricao: "Crédito não identificado",          valorBanco: 320,  valorSistema: 0,    tipo: "Crédito", situacao: "Divergente", observacoes: "Origem desconhecida" },
-  { id: 6, data: "2026-09-12", descricao: "Débito fornecedor som & luz",       valorBanco: 2500, valorSistema: 0,    tipo: "Débito",  situacao: "Pendente",   observacoes: "Aguardando baixa manual" },
-];
-
-/* ── componente ──────────────────────────────────────────────────────── */
 export default function Financeiro() {
-  const [tab, setTab] = useState<Tab>("pagar");
-
-  const [contasPagar,    setContasPagar]    = useState<ContaPagar[]>(initialPagar);
-  const [contasReceber,  setContasReceber]  = useState<ContaReceber[]>(initialReceber);
-  const [caixas,         setCaixas]         = useState<Caixa[]>(initialCaixas);
-  const [centros,        setCentros]        = useState<CentroCusto[]>(initialCentros);
-  const [conciliacao,    setConciliacao]    = useState<ConciliacaoBancaria[]>(initialConciliacao);
-
-  /* modais */
-  type ModalType = "newPagar" | "editPagar" | "newReceber" | "editReceber" |
-                   "abrirCaixa" | "fecharCaixa" | "viewCaixa" |
-                   "newCentro" | "editCentro" | "newConcilia" | null;
+  const {
+    reservations, receipts, consumptions, invoices, payables, costCenters, cashSessions, cashMovements,
+    events, eventReceipts,
+    bankTransactions, registerReceipt, createPayable, updatePayable, registerPayablePayment,
+    openCashSession, closeCashSession, registerManualCashMovement, createCostCenter, updateCostCenter,
+    reconcileBankTransaction, getReservationFinancials, cashExpectedTotal, getEventFinancials, registerEventReceipt,
+  } = useHotelOperations();
+  const demo = useDemoEngine();
+  const [tab, setTab] = useState<Tab>("receber");
   const [modal, setModal] = useState<ModalType>(null);
-  const [selectedPagar,   setSelectedPagar]   = useState<ContaPagar | null>(null);
-  const [selectedReceber, setSelectedReceber] = useState<ContaReceber | null>(null);
-  const [selectedCaixa,   setSelectedCaixa]   = useState<Caixa | null>(null);
-  const [selectedCentro,  setSelectedCentro]  = useState<CentroCusto | null>(null);
+  const [selectedReservationId, setSelectedReservationId] = useState<number | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  const [selectedPayableId, setSelectedPayableId] = useState<number | null>(null);
+  const [selectedCenterId, setSelectedCenterId] = useState<number | null>(null);
+  const [receiptForm, setReceiptForm] = useState(emptyReceipt);
+  const [payableForm, setPayableForm] = useState(emptyPayable);
+  const [paymentForm, setPaymentForm] = useState(emptyPayment);
+  const [cashOpenForm, setCashOpenForm] = useState({ responsible: "Recepcao", openingCash: "500", notes: "" });
+  const [cashCloseForm, setCashCloseForm] = useState({ countedCash: "", notes: "" });
+  const [cashMoveForm, setCashMoveForm] = useState({ direction: "saida", value: "", method: "cash", description: "", responsible: "Recepcao", notes: "" });
+  const [centerForm, setCenterForm] = useState({ code: "", name: "", description: "", active: true });
+  const [bankForm, setBankForm] = useState({ date: today(), description: "", value: "", direction: "credito", movementId: "", notes: "" });
+  const [message, setMessage] = useState("");
 
-  /* filtros */
-  const [filtroPagarSit,    setFiltroPagarSit]    = useState("");
-  const [filtroPagarCC,     setFiltroPagarCC]      = useState("");
-  const [filtroReceberSit,  setFiltroReceberSit]   = useState("");
-  const [filtroReceberCC,   setFiltroReceberCC]    = useState("");
-  const [conciliaInicio,    setConciliaInicio]     = useState("2026-09-01");
-  const [conciliaFim,       setConciliaFim]        = useState("2026-09-17");
+  useEffect(() => {
+    const command = demo.activeCommand;
+    if (!command || command.target !== "financeiro" || command.command !== "open-receivable") return;
+    const reservationId = demo.scenario?.ids.reservationId;
+    setTab("receber");
+    if (reservationId) {
+      setSelectedReservationId(reservationId);
+      setReceiptForm({ ...emptyReceipt, value: "300", method: "debit_card", notes: "Pagamento parcial da jornada demonstrativa." });
+      setModal("receber");
+    }
+    demo.resolveCommand(command.id, { status: "running", message: "Conta operacional aberta. Registre R$ 300,00 em debito e depois R$ 270,00 em dinheiro." });
+  }, [demo.activeCommand]);
 
-  /* formulários */
-  const emptyPagar = () => ({
-    descricao: "", fornecedor: "", valor: "", vencimento: "", pagamento: "",
-    formaPagamento: "PIX", centroCusto: "Hospedagem", situacao: "Pendente" as SituacaoPagar,
-    observacoes: "",
+  const receivables = useMemo(() => reservations.filter((reservation) => reservation.status !== "Cancelada").map((reservation) => {
+    const financials = getReservationFinancials(reservation.id);
+    const invoice = invoices.find((item) => item.reservationId === reservation.id);
+    return {
+      reservation,
+      invoice,
+      total: financials?.total ?? reservationBaseValue(reservation),
+      received: financials?.received ?? 0,
+      balance: financials?.balance ?? 0,
+      status: financials?.status ?? "Pendente",
+      history: receipts.filter((receipt) => receipt.reservationId === reservation.id && receipt.status === "Confirmado"),
+    };
+  }), [reservations, receipts, consumptions, invoices]);
+
+  const eventReceivables = useMemo(() => events.filter((event) => event.billingType === "Separada").map((event) => {
+    const financials = getEventFinancials(event.id);
+    return {
+      event,
+      total: financials?.total ?? event.totalContracted,
+      received: financials?.received ?? 0,
+      balance: financials?.balance ?? event.totalContracted,
+      status: financials?.status ?? "Pendente",
+      history: eventReceipts.filter((receipt) => receipt.eventId === event.id && receipt.status === "Confirmado"),
+    };
+  }), [events, eventReceipts]);
+
+  const openCash = cashSessions.find((session) => !session.closedAt);
+  const receivedToday = receipts.filter((receipt) => receipt.status === "Confirmado" && receipt.date === today()).reduce((total, receipt) => total + receipt.value, 0);
+  const payablePending = payables.reduce((total, payable) => total + (payable.canceledAt ? 0 : pendingBalance(payable.originalValue, paidValue(payable))), 0);
+  const receivablePending = receivables.reduce((total, item) => total + item.balance, 0);
+  const cashBalance = openCash ? cashExpectedTotal(openCash.id) : 0;
+
+  const selectedReceivable = receivables.find((item) => item.reservation.id === selectedReservationId);
+  const selectedEventReceivable = eventReceivables.find((item) => item.event.id === selectedEventId);
+  const selectedPayable = payables.find((item) => item.id === selectedPayableId);
+  const selectedCenter = costCenters.find((item) => item.id === selectedCenterId);
+
+  const saveReceipt = () => {
+    if (!selectedReceivable) return;
+    const result = registerReceipt({
+      reservationId: selectedReceivable.reservation.id,
+      value: Number(receiptForm.value),
+      method: receiptForm.method,
+      date: receiptForm.date,
+      responsible: receiptForm.responsible,
+      notes: receiptForm.notes,
+      operationKey: `financeiro-receipt-${Date.now()}`,
+    });
+    if (!result.ok) {
+      setMessage(result.error ?? "Nao foi possivel registrar o recebimento.");
+      return;
+    }
+    setModal(null);
+    setMessage("Recebimento registrado e fatura atualizada.");
+  };
+
+  const saveEventReceipt = () => {
+    if (!selectedEventReceivable) return;
+    const result = registerEventReceipt({
+      eventId: selectedEventReceivable.event.id,
+      value: Number(receiptForm.value),
+      method: receiptForm.method,
+      date: receiptForm.date,
+      responsible: receiptForm.responsible,
+      notes: receiptForm.notes,
+      operationKey: `financeiro-event-receipt-${Date.now()}`,
+    });
+    if (!result.ok) {
+      setMessage(result.error ?? "Nao foi possivel registrar o recebimento.");
+      return;
+    }
+    setModal(null);
+    setMessage("Recebimento de evento registrado e refletido no caixa.");
+  };
+
+  const savePayable = () => {
+    const input = {
+      description: payableForm.description,
+      supplier: payableForm.supplier,
+      category: payableForm.category,
+      costCenterId: Number(payableForm.costCenterId),
+      originalValue: Number(payableForm.originalValue),
+      dueDate: payableForm.dueDate,
+      notes: payableForm.notes,
+    };
+    const result = modal === "editPagar" && selectedPayable ? updatePayable(selectedPayable.id, input) : createPayable(input);
+    if (!result.ok) {
+      setMessage(result.error ?? "Nao foi possivel salvar a conta.");
+      return;
+    }
+    setModal(null);
+    setMessage("Conta a pagar salva.");
+  };
+
+  const savePayablePayment = () => {
+    if (!selectedPayable) return;
+    const result = registerPayablePayment({
+      payableId: selectedPayable.id,
+      value: Number(paymentForm.value),
+      method: paymentForm.method,
+      responsible: paymentForm.responsible,
+      date: paymentForm.date,
+      notes: paymentForm.notes,
+      operationKey: `financeiro-payable-${Date.now()}`,
+    });
+    if (!result.ok) {
+      setMessage(result.error ?? "Nao foi possivel registrar o pagamento.");
+      return;
+    }
+    setModal(null);
+    setMessage("Pagamento registrado.");
+  };
+
+  const saveCenter = () => {
+    const result = selectedCenter && modal === "editCentro"
+      ? updateCostCenter(selectedCenter.id, centerForm)
+      : createCostCenter({ code: centerForm.code, name: centerForm.name, description: centerForm.description });
+    if (!result.ok) {
+      setMessage(result.error ?? "Nao foi possivel salvar o centro de custo.");
+      return;
+    }
+    setModal(null);
+  };
+
+  const reconciledRows = bankTransactions.map((transaction) => {
+    const movement = cashMovements.find((item) => item.id === transaction.matchedMovementId);
+    return { transaction, movement, difference: movement ? transaction.value - movement.value : transaction.value };
   });
-  const emptyReceber = () => ({
-    descricao: "", cliente: "", valor: "", valorRecebido: "0", vencimento: "", recebimento: "",
-    formaPagamento: "PIX", centroCusto: "Hospedagem", situacao: "Pendente" as SituacaoReceber,
-    observacoes: "",
-  });
-  const emptyCaixa = () => ({ operador: "", valorAbertura: "", observacoes: "" });
-  const emptyFechar = () => ({ valorFechamento: "", observacoes: "" });
-  const emptyCentro = () => ({ codigo: "", nome: "", descricao: "" });
-  const emptyConcilia = () => ({ data: "", descricao: "", valorBanco: "", valorSistema: "", tipo: "Crédito" as "Crédito" | "Débito", observacoes: "" });
 
-  const [fp,   setFp]   = useState(emptyPagar());
-  const [fr,   setFr]   = useState(emptyReceber());
-  const [fc,   setFc]   = useState(emptyCaixa());
-  const [ff,   setFf]   = useState(emptyFechar());
-  const [fcc,  setFcc]  = useState(emptyCentro());
-  const [fcon, setFcon] = useState(emptyConcilia());
+  return <div className="ops-page">
+    <PageHeader title="Financeiro" />
+    <Alert type="info">Conciliação simulada - sem integração bancária externa. Os dados financeiros sao compartilhados com reservas, hospedagens, consumos, faturas e dashboard.</Alert>
+    {message && <Alert type={message.includes("Nao") ? "error" : "success"}>{message}</Alert>}
 
-  /* KPIs dinâmicos */
-  const totalPagarPendente  = contasPagar.filter((c) => c.situacao === "Pendente" || c.situacao === "Vencido").reduce((s, c) => s + c.valor, 0);
-  const totalReceberPendente = contasReceber.filter((c) => c.situacao !== "Recebido" && c.situacao !== "Cancelado").reduce((s, c) => s + (c.valor - c.valorRecebido), 0);
-  const caixaAberto         = caixas.find((c) => c.situacao === "Aberto");
-  const saldoCaixa          = caixaAberto ? caixaAberto.valorAbertura + caixaAberto.entradas - caixaAberto.saidas : 0;
-  const resultado           = totalReceberPendente - totalPagarPendente;
-
-  /* saves */
-  const savePagar = () => {
-    const base = { ...fp, valor: Number(fp.valor), dataCadastro: new Date().toISOString().slice(0, 10) };
-    if (modal === "newPagar") {
-      setContasPagar([...contasPagar, { id: Date.now(), ...base }]);
-    } else if (modal === "editPagar" && selectedPagar) {
-      setContasPagar(contasPagar.map((c) => c.id === selectedPagar.id ? { ...c, ...base } : c));
-    }
-    setModal(null);
-  };
-
-  const saveReceber = () => {
-    const base = { ...fr, valor: Number(fr.valor), valorRecebido: Number(fr.valorRecebido), dataCadastro: new Date().toISOString().slice(0, 10) };
-    if (modal === "newReceber") {
-      setContasReceber([...contasReceber, { id: Date.now(), ...base }]);
-    } else if (modal === "editReceber" && selectedReceber) {
-      setContasReceber(contasReceber.map((c) => c.id === selectedReceber.id ? { ...c, ...base } : c));
-    }
-    setModal(null);
-  };
-
-  const abrirCaixa = () => {
-    if (caixaAberto) return;
-    setCaixas([{ id: Date.now(), data: new Date().toISOString().slice(0, 10), operador: fc.operador, valorAbertura: Number(fc.valorAbertura), valorFechamento: null, entradas: 0, saidas: 0, situacao: "Aberto", observacoes: fc.observacoes }, ...caixas]);
-    setModal(null);
-  };
-
-  const fecharCaixa = () => {
-    if (!caixaAberto) return;
-    setCaixas(caixas.map((c) => c.id === caixaAberto.id ? { ...c, situacao: "Fechado", valorFechamento: Number(ff.valorFechamento), observacoes: ff.observacoes } : c));
-    setModal(null);
-  };
-
-  const saveCentro = () => {
-    if (modal === "newCentro") {
-      setCentros([...centros, { id: Date.now(), codigo: fcc.codigo, nome: fcc.nome, descricao: fcc.descricao, ativo: true, receitas: 0, despesas: 0 }]);
-    } else if (modal === "editCentro" && selectedCentro) {
-      setCentros(centros.map((c) => c.id === selectedCentro.id ? { ...c, ...fcc } : c));
-    }
-    setModal(null);
-  };
-
-  const saveConcilia = () => {
-    setConciliacao([{ id: Date.now(), data: fcon.data, descricao: fcon.descricao, valorBanco: Number(fcon.valorBanco), valorSistema: Number(fcon.valorSistema), tipo: fcon.tipo, situacao: Math.abs(Number(fcon.valorBanco) - Number(fcon.valorSistema)) < 0.01 ? "Conciliado" : "Divergente", observacoes: fcon.observacoes }, ...conciliacao]);
-    setModal(null);
-  };
-
-  const conciliadosFiltrados = conciliacao.filter((c) => c.data >= conciliaInicio && c.data <= conciliaFim);
-
-  const openEditPagar = (c: ContaPagar) => {
-    setSelectedPagar(c);
-    setFp({ descricao: c.descricao, fornecedor: c.fornecedor, valor: String(c.valor), vencimento: c.vencimento, pagamento: c.pagamento, formaPagamento: c.formaPagamento, centroCusto: c.centroCusto, situacao: c.situacao, observacoes: c.observacoes });
-    setModal("editPagar");
-  };
-
-  const openEditReceber = (c: ContaReceber) => {
-    setSelectedReceber(c);
-    setFr({ descricao: c.descricao, cliente: c.cliente, valor: String(c.valor), valorRecebido: String(c.valorRecebido), vencimento: c.vencimento, recebimento: c.recebimento, formaPagamento: c.formaPagamento, centroCusto: c.centroCusto, situacao: c.situacao, observacoes: c.observacoes });
-    setModal("editReceber");
-  };
-
-  /* ── render ── */
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-      <PageHeader title="Financeiro" />
-
-      {/* KPIs */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
-        <KpiCard label="A pagar (pendente)" value={fmt(totalPagarPendente)} icon="banknote" tone={totalPagarPendente > 0 ? "warn" : "default"} />
-        <KpiCard label="A receber (pendente)" value={fmt(totalReceberPendente)} icon="trending-up" />
-        <KpiCard label="Saldo em caixa" value={fmt(saldoCaixa)} icon="banknote" />
-        <KpiCard label="Resultado líquido" value={fmt(resultado)} icon="trending-up" tone={resultado < 0 ? "danger" : "default"} />
-      </div>
-
-      <Tabs
-        tabs={[
-          { id: "pagar",       label: "Contas a Pagar"  },
-          { id: "receber",     label: "Contas a Receber" },
-          { id: "caixa",       label: "Caixa"            },
-          { id: "centrocusto", label: "Centro de Custo"  },
-          { id: "conciliacao", label: "Conciliação Bancária" },
-        ]}
-        active={tab}
-        onChange={setTab}
-      />
-
-      {/* ══ CONTAS A PAGAR ════════════════════════════════════════════ */}
-      {tab === "pagar" && (
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
-            <SectionTitle>Contas a Pagar</SectionTitle>
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-end" }}>
-              <div style={{ width: "160px" }}>
-                <Select label="Situação" value={filtroPagarSit} onChange={(e) => setFiltroPagarSit(e.target.value)}>
-                  <option value="">Todas</option>
-                  <option>Pendente</option><option>Pago</option><option>Vencido</option><option>Cancelado</option>
-                </Select>
-              </div>
-              <div style={{ width: "160px" }}>
-                <Select label="Centro de custo" value={filtroPagarCC} onChange={(e) => setFiltroPagarCC(e.target.value)}>
-                  <option value="">Todos</option>
-                  {centrosNomes.map((c) => <option key={c}>{c}</option>)}
-                </Select>
-              </div>
-              <Btn small onClick={() => { setFp(emptyPagar()); setModal("newPagar"); }}>+ Nova conta</Btn>
-            </div>
-          </div>
-
-          <Table
-            headers={["Descrição / Fornecedor", "Valor", "Vencimento", "Centro de Custo", "Forma Pagto.", "Situação", "Ações"]}
-            rows={contasPagar
-              .filter((c) => (!filtroPagarSit || c.situacao === filtroPagarSit) && (!filtroPagarCC || c.centroCusto === filtroPagarCC))
-              .map((c) => [
-                <div>
-                  <p style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "0.84rem", color: "var(--text-strong)" }}>{c.descricao}</p>
-                  <p style={{ fontFamily: "var(--font-sans)", fontSize: "0.72rem", color: "var(--text-muted)" }}>{c.fornecedor}</p>
-                </div>,
-                <span style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "0.88rem", color: c.situacao === "Vencido" ? "var(--danger-fg)" : "var(--text-strong)" }}>{fmt(c.valor)}</span>,
-                <div>
-                  <p style={{ fontFamily: "var(--font-sans)", fontSize: "0.82rem", color: "var(--text-body)" }}>{formatDisplayDate(c.vencimento)}</p>
-                  {c.pagamento && <p style={{ fontFamily: "var(--font-sans)", fontSize: "0.7rem", color: "var(--text-muted)" }}>Pago: {c.pagamento}</p>}
-                </div>,
-                c.centroCusto,
-                c.formaPagamento,
-                <Badge label={c.situacao} color={situacaoPagarColor[c.situacao]} />,
-                <div style={{ display: "flex", gap: "5px" }}>
-                  <Btn small variant="secondary" onClick={() => openEditPagar(c)}>Editar</Btn>
-                  {c.situacao === "Pendente" && (
-                    <Btn small onClick={() => setContasPagar(contasPagar.map((x) => x.id === c.id ? { ...x, situacao: "Pago", pagamento: new Date().toISOString().slice(0, 10) } : x))}>
-                      Pagar
-                    </Btn>
-                  )}
-                </div>,
-              ])}
-          />
-
-          {/* resumo por centro */}
-          <div style={{ marginTop: "20px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            {centrosNomes.map((cc) => {
-              const total = contasPagar.filter((c) => c.centroCusto === cc && c.situacao !== "Cancelado").reduce((s, c) => s + c.valor, 0);
-              if (total === 0) return null;
-              return (
-                <div key={cc} style={{ background: "var(--bg-card)", borderRadius: "10px", padding: "10px 14px", textAlign: "center" }}>
-                  <p style={{ fontFamily: "var(--font-sans)", fontSize: "0.72rem", color: "var(--text-muted)" }}>{cc}</p>
-                  <p style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "0.88rem", color: "var(--danger-fg)" }}>{fmt(total)}</p>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-      )}
-
-      {/* ══ CONTAS A RECEBER ══════════════════════════════════════════ */}
-      {tab === "receber" && (
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
-            <SectionTitle>Contas a Receber</SectionTitle>
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-end" }}>
-              <div style={{ width: "160px" }}>
-                <Select label="Situação" value={filtroReceberSit} onChange={(e) => setFiltroReceberSit(e.target.value)}>
-                  <option value="">Todas</option>
-                  <option>Pendente</option><option>Recebido</option><option>Parcial</option><option>Vencido</option><option>Cancelado</option>
-                </Select>
-              </div>
-              <div style={{ width: "160px" }}>
-                <Select label="Centro de custo" value={filtroReceberCC} onChange={(e) => setFiltroReceberCC(e.target.value)}>
-                  <option value="">Todos</option>
-                  {centrosNomes.map((c) => <option key={c}>{c}</option>)}
-                </Select>
-              </div>
-              <Btn small onClick={() => { setFr(emptyReceber()); setModal("newReceber"); }}>+ Nova conta</Btn>
-            </div>
-          </div>
-
-          <Table
-            headers={["Descrição / Cliente", "Valor total", "Recebido", "Vencimento", "Centro", "Situação", "Ações"]}
-            rows={contasReceber
-              .filter((c) => (!filtroReceberSit || c.situacao === filtroReceberSit) && (!filtroReceberCC || c.centroCusto === filtroReceberCC))
-              .map((c) => {
-                const pct = c.valor > 0 ? Math.round((c.valorRecebido / c.valor) * 100) : 0;
-                return [
-                  <div>
-                    <p style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "0.84rem", color: "var(--text-strong)" }}>{c.descricao}</p>
-                    <p style={{ fontFamily: "var(--font-sans)", fontSize: "0.72rem", color: "var(--text-muted)" }}>{c.cliente}</p>
-                  </div>,
-                  <span style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "0.88rem" }}>{fmt(c.valor)}</span>,
-                  <div>
-                    <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.82rem", color: "var(--ok-fg)", fontWeight: 700 }}>{fmt(c.valorRecebido)}</span>
-                    <div style={{ width: "70px", height: "5px", background: "var(--bg-page)", borderRadius: "3px", marginTop: "3px" }}>
-                      <div style={{ height: "100%", width: `${pct}%`, borderRadius: "3px", background: "var(--brand-700)" }} />
-                    </div>
-                    <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.68rem", color: "var(--text-muted)" }}>{pct}%</span>
-                  </div>,
-                  c.vencimento,
-                  c.centroCusto,
-                  <Badge label={c.situacao} color={situacaoReceberColor[c.situacao]} />,
-                  <div style={{ display: "flex", gap: "5px" }}>
-                    <Btn small variant="secondary" onClick={() => openEditReceber(c)}>Editar</Btn>
-                    {(c.situacao === "Pendente" || c.situacao === "Parcial") && (
-                      <Btn small onClick={() => setContasReceber(contasReceber.map((x) => x.id === c.id ? { ...x, situacao: "Recebido", valorRecebido: x.valor, recebimento: new Date().toISOString().slice(0, 10) } : x))}>
-                        Receber
-                      </Btn>
-                    )}
-                  </div>,
-                ];
-              })}
-          />
-        </Card>
-      )}
-
-      {/* ══ CAIXA ════════════════════════════════════════════════════ */}
-      {tab === "caixa" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {/* status do caixa atual */}
-          <div
-            style={{
-              background: caixaAberto ? "var(--ok-bg)" : "var(--danger-bg)",
-              borderLeft: `4px solid ${caixaAberto ? "var(--ok-fg)" : "var(--danger-fg)"}`,
-              borderRadius: "0 14px 14px 0",
-              padding: "18px 24px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: "16px",
-            }}
-          >
-            <div>
-              <p style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "1rem", color: caixaAberto ? "var(--ok-fg)" : "var(--danger-fg)", marginBottom: "4px" }}>
-                <StatusBadge status={caixaAberto ? "Caixa aberto" : "Caixa fechado"} tone={caixaAberto ? "ok" : "neutral"} />
-              </p>
-              {caixaAberto && (
-                <p style={{ fontFamily: "var(--font-sans)", fontSize: "0.82rem", color: "var(--text-body)" }}>
-                  Operador: <strong>{caixaAberto.operador}</strong> · Data: {formatDisplayDate(caixaAberto.data)} ·
-                  Saldo atual: <strong>{fmt(saldoCaixa)}</strong>
-                </p>
-              )}
-            </div>
-            <div style={{ display: "flex", gap: "8px" }}>
-              {!caixaAberto && (
-                <Btn onClick={() => { setFc(emptyCaixa()); setModal("abrirCaixa"); }}>Abrir Caixa</Btn>
-              )}
-              {caixaAberto && (
-                <Btn variant="danger" onClick={() => { setFf(emptyFechar()); setModal("fecharCaixa"); }}>Fechar Caixa</Btn>
-              )}
-            </div>
-          </div>
-
-          {/* histórico de caixas */}
-          <Card>
-            <SectionTitle>Histórico de Caixas</SectionTitle>
-            <Table
-              headers={["Data", "Operador", "Abertura", "Entradas", "Saídas", "Saldo final", "Fechamento", "Status"]}
-              rows={caixas.map((c) => [
-                c.data,
-                c.operador,
-                <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.82rem" }}>{fmt(c.valorAbertura)}</span>,
-                <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.82rem", color: "var(--ok-fg)", fontWeight: 700 }}>+{fmt(c.entradas)}</span>,
-                <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.82rem", color: "var(--danger-fg)", fontWeight: 700 }}>−{fmt(c.saidas)}</span>,
-                <span style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "0.88rem", color: "var(--brand-900)" }}>
-                  {fmt(c.valorAbertura + c.entradas - c.saidas)}
-                </span>,
-                c.valorFechamento ? fmt(c.valorFechamento) : "—",
-                <Badge label={c.situacao} color={c.situacao === "Aberto" ? "green" : "gray"} />,
-              ])}
-            />
-          </Card>
-        </div>
-      )}
-
-      {/* ══ CENTRO DE CUSTO ══════════════════════════════════════════ */}
-      {tab === "centrocusto" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {/* gráfico de barras horizontal */}
-          <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <SectionTitle>Resultado por Centro de Custo</SectionTitle>
-              <Btn small onClick={() => { setFcc(emptyCentro()); setModal("newCentro"); }}>+ Novo Centro</Btn>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {centros.filter((c) => c.ativo).map((c) => {
-                const saldo  = c.receitas - c.despesas;
-                const maxVal = Math.max(...centros.map((x) => x.receitas));
-                const pctR   = maxVal > 0 ? Math.round((c.receitas  / maxVal) * 100) : 0;
-                const pctD   = maxVal > 0 ? Math.round((c.despesas  / maxVal) * 100) : 0;
-                return (
-                  <div key={c.id} style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: "12px", alignItems: "center" }}>
-                    <div>
-                      <p style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "0.82rem", color: "var(--text-strong)" }}>{c.nome}</p>
-                      <p style={{ fontFamily: "var(--font-sans)", fontSize: "0.7rem", color: saldo >= 0 ? "var(--ok-fg)" : "var(--danger-fg)", fontWeight: 700 }}>
-                        {saldo >= 0 ? "+" : ""}{fmt(saldo)}
-                      </p>
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.65rem", color: "var(--ok-fg)", width: "60px", textAlign: "right" }}>{fmt(c.receitas)}</span>
-                        <div style={{ flex: 1, height: "8px", background: "var(--bg-page)", borderRadius: "4px" }}>
-                          <div style={{ height: "100%", width: `${pctR}%`, background: "var(--brand-700)", borderRadius: "4px" }} />
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.65rem", color: "var(--danger-fg)", width: "60px", textAlign: "right" }}>{fmt(c.despesas)}</span>
-                        <div style={{ flex: 1, height: "8px", background: "var(--bg-page)", borderRadius: "4px" }}>
-                          <div style={{ height: "100%", width: `${pctD}%`, background: "var(--danger-fg)", borderRadius: "4px" }} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-
-          <Card>
-            <Table
-              headers={["Código", "Centro de Custo", "Descrição", "Receitas", "Despesas", "Saldo", "Status", "Ações"]}
-              rows={centros.map((c) => {
-                const saldo = c.receitas - c.despesas;
-                return [
-                  c.codigo,
-                  c.nome,
-                  c.descricao,
-                  <span style={{ fontFamily: "var(--font-sans)", fontWeight: 700, color: "var(--ok-fg)" }}>{fmt(c.receitas)}</span>,
-                  <span style={{ fontFamily: "var(--font-sans)", fontWeight: 700, color: "var(--danger-fg)" }}>{fmt(c.despesas)}</span>,
-                  <span style={{ fontFamily: "var(--font-sans)", fontWeight: 700, color: saldo >= 0 ? "var(--brand-900)" : "var(--danger-fg)" }}>{fmt(saldo)}</span>,
-                  <Badge label={c.ativo ? "Ativo" : "Inativo"} color={c.ativo ? "green" : "gray"} />,
-                  <div style={{ display: "flex", gap: "5px" }}>
-                    <Btn small variant="secondary" onClick={() => { setSelectedCentro(c); setFcc({ codigo: c.codigo, nome: c.nome, descricao: c.descricao }); setModal("editCentro"); }}>Editar</Btn>
-                    <Btn small variant={c.ativo ? "danger" : "ghost"} onClick={() => setCentros(centros.map((x) => x.id === c.id ? { ...x, ativo: !x.ativo } : x))}>
-                      {c.ativo ? "Inativar" : "Ativar"}
-                    </Btn>
-                  </div>,
-                ];
-              })}
-            />
-          </Card>
-        </div>
-      )}
-
-      {/* ══ CONCILIAÇÃO BANCÁRIA ══════════════════════════════════════ */}
-      {tab === "conciliacao" && (
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
-            <SectionTitle>Conciliação Bancária</SectionTitle>
-            <Btn small onClick={() => { setFcon(emptyConcilia()); setModal("newConcilia"); }}>+ Lançamento manual</Btn>
-          </div>
-
-          <div style={{ display: "flex", gap: "12px", marginBottom: "16px", alignItems: "flex-end", flexWrap: "wrap" }}>
-            <div style={{ width: "160px" }}>
-              <Input label="Data início" type="date" value={conciliaInicio} onChange={(e) => setConciliaInicio(e.target.value)} />
-            </div>
-            <div style={{ width: "160px" }}>
-              <Input label="Data fim" type="date" value={conciliaFim} onChange={(e) => setConciliaFim(e.target.value)} />
-            </div>
-          </div>
-
-          {/* resumo do período */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", marginBottom: "16px" }}>
-            {[
-              { label: "Conciliados",  value: conciliadosFiltrados.filter((c) => c.situacao === "Conciliado").length,  color: "var(--ok-fg)" },
-              { label: "Divergentes",  value: conciliadosFiltrados.filter((c) => c.situacao === "Divergente").length,  color: "var(--danger-fg)" },
-              { label: "Pendentes",    value: conciliadosFiltrados.filter((c) => c.situacao === "Pendente").length,    color: "var(--warn-fg)" },
-            ].map((s) => (
-              <div key={s.label} style={{ background: "var(--bg-card)", borderRadius: "10px", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.8rem", color: "var(--text-muted)" }}>{s.label}</span>
-                <span style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "1.3rem", color: s.color }}>{s.value}</span>
-              </div>
-            ))}
-          </div>
-
-          <Table
-            headers={["Data", "Descrição", "Tipo", "Valor banco", "Valor sistema", "Diferença", "Status"]}
-            rows={conciliadosFiltrados.map((c) => {
-              const dif = c.valorBanco - c.valorSistema;
-              return [
-                c.data,
-                <div>
-                  <p style={{ fontFamily: "var(--font-sans)", fontSize: "0.84rem", color: "var(--text-strong)" }}>{c.descricao}</p>
-                  {c.observacoes && <p style={{ fontFamily: "var(--font-sans)", fontSize: "0.7rem", color: "var(--text-muted)" }}>{c.observacoes}</p>}
-                </div>,
-                <Badge label={c.tipo} color={c.tipo === "Crédito" ? "green" : "red"} />,
-                <span style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "0.88rem", color: c.tipo === "Crédito" ? "var(--ok-fg)" : "var(--danger-fg)" }}>
-                  {c.tipo === "Crédito" ? "+" : "−"}{fmt(c.valorBanco)}
-                </span>,
-                fmt(c.valorSistema),
-                <span style={{ fontFamily: "var(--font-sans)", fontWeight: 700, color: Math.abs(dif) < 0.01 ? "var(--text-muted)" : "var(--danger-fg)" }}>
-                  {Math.abs(dif) < 0.01 ? "—" : (dif > 0 ? "+" : "") + fmt(Math.abs(dif))}
-                </span>,
-                <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                  <Badge label={c.situacao} color={conciliaColor[c.situacao]} />
-                  {c.situacao !== "Conciliado" && (
-                    <Btn small variant="ghost" onClick={() => setConciliacao(conciliacao.map((x) => x.id === c.id ? { ...x, situacao: "Conciliado", valorSistema: x.valorBanco } : x))}>
-                      Conciliar
-                    </Btn>
-                  )}
-                </div>,
-              ];
-            })}
-          />
-        </Card>
-      )}
-
-      {/* ══ MODAIS ═══════════════════════════════════════════════════ */}
-
-      {/* Nova / Editar Conta a Pagar */}
-      {(modal === "newPagar" || modal === "editPagar") && (
-        <Modal title={modal === "newPagar" ? "Nova Conta a Pagar" : "Editar Conta a Pagar"} onClose={() => setModal(null)} wide>
-          <FormGrid cols={2}>
-            <FullCol><Input label="Descrição *" value={fp.descricao} onChange={(e) => setFp({ ...fp, descricao: e.target.value })} /></FullCol>
-            <Input label="Fornecedor / Credor" value={fp.fornecedor} onChange={(e) => setFp({ ...fp, fornecedor: e.target.value })} />
-            <Input label="Valor *" placeholder="0.00" type="number" min="0" value={fp.valor} onChange={(e) => setFp({ ...fp, valor: e.target.value })} />
-            <Input label="Vencimento *" type="date" value={fp.vencimento} onChange={(e) => setFp({ ...fp, vencimento: e.target.value })} />
-            <Input label="Data de pagamento" type="date" value={fp.pagamento} onChange={(e) => setFp({ ...fp, pagamento: e.target.value })} />
-            <Select label="Forma de pagamento" value={fp.formaPagamento} onChange={(e) => setFp({ ...fp, formaPagamento: e.target.value })}>
-              {formasPagamento.map((f) => <option key={f}>{f}</option>)}
-            </Select>
-            <Select label="Centro de Custo *" value={fp.centroCusto} onChange={(e) => setFp({ ...fp, centroCusto: e.target.value })}>
-              {centrosNomes.map((c) => <option key={c}>{c}</option>)}
-            </Select>
-            <Select label="Situação" value={fp.situacao} onChange={(e) => setFp({ ...fp, situacao: e.target.value as SituacaoPagar })}>
-              <option>Pendente</option><option>Pago</option><option>Vencido</option><option>Cancelado</option>
-            </Select>
-            <FullCol><Input label="Observações" value={fp.observacoes} onChange={(e) => setFp({ ...fp, observacoes: e.target.value })} /></FullCol>
-            <FormActions>
-              <Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn>
-              <Btn onClick={savePagar}>Salvar</Btn>
-            </FormActions>
-          </FormGrid>
-        </Modal>
-      )}
-
-      {/* Nova / Editar Conta a Receber */}
-      {(modal === "newReceber" || modal === "editReceber") && (
-        <Modal title={modal === "newReceber" ? "Nova Conta a Receber" : "Editar Conta a Receber"} onClose={() => setModal(null)} wide>
-          <FormGrid cols={2}>
-            <FullCol><Input label="Descrição *" value={fr.descricao} onChange={(e) => setFr({ ...fr, descricao: e.target.value })} /></FullCol>
-            <Input label="Cliente / Devedor" value={fr.cliente} onChange={(e) => setFr({ ...fr, cliente: e.target.value })} />
-            <Input label="Valor total *" placeholder="0.00" type="number" min="0" value={fr.valor} onChange={(e) => setFr({ ...fr, valor: e.target.value })} />
-            <Input label="Valor recebido" placeholder="0.00" type="number" min="0" value={fr.valorRecebido} onChange={(e) => setFr({ ...fr, valorRecebido: e.target.value })} />
-            <Input label="Vencimento *" type="date" value={fr.vencimento} onChange={(e) => setFr({ ...fr, vencimento: e.target.value })} />
-            <Input label="Data de recebimento" type="date" value={fr.recebimento} onChange={(e) => setFr({ ...fr, recebimento: e.target.value })} />
-            <Select label="Forma de pagamento" value={fr.formaPagamento} onChange={(e) => setFr({ ...fr, formaPagamento: e.target.value })}>
-              {formasPagamento.map((f) => <option key={f}>{f}</option>)}
-            </Select>
-            <Select label="Centro de Custo *" value={fr.centroCusto} onChange={(e) => setFr({ ...fr, centroCusto: e.target.value })}>
-              {centrosNomes.map((c) => <option key={c}>{c}</option>)}
-            </Select>
-            <Select label="Situação" value={fr.situacao} onChange={(e) => setFr({ ...fr, situacao: e.target.value as SituacaoReceber })}>
-              <option>Pendente</option><option>Recebido</option><option>Parcial</option><option>Vencido</option><option>Cancelado</option>
-            </Select>
-            <FullCol><Input label="Observações" value={fr.observacoes} onChange={(e) => setFr({ ...fr, observacoes: e.target.value })} /></FullCol>
-            <FormActions>
-              <Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn>
-              <Btn onClick={saveReceber}>Salvar</Btn>
-            </FormActions>
-          </FormGrid>
-        </Modal>
-      )}
-
-      {/* Abrir Caixa */}
-      {modal === "abrirCaixa" && (
-        <Modal title="Abrir Caixa" onClose={() => setModal(null)}>
-          <FormGrid cols={1}>
-            <Input label="Operador responsável *" placeholder="Nome do operador" value={fc.operador} onChange={(e) => setFc({ ...fc, operador: e.target.value })} />
-            <Input label="Valor de abertura (fundo de caixa) *" type="number" min="0" placeholder="0.00" value={fc.valorAbertura} onChange={(e) => setFc({ ...fc, valorAbertura: e.target.value })} />
-            <Input label="Observações" value={fc.observacoes} onChange={(e) => setFc({ ...fc, observacoes: e.target.value })} />
-            <FormActions>
-              <Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn>
-              <Btn onClick={abrirCaixa}>Confirmar abertura</Btn>
-            </FormActions>
-          </FormGrid>
-        </Modal>
-      )}
-
-      {/* Fechar Caixa */}
-      {modal === "fecharCaixa" && (
-        <Modal title="Fechar Caixa" onClose={() => setModal(null)}>
-          {caixaAberto && (
-            <div style={{ background: "var(--bg-card)", borderRadius: "10px", padding: "14px 16px", marginBottom: "18px" }}>
-              <p style={{ fontFamily: "var(--font-sans)", fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "6px" }}>Resumo do caixa atual</p>
-              {[
-                ["Valor de abertura", fmt(caixaAberto.valorAbertura)],
-                ["Entradas do dia",   "+" + fmt(caixaAberto.entradas)],
-                ["Saídas do dia",     "−" + fmt(caixaAberto.saidas)],
-                ["Saldo calculado",   fmt(saldoCaixa)],
-              ].map(([k, v]) => (
-                <div key={k} style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                  <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.82rem", color: "var(--text-body)" }}>{k}</span>
-                  <span style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "0.82rem", color: "var(--text-strong)" }}>{v}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          <FormGrid cols={1}>
-            <Input label="Valor físico em caixa *" type="number" min="0" placeholder="0.00" value={ff.valorFechamento} onChange={(e) => setFf({ ...ff, valorFechamento: e.target.value })} />
-            <Input label="Observações" value={ff.observacoes} onChange={(e) => setFf({ ...ff, observacoes: e.target.value })} />
-            <FormActions>
-              <Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn>
-              <Btn variant="danger" onClick={fecharCaixa}>Fechar caixa</Btn>
-            </FormActions>
-          </FormGrid>
-        </Modal>
-      )}
-
-      {/* Novo / Editar Centro de Custo */}
-      {(modal === "newCentro" || modal === "editCentro") && (
-        <Modal title={modal === "newCentro" ? "Novo Centro de Custo" : "Editar Centro de Custo"} onClose={() => setModal(null)}>
-          <FormGrid cols={2}>
-            <Input label="Código *" placeholder="CC-007" value={fcc.codigo} onChange={(e) => setFcc({ ...fcc, codigo: e.target.value })} />
-            <Input label="Nome *" value={fcc.nome} onChange={(e) => setFcc({ ...fcc, nome: e.target.value })} />
-            <FullCol><Input label="Descrição" value={fcc.descricao} onChange={(e) => setFcc({ ...fcc, descricao: e.target.value })} /></FullCol>
-            <FormActions>
-              <Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn>
-              <Btn onClick={saveCentro}>Salvar</Btn>
-            </FormActions>
-          </FormGrid>
-        </Modal>
-      )}
-
-      {/* Lançamento conciliação manual */}
-      {modal === "newConcilia" && (
-        <Modal title="Lançamento de Conciliação" onClose={() => setModal(null)}>
-          <FormGrid cols={2}>
-            <Input label="Data *" type="date" value={fcon.data} onChange={(e) => setFcon({ ...fcon, data: e.target.value })} />
-            <Select label="Tipo" value={fcon.tipo} onChange={(e) => setFcon({ ...fcon, tipo: e.target.value as "Crédito" | "Débito" })}>
-              <option>Crédito</option><option>Débito</option>
-            </Select>
-            <FullCol><Input label="Descrição *" value={fcon.descricao} onChange={(e) => setFcon({ ...fcon, descricao: e.target.value })} /></FullCol>
-            <Input label="Valor banco *" type="number" min="0" value={fcon.valorBanco} onChange={(e) => setFcon({ ...fcon, valorBanco: e.target.value })} />
-            <Input label="Valor sistema *" type="number" min="0" value={fcon.valorSistema} onChange={(e) => setFcon({ ...fcon, valorSistema: e.target.value })} />
-            <FullCol><Input label="Observações" value={fcon.observacoes} onChange={(e) => setFcon({ ...fcon, observacoes: e.target.value })} /></FullCol>
-            <FormActions>
-              <Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn>
-              <Btn onClick={saveConcilia}>Salvar lançamento</Btn>
-            </FormActions>
-          </FormGrid>
-        </Modal>
-      )}
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <Card><Kpi title="Total a receber" value={formatMoney(receivablePending)} help="Soma dos saldos pendentes de reservas, hospedagens e faturas ativas." /></Card>
+      <Card><Kpi title="Total a pagar" value={formatMoney(payablePending)} help="Soma dos saldos de contas a pagar nao canceladas." /></Card>
+      <Card><Kpi title="Recebido no periodo" value={formatMoney(receivedToday)} help="Recebimentos confirmados na data de hoje." /></Card>
+      <Card><Kpi title="Saldo do caixa" value={formatMoney(cashBalance)} help="Dinheiro fisico esperado: abertura + entradas em dinheiro - saidas em dinheiro." /></Card>
     </div>
-  );
+
+    <Tabs tabs={[
+      { id: "receber", label: "Contas a Receber" },
+      { id: "pagar", label: "Contas a Pagar" },
+      { id: "caixa", label: "Caixa" },
+      { id: "centros", label: "Centros de Custo" },
+      { id: "conciliacao", label: "Conciliacao Bancaria" },
+    ]} active={tab} onChange={setTab} />
+
+    {tab === "receber" && <Card>
+      <SectionTitle>Contas a Receber Operacionais</SectionTitle>
+      <Table headers={["Origem", "Cliente", "Descricao", "Total", "Recebido", "Saldo", "Situacao", "Historico", "Acao"]} rows={[
+        ...receivables.map((item) => [
+        item.invoice ? `Fatura ${item.reservation.code.replace("RES", "HOS")}` : `Reserva ${item.reservation.code}`,
+        item.reservation.guest,
+        receivableDescription(item.reservation),
+        formatMoney(item.total),
+        formatMoney(item.received),
+        formatMoney(item.balance),
+        <Badge label={item.status} />,
+        item.history.length ? item.history.map((receipt) => `${formatDisplayDate(receipt.date)} ${formatMoney(receipt.value)} ${receipt.method}`).join(" | ") : "Sem recebimentos",
+        <Btn small disabled={item.balance <= 0} onClick={() => { setSelectedReservationId(item.reservation.id); setReceiptForm({ ...emptyReceipt, value: String(item.balance) }); setMessage(""); setModal("receber"); }}>Receber</Btn>,
+        ]),
+        ...eventReceivables.map((item) => [
+          `Evento ${item.event.code}`,
+          item.event.contractorName,
+          item.event.name,
+          formatMoney(item.total),
+          formatMoney(item.received),
+          formatMoney(item.balance),
+          <Badge label={item.status} />,
+          item.history.length ? item.history.map((receipt) => `${formatDisplayDate(receipt.date)} ${formatMoney(receipt.value)} ${receipt.method}`).join(" | ") : "Sem recebimentos",
+          <Btn small disabled={item.balance <= 0 || item.event.status === "Cancelado"} onClick={() => { setSelectedEventId(item.event.id); setReceiptForm({ ...emptyReceipt, value: String(item.balance) }); setMessage(""); setModal("receberEvento"); }}>Receber</Btn>,
+        ]),
+      ]} />
+    </Card>}
+
+    {tab === "pagar" && <Card>
+      <div className="flex justify-between items-center gap-3 mb-4"><SectionTitle>Contas a Pagar</SectionTitle><Btn onClick={() => { setSelectedPayableId(null); setPayableForm({ ...emptyPayable, costCenterId: String(costCenters[0]?.id ?? "") }); setModal("newPagar"); }}>+ Nova Conta</Btn></div>
+      <Table headers={["Codigo", "Descricao", "Fornecedor", "Centro", "Valor", "Pago", "Saldo", "Situacao", "Acoes"]} rows={payables.map((payable) => {
+        const paid = paidValue(payable);
+        const status = derivePayableStatus(payable.originalValue, paid, payable.dueDate, Boolean(payable.canceledAt), today());
+        return [payable.code, payable.description, payable.supplier, costCenterName(costCenters, payable.costCenterId), formatMoney(payable.originalValue), formatMoney(paid), formatMoney(pendingBalance(payable.originalValue, paid)), <Badge label={status} />, <div className="table-actions"><Btn small variant="ghost" onClick={() => { setSelectedPayableId(payable.id); setPayableForm({ description: payable.description, supplier: payable.supplier, category: payable.category, costCenterId: String(payable.costCenterId), originalValue: String(payable.originalValue), dueDate: payable.dueDate, notes: payable.notes }); setModal("editPagar"); }}>Editar</Btn><Btn small disabled={pendingBalance(payable.originalValue, paid) <= 0 || Boolean(payable.canceledAt)} onClick={() => { setSelectedPayableId(payable.id); setPaymentForm({ ...emptyPayment, value: String(pendingBalance(payable.originalValue, paid)) }); setModal("payPagar"); }}>Pagar</Btn></div>];
+      })} />
+    </Card>}
+
+    {tab === "caixa" && <div className="space-y-4">
+      <Card>
+        <div className="flex justify-between items-center gap-3 mb-4"><SectionTitle>Caixa</SectionTitle>{openCash ? <Btn variant="danger" onClick={() => { setCashCloseForm({ countedCash: String(cashExpectedTotal(openCash.id)), notes: "" }); setModal("fecharCaixa"); }}>Fechar Caixa</Btn> : <Btn onClick={() => setModal("abrirCaixa")}>Abrir Caixa</Btn>}</div>
+        {openCash ? <Alert type="success">Caixa {openCash.code} aberto por {openCash.responsible}. Recebimentos sem caixa aberto permanecem no historico financeiro, mas nao entram em gaveta fisica.</Alert> : <Alert type="warning">Nao ha caixa aberto. Recebimentos continuarao registrados, sem vinculo a uma gaveta fisica.</Alert>}
+        <FormActions><Btn variant="secondary" onClick={() => setModal("movCaixa")}>+ Movimento Manual</Btn></FormActions>
+      </Card>
+      <Card>
+        <SectionTitle>Movimentacoes</SectionTitle>
+        <Table headers={["Data", "Tipo", "Metodo", "Descricao", "Valor", "Caixa", "Responsavel"]} rows={cashMovements.map((movement) => [movement.date, movement.direction === "entrada" ? "Entrada" : "Saida", paymentMethodLabel(movement.methodId), movement.description, `${movement.direction === "entrada" ? "+" : "-"}${formatMoney(movement.value)}`, movement.sessionId ? cashSessions.find((item) => item.id === movement.sessionId)?.code ?? "-" : "Sem caixa", movement.responsible])} />
+      </Card>
+    </div>}
+
+    {tab === "centros" && <Card>
+      <div className="flex justify-between items-center gap-3 mb-4"><SectionTitle>Centros de Custo</SectionTitle><Btn onClick={() => { setSelectedCenterId(null); setCenterForm({ code: "", name: "", description: "", active: true }); setModal("newCentro"); }}>+ Novo Centro</Btn></div>
+      <Table headers={["Codigo", "Nome", "Descricao", "Receitas", "Despesas", "Saldo", "Status", "Acoes"]} rows={costCenters.map((center) => {
+        const totals = costCenterTotals(center, receipts, payables, cashMovements);
+        return [center.code, center.name, center.description, formatMoney(totals.receipts), formatMoney(totals.payments), formatMoney(totals.receipts - totals.payments), <Badge label={center.active ? "Ativo" : "Inativo"} />, <Btn small variant="ghost" onClick={() => { setSelectedCenterId(center.id); setCenterForm({ code: center.code, name: center.name, description: center.description, active: center.active }); setModal("editCentro"); }}>Editar</Btn>];
+      })} />
+    </Card>}
+
+    {tab === "conciliacao" && <Card>
+      <div className="flex justify-between items-center gap-3 mb-4"><SectionTitle>Conciliação Bancária</SectionTitle><Btn onClick={() => { setBankForm({ date: today(), description: "", value: "", direction: "credito", movementId: "", notes: "" }); setModal("concilia"); }}>+ Registrar Conciliação</Btn></div>
+      <Alert type="info">Compare uma transacao bancaria informada manualmente com uma movimentacao do sistema. Divergencias ficam registradas sem substituir valores.</Alert>
+      <Table headers={["Data", "Banco", "Tipo", "Valor banco", "Movimento sistema", "Diferenca", "Status"]} rows={reconciledRows.map(({ transaction, movement, difference }) => [transaction.date, transaction.description, transaction.direction === "credito" ? "Credito" : "Debito", formatMoney(transaction.value), movement ? `${movement.description} (${formatMoney(movement.value)})` : "Nao vinculado", formatMoney(Math.abs(difference)), <Badge label={movement && Math.abs(difference) < 0.01 ? "Conciliado" : "Divergente"} />])} />
+    </Card>}
+
+    {modal === "receber" && selectedReceivable && <Modal wide title={`Receber ${selectedReceivable.reservation.code}`} onClose={() => setModal(null)}>
+      <FormGrid cols={2}>
+        <Input label="Cliente" value={selectedReceivable.reservation.guest} readOnly />
+        <Input label="Reserva / hospedagem" value={selectedReceivable.invoice ? selectedReceivable.reservation.code.replace("RES", "HOS") : selectedReceivable.reservation.code} readOnly />
+        <Input label="Valor total devido" value={formatMoney(selectedReceivable.total)} readOnly />
+        <Input label="Valor ja recebido" value={formatMoney(selectedReceivable.received)} readOnly />
+        <Input label="Saldo pendente" value={formatMoney(selectedReceivable.balance)} readOnly />
+        <Input label="Valor a receber *" type="number" min="0.01" step="0.01" max={selectedReceivable.balance} value={receiptForm.value} onChange={(event) => setReceiptForm({ ...receiptForm, value: event.target.value })} />
+        <Select label="Forma de pagamento *" value={receiptForm.method} onChange={(event) => setReceiptForm({ ...receiptForm, method: event.target.value })}>{methodOptions.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}</Select>
+        <Input label="Data *" type="date" value={receiptForm.date} onChange={(event) => setReceiptForm({ ...receiptForm, date: event.target.value })} />
+        <Input label="Responsavel *" value={receiptForm.responsible} onChange={(event) => setReceiptForm({ ...receiptForm, responsible: event.target.value })} />
+        <FullCol><Textarea label="Observacoes" value={receiptForm.notes} onChange={(event) => setReceiptForm({ ...receiptForm, notes: event.target.value })} /></FullCol>
+      </FormGrid>
+      <FormActions><Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn><Btn onClick={saveReceipt}>Confirmar recebimento</Btn></FormActions>
+    </Modal>}
+
+    {modal === "receberEvento" && selectedEventReceivable && <Modal wide title={`Receber ${selectedEventReceivable.event.code}`} onClose={() => setModal(null)}>
+      <FormGrid cols={2}>
+        <Input label="Cliente" value={selectedEventReceivable.event.contractorName} readOnly />
+        <Input label="Evento" value={selectedEventReceivable.event.name} readOnly />
+        <Input label="Valor total devido" value={formatMoney(selectedEventReceivable.total)} readOnly />
+        <Input label="Valor ja recebido" value={formatMoney(selectedEventReceivable.received)} readOnly />
+        <Input label="Saldo pendente" value={formatMoney(selectedEventReceivable.balance)} readOnly />
+        <Input label="Valor a receber *" type="number" min="0.01" step="0.01" max={selectedEventReceivable.balance} value={receiptForm.value} onChange={(event) => setReceiptForm({ ...receiptForm, value: event.target.value })} />
+        <Select label="Forma de pagamento *" value={receiptForm.method} onChange={(event) => setReceiptForm({ ...receiptForm, method: event.target.value })}>{methodOptions.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}</Select>
+        <Input label="Data *" type="date" value={receiptForm.date} onChange={(event) => setReceiptForm({ ...receiptForm, date: event.target.value })} />
+        <Input label="Responsavel *" value={receiptForm.responsible} onChange={(event) => setReceiptForm({ ...receiptForm, responsible: event.target.value })} />
+        <FullCol><Textarea label="Observacoes" value={receiptForm.notes} onChange={(event) => setReceiptForm({ ...receiptForm, notes: event.target.value })} /></FullCol>
+      </FormGrid>
+      <FormActions><Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn><Btn onClick={saveEventReceipt}>Confirmar recebimento</Btn></FormActions>
+    </Modal>}
+
+    {(modal === "newPagar" || modal === "editPagar") && <Modal wide title={modal === "newPagar" ? "Nova Conta a Pagar" : "Editar Conta a Pagar"} onClose={() => setModal(null)}>
+      <PayableForm form={payableForm} setForm={setPayableForm} costCenters={costCenters} />
+      <FormActions><Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn><Btn onClick={savePayable}>Salvar</Btn></FormActions>
+    </Modal>}
+
+    {modal === "payPagar" && selectedPayable && <Modal title={`Pagar ${selectedPayable.code}`} onClose={() => setModal(null)}>
+      <FormGrid cols={2}>
+        <Input label="Fornecedor" value={selectedPayable.supplier} readOnly />
+        <Input label="Saldo pendente" value={formatMoney(pendingBalance(selectedPayable.originalValue, paidValue(selectedPayable)))} readOnly />
+        <Input label="Valor *" type="number" min="0.01" step="0.01" value={paymentForm.value} onChange={(event) => setPaymentForm({ ...paymentForm, value: event.target.value })} />
+        <Select label="Forma *" value={paymentForm.method} onChange={(event) => setPaymentForm({ ...paymentForm, method: event.target.value })}>{methodOptions.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}</Select>
+        <Input label="Data" type="date" value={paymentForm.date} onChange={(event) => setPaymentForm({ ...paymentForm, date: event.target.value })} />
+        <Input label="Responsavel" value={paymentForm.responsible} onChange={(event) => setPaymentForm({ ...paymentForm, responsible: event.target.value })} />
+        <FullCol><Textarea label="Observacoes" value={paymentForm.notes} onChange={(event) => setPaymentForm({ ...paymentForm, notes: event.target.value })} /></FullCol>
+      </FormGrid>
+      <FormActions><Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn><Btn onClick={savePayablePayment}>Registrar pagamento</Btn></FormActions>
+    </Modal>}
+
+    {modal === "abrirCaixa" && <Modal title="Abrir Caixa" onClose={() => setModal(null)}><FormGrid cols={1}><Input label="Responsavel" value={cashOpenForm.responsible} onChange={(event) => setCashOpenForm({ ...cashOpenForm, responsible: event.target.value })} /><Input label="Valor inicial em dinheiro" type="number" min="0" value={cashOpenForm.openingCash} onChange={(event) => setCashOpenForm({ ...cashOpenForm, openingCash: event.target.value })} /><Textarea label="Observacoes" value={cashOpenForm.notes} onChange={(event) => setCashOpenForm({ ...cashOpenForm, notes: event.target.value })} /></FormGrid><FormActions><Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn><Btn onClick={() => { const result = openCashSession({ responsible: cashOpenForm.responsible, openingCash: Number(cashOpenForm.openingCash), notes: cashOpenForm.notes }); if (!result.ok) setMessage(result.error ?? "Falha ao abrir caixa."); else setModal(null); }}>Abrir</Btn></FormActions></Modal>}
+
+    {modal === "fecharCaixa" && openCash && <Modal title="Fechar Caixa" onClose={() => setModal(null)}><Alert type="info">Valor fisico esperado: {formatMoney(cashExpectedTotal(openCash.id))}. Transacoes Pix/cartao aparecem no resumo, mas nao aumentam o dinheiro em gaveta.</Alert><FormGrid cols={1}><Input label="Valor contado" type="number" min="0" value={cashCloseForm.countedCash} onChange={(event) => setCashCloseForm({ ...cashCloseForm, countedCash: event.target.value })} /><Textarea label="Observacoes" value={cashCloseForm.notes} onChange={(event) => setCashCloseForm({ ...cashCloseForm, notes: event.target.value })} /></FormGrid><FormActions><Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn><Btn variant="danger" onClick={() => { const result = closeCashSession({ sessionId: openCash.id, countedCash: Number(cashCloseForm.countedCash), notes: cashCloseForm.notes }); if (!result.ok) setMessage(result.error ?? "Falha ao fechar caixa."); else setModal(null); }}>Fechar</Btn></FormActions></Modal>}
+
+    {modal === "movCaixa" && <Modal title="Movimento Manual de Caixa" onClose={() => setModal(null)}><FormGrid cols={2}><Select label="Tipo" value={cashMoveForm.direction} onChange={(event) => setCashMoveForm({ ...cashMoveForm, direction: event.target.value })}><option value="entrada">Entrada</option><option value="saida">Saida</option></Select><Select label="Metodo" value={cashMoveForm.method} onChange={(event) => setCashMoveForm({ ...cashMoveForm, method: event.target.value })}>{methodOptions.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}</Select><Input label="Valor" type="number" min="0.01" value={cashMoveForm.value} onChange={(event) => setCashMoveForm({ ...cashMoveForm, value: event.target.value })} /><Input label="Responsavel" value={cashMoveForm.responsible} onChange={(event) => setCashMoveForm({ ...cashMoveForm, responsible: event.target.value })} /><FullCol><Input label="Descricao" value={cashMoveForm.description} onChange={(event) => setCashMoveForm({ ...cashMoveForm, description: event.target.value })} /></FullCol><FullCol><Textarea label="Observacoes" value={cashMoveForm.notes} onChange={(event) => setCashMoveForm({ ...cashMoveForm, notes: event.target.value })} /></FullCol></FormGrid><FormActions><Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn><Btn onClick={() => { const result = registerManualCashMovement({ ...cashMoveForm, direction: cashMoveForm.direction as "entrada" | "saida", value: Number(cashMoveForm.value) }); if (!result.ok) setMessage(result.error ?? "Falha no movimento."); else setModal(null); }}>Registrar</Btn></FormActions></Modal>}
+
+    {(modal === "newCentro" || modal === "editCentro") && <Modal title="Centro de Custo" onClose={() => setModal(null)}><FormGrid cols={2}><Input label="Codigo" value={centerForm.code} onChange={(event) => setCenterForm({ ...centerForm, code: event.target.value })} /><Input label="Nome" value={centerForm.name} onChange={(event) => setCenterForm({ ...centerForm, name: event.target.value })} /><Select label="Situacao" value={centerForm.active ? "ativo" : "inativo"} onChange={(event) => setCenterForm({ ...centerForm, active: event.target.value === "ativo" })}><option value="ativo">Ativo</option><option value="inativo">Inativo</option></Select><FullCol><Textarea label="Descricao" value={centerForm.description} onChange={(event) => setCenterForm({ ...centerForm, description: event.target.value })} /></FullCol></FormGrid><FormActions><Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn><Btn onClick={saveCenter}>Salvar</Btn></FormActions></Modal>}
+
+    {modal === "concilia" && <Modal wide title="Registrar Conciliação" onClose={() => setModal(null)}><FormGrid cols={2}><Input label="Data banco" type="date" value={bankForm.date} onChange={(event) => setBankForm({ ...bankForm, date: event.target.value })} /><Select label="Tipo" value={bankForm.direction} onChange={(event) => setBankForm({ ...bankForm, direction: event.target.value })}><option value="credito">Credito</option><option value="debito">Debito</option></Select><Input label="Valor banco" type="number" min="0.01" value={bankForm.value} onChange={(event) => setBankForm({ ...bankForm, value: event.target.value })} /><Select label="Movimento do sistema" value={bankForm.movementId} onChange={(event) => setBankForm({ ...bankForm, movementId: event.target.value })}><option value="">Nao vincular</option>{cashMovements.map((movement) => <option key={movement.id} value={movement.id}>{movement.date} - {movement.description} - {formatMoney(movement.value)}</option>)}</Select><FullCol><Input label="Descricao banco" value={bankForm.description} onChange={(event) => setBankForm({ ...bankForm, description: event.target.value })} /></FullCol><FullCol><Textarea label="Observacoes" value={bankForm.notes} onChange={(event) => setBankForm({ ...bankForm, notes: event.target.value })} /></FullCol></FormGrid><FormActions><Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn><Btn onClick={() => { const result = reconcileBankTransaction({ date: bankForm.date, description: bankForm.description, value: Number(bankForm.value), direction: bankForm.direction as "credito" | "debito", movementId: bankForm.movementId ? Number(bankForm.movementId) : undefined, notes: bankForm.notes }); if (!result.ok) setMessage(result.error ?? "Falha na conciliacao."); else setModal(null); }}>Salvar</Btn></FormActions></Modal>}
+  </div>;
+}
+
+function Kpi({ title, value, help }: { title: string; value: string; help: string }) {
+  return <div className="summary-item"><span>{title}</span><strong>{value}</strong><small>{help}</small></div>;
+}
+
+function PayableForm({ form, setForm, costCenters }: { form: typeof emptyPayable; setForm: (form: typeof emptyPayable) => void; costCenters: CostCenter[] }) {
+  return <FormGrid cols={2}>
+    <FullCol><Input label="Descricao *" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></FullCol>
+    <Input label="Fornecedor / beneficiario *" value={form.supplier} onChange={(event) => setForm({ ...form, supplier: event.target.value })} />
+    <Input label="Categoria" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} />
+    <Select label="Centro de custo *" value={form.costCenterId} onChange={(event) => setForm({ ...form, costCenterId: event.target.value })}>{costCenters.filter((center) => center.active).map((center) => <option key={center.id} value={center.id}>{center.name}</option>)}</Select>
+    <Input label="Valor *" type="number" min="0.01" step="0.01" value={form.originalValue} onChange={(event) => setForm({ ...form, originalValue: event.target.value })} />
+    <Input label="Vencimento *" type="date" value={form.dueDate} onChange={(event) => setForm({ ...form, dueDate: event.target.value })} />
+    <FullCol><Textarea label="Observacoes" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></FullCol>
+  </FormGrid>;
+}
+
+function paidValue(payable: PayableAccount) {
+  return payable.payments.reduce((total, payment) => total + payment.value, 0);
+}
+
+function costCenterName(costCenters: CostCenter[], id: number) {
+  return costCenters.find((center) => center.id === id)?.name ?? "Sem centro";
+}
+
+function receivableDescription(reservation: Reservation) {
+  return reservation.status === "Hospedado" || reservation.status === "Concluida" ? "Hospedagem e consumos faturaveis" : "Valor contratado da reserva";
+}
+
+function costCenterTotals(center: CostCenter, receipts: { value: number; status: string }[], payables: PayableAccount[], movements: CashMovement[]) {
+  const receiptsTotal = center.name === "Hospedagem" ? receipts.filter((receipt) => receipt.status === "Confirmado").reduce((total, receipt) => total + receipt.value, 0) : 0;
+  const paymentsTotal = payables.filter((payable) => payable.costCenterId === center.id).reduce((total, payable) => total + paidValue(payable), 0);
+  const manualCash = movements.filter((movement) => movement.source === "manual" && movement.direction === "saida" && isCashPayment(movement.methodId)).reduce((total, movement) => total + movement.value, 0);
+  return { receipts: receiptsTotal, payments: paymentsTotal + (center.name === "Administracao" ? manualCash : 0) };
 }

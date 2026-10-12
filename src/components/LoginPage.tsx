@@ -2,16 +2,23 @@ import { useState } from "react";
 import loginHero from "@/assets/images/login-hero.webp";
 import imgBg from "@/imports/Tela1/a0d675e5dbbaa64a9cbd0de29255fe8fe8cd0e10.png";
 import logo from "@/assets/logo.png";
+import { Alert, Btn, FormActions, Input, Modal } from "./ui";
 
 const SERIF = "'Inria Serif', Georgia, serif";
 
-type Props = { onLogin: (email: string, password: string) => void };
+type Props = {
+  onLogin: (email: string, password: string) => string | undefined;
+  onRecoverPassword: (email: string) => string;
+};
 
-export default function LoginPage({ onLogin }: Props) {
+export default function LoginPage({ onLogin, onRecoverPassword }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [recoveryMessage, setRecoveryMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +30,16 @@ export default function LoginPage({ onLogin }: Props) {
     setLoading(true);
     await new Promise((r) => setTimeout(r, 600));
     setLoading(false);
-    onLogin(email, password);
+    const loginError = onLogin(email, password);
+    if (loginError) setError(loginError);
+  };
+
+  const handleRecovery = () => {
+    if (!recoveryEmail.trim()) {
+      setRecoveryMessage("Informe o e-mail cadastrado.");
+      return;
+    }
+    setRecoveryMessage(onRecoverPassword(recoveryEmail));
   };
 
   return (
@@ -318,19 +334,66 @@ export default function LoginPage({ onLogin }: Props) {
             </div>
           </form>
 
-          <p
-            style={{
-              fontFamily: SERIF,
-              fontSize: "0.72rem",
-              color: "var(--border)",
-              textAlign: "center",
-              marginTop: "20px",
-            }}
-          >
-            Esqueceu a senha? Contate o administrador.
-          </p>
+          <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+            <Btn
+              variant="ghost"
+              fullWidth
+              onClick={() => {
+                setRecoveryEmail(email);
+                setRecoveryMessage("");
+                setRecoveryOpen(true);
+              }}
+            >
+              Esqueci minha senha
+            </Btn>
+            <p
+              style={{
+                fontFamily: SERIF,
+                fontSize: "0.72rem",
+                color: "var(--text-muted)",
+                textAlign: "center",
+              }}
+            >
+              Acesso demonstrativo: admin@hotel.com · Hotel@2026
+            </p>
+          </div>
         </div>
       </div>
+      {recoveryOpen && (
+        <Modal
+          title="Recuperar senha"
+          onClose={() => setRecoveryOpen(false)}
+        >
+          <div className="space-y-4">
+            <Alert type="info">
+              Informe seu e-mail para receber as instruções de recuperação.
+            </Alert>
+            <Input
+              label="E-mail cadastrado"
+              type="email"
+              value={recoveryEmail}
+              onChange={(event) => setRecoveryEmail(event.target.value)}
+            />
+            {recoveryMessage && (
+              <Alert
+                type={
+                  recoveryMessage.startsWith("Informe")
+                    ? "error"
+                    : "success"
+                }
+              >
+                {recoveryMessage}
+              </Alert>
+            )}
+            <FormActions>
+              <Btn variant="ghost" onClick={() => setRecoveryOpen(false)}>
+                Voltar
+              </Btn>
+              <Btn onClick={handleRecovery}>Enviar instruções</Btn>
+            </FormActions>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
