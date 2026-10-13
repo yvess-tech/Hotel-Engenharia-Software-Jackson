@@ -34,6 +34,7 @@ interface Funcionario {
   admissao: string;
   cargoId: number;
   turnoId: number;
+  salario: number;
   perfilAcesso: string;
   observacoes: string;
   status: Status;
@@ -179,6 +180,7 @@ const initialFuncionarios: Funcionario[] = [
     admissao: "2024-02-12",
     cargoId: 1,
     turnoId: 1,
+    salario: 2650,
     perfilAcesso: "Operacional",
     observacoes: "",
     status: "Ativo",
@@ -195,6 +197,7 @@ const initialFuncionarios: Funcionario[] = [
     admissao: "2024-06-03",
     cargoId: 2,
     turnoId: 1,
+    salario: 2200,
     perfilAcesso: "Operacional",
     observacoes: "Responsável pelo segundo andar.",
     status: "Ativo",
@@ -211,6 +214,7 @@ const initialFuncionarios: Funcionario[] = [
     admissao: "2025-01-20",
     cargoId: 3,
     turnoId: 2,
+    salario: 2400,
     perfilAcesso: "Operacional",
     observacoes: "",
     status: "Ativo",
@@ -227,6 +231,7 @@ const initialFuncionarios: Funcionario[] = [
     admissao: "2022-08-15",
     cargoId: 4,
     turnoId: 4,
+    salario: 4200,
     perfilAcesso: "Gestão",
     observacoes: "",
     status: "Inativo",
@@ -344,6 +349,7 @@ const emptyFuncionario = () => ({
   admissao: "",
   cargoId: "",
   turnoId: "",
+  salario: "",
   perfilAcesso: "Operacional",
   observacoes: "",
 });
@@ -388,6 +394,13 @@ function formatDate(value: string, dateOnly = false) {
           minute: "2-digit",
         },
   );
+}
+
+function formatCurrency(value: number) {
+  return value.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
 }
 
 export default function Funcionarios() {
@@ -454,7 +467,9 @@ export default function Funcionarios() {
   const openNew = () => {
     setSelectedId(null);
     setError("");
-    if (tab === "funcionarios") setFormFuncionario({
+    if (tab === "funcionarios") {
+      const cargoInicial = cargos.find((item) => item.status === "Ativo");
+      setFormFuncionario({
       ...emptyFuncionario(),
       nome: "Patricia Nunes Demo",
       cpf: "529.982.247-25",
@@ -463,10 +478,12 @@ export default function Funcionarios() {
       telefone: "(69) 99240-1122",
       endereco: "Rua das Flores, 120 - Centro",
       admissao: new Date().toISOString().slice(0, 10),
-      cargoId: String(cargos.find((item) => item.status === "Ativo")?.id ?? ""),
+      cargoId: String(cargoInicial?.id ?? ""),
       turnoId: String(turnos.find((item) => item.status === "Ativo")?.id ?? ""),
+      salario: String(cargoInicial?.salarioBase ?? ""),
       observacoes: "Funcionario exemplo para demonstracao do cadastro.",
-    });
+      });
+    }
     if (tab === "cargos") setFormCargo({ nome: "Supervisor Demo", descricao: "Cargo de exemplo para demonstracao de permissoes.", salarioBase: "3200", permissoes: "Reservas, Hospedes, Relatorios" });
     if (tab === "turnos") setFormTurno({ nome: "Turno Demo Manha", inicio: "07:00", fim: "15:00", intervalo: "60", dias: "Segunda a sexta", cargaSemanal: "40" });
     if (tab === "atribuicoes") setFormAtribuicao({ funcionarioId: String(funcionarios.find((item) => item.status === "Ativo")?.id ?? ""), titulo: "Treinamento de recepcao demo", descricao: "Acompanhar atendimento, check-in e fechamento de caixa durante a demonstracao.", inicio: new Date().toISOString().slice(0, 10), fim: "", prioridade: "Média" });
@@ -497,6 +514,7 @@ export default function Funcionarios() {
         admissao: funcionario.admissao,
         cargoId: String(funcionario.cargoId),
         turnoId: String(funcionario.turnoId),
+        salario: String(funcionario.salario),
         perfilAcesso: funcionario.perfilAcesso,
         observacoes: funcionario.observacoes,
       });
@@ -552,9 +570,15 @@ export default function Funcionarios() {
       !formFuncionario.cpf ||
       !formFuncionario.admissao ||
       !formFuncionario.cargoId ||
-      !formFuncionario.turnoId
+      !formFuncionario.turnoId ||
+      !formFuncionario.salario
     ) {
-      setError("Preencha nome, CPF, admissão, cargo e turno.");
+      setError("Preencha nome, CPF, admissão, cargo, turno e salário.");
+      return;
+    }
+    const salario = Number(formFuncionario.salario);
+    if (!Number.isFinite(salario) || salario < 0) {
+      setError("Informe um salário válido.");
       return;
     }
     const cpfEmUso = funcionarios.some(
@@ -568,6 +592,7 @@ export default function Funcionarios() {
       ...formFuncionario,
       cargoId: Number(formFuncionario.cargoId),
       turnoId: Number(formFuncionario.turnoId),
+      salario,
     };
     if (modalMode === "new") {
       const id = Date.now();
@@ -579,15 +604,21 @@ export default function Funcionarios() {
       addHistory(id, "Funcionário cadastrado", `Matrícula ${matricula} criada.`);
     } else if (selectedId) {
       const previous = funcionarios.find((item) => item.id === selectedId);
+      const detalhesAtualizacao = [
+        previous?.cargoId !== data.cargoId || previous?.turnoId !== data.turnoId
+          ? `Cargo/turno atualizado para ${cargoNome(data.cargoId)} / ${turnoNome(data.turnoId)}.`
+          : "",
+        previous && previous.salario !== data.salario
+          ? `Salário atualizado para ${formatCurrency(data.salario)}.`
+          : "",
+      ].filter(Boolean).join(" ");
       setFuncionarios((current) =>
         current.map((item) => (item.id === selectedId ? { ...item, ...data } : item)),
       );
       addHistory(
         selectedId,
         "Cadastro atualizado",
-        previous?.cargoId !== data.cargoId || previous?.turnoId !== data.turnoId
-          ? `Cargo/turno atualizado para ${cargoNome(data.cargoId)} / ${turnoNome(data.turnoId)}.`
-          : "Dados cadastrais atualizados.",
+        detalhesAtualizacao || "Dados cadastrais atualizados.",
       );
     }
     closeModal();
@@ -866,7 +897,7 @@ export default function Funcionarios() {
 
           {tab === "funcionarios" && (
             <Table
-              headers={["Matrícula", "Funcionário", "Cargo", "Turno", "Admissão", "Perfil", "Status", "Ações"]}
+              headers={["Matrícula", "Funcionário", "Cargo", "Salário", "Turno", "Admissão", "Perfil", "Status", "Ações"]}
               rows={funcionariosFiltrados.map((item) => [
                 item.matricula,
                 <div>
@@ -874,8 +905,11 @@ export default function Funcionarios() {
                   <p className="text-xs text-muted">{item.email}</p>
                 </div>,
                 cargoNome(item.cargoId),
+                formatCurrency(item.salario),
                 turnoNome(item.turnoId),
-                formatDate(item.admissao, true),
+                <span className="block text-center tabular-nums">
+                  {formatDate(item.admissao, true)}
+                </span>,
                 item.perfilAcesso,
                 <Badge label={item.status} color={item.status === "Ativo" ? "green" : "gray"} />,
                 <div className="flex flex-wrap gap-1">
@@ -1028,10 +1062,22 @@ export default function Funcionarios() {
             <Input label="Endereço" value={formFuncionario.endereco} onChange={(event) => setFormFuncionario((current) => ({ ...current, endereco: event.target.value }))} />
             <FullCol><SectionTitle>Vínculo e permissões</SectionTitle></FullCol>
             <Input label="Data de admissão *" type="date" value={formFuncionario.admissao} onChange={(event) => setFormFuncionario((current) => ({ ...current, admissao: event.target.value }))} />
-            <Select label="Cargo *" value={formFuncionario.cargoId} onChange={(event) => setFormFuncionario((current) => ({ ...current, cargoId: event.target.value }))}>
+            <Select
+              label="Cargo *"
+              value={formFuncionario.cargoId}
+              onChange={(event) => {
+                const cargo = cargos.find((item) => item.id === Number(event.target.value));
+                setFormFuncionario((current) => ({
+                  ...current,
+                  cargoId: event.target.value,
+                  salario: current.salario || String(cargo?.salarioBase ?? ""),
+                }));
+              }}
+            >
               <option value="">Selecione</option>
               {cargos.filter((item) => item.status === "Ativo").map((item) => <option key={item.id} value={item.id}>{item.nome}</option>)}
             </Select>
+            <Input label="Salário do funcionário *" type="number" min="0" step="0.01" value={formFuncionario.salario} onChange={(event) => setFormFuncionario((current) => ({ ...current, salario: event.target.value }))} />
             <Select label="Turno *" value={formFuncionario.turnoId} onChange={(event) => setFormFuncionario((current) => ({ ...current, turnoId: event.target.value }))}>
               <option value="">Selecione</option>
               {turnos.filter((item) => item.status === "Ativo").map((item) => <option key={item.id} value={item.id}>{item.nome}</option>)}
@@ -1149,6 +1195,7 @@ export default function Funcionarios() {
                 <Info label="Nascimento" value={formatDate(selectedFuncionario.nascimento, true)} />
                 <Info label="Admissão" value={formatDate(selectedFuncionario.admissao, true)} />
                 <Info label="Cargo" value={cargoNome(selectedFuncionario.cargoId)} />
+                <Info label="Salário" value={formatCurrency(selectedFuncionario.salario)} />
                 <Info label="Turno" value={turnoNome(selectedFuncionario.turnoId)} />
                 <Info label="Perfil de acesso" value={selectedFuncionario.perfilAcesso} />
                 <Info label="Telefone" value={selectedFuncionario.telefone || "—"} />
