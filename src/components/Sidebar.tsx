@@ -31,6 +31,7 @@ const navItems: NavItem[] = [
   { id: "reservas",     label: "Reservas",              icon: calendarCheckIcon, group: "Recepção" },
   { id: "quartos",      label: "Quartos",               icon: bedDoubleIcon, group: "Recepção" },
   { id: "checkinout",   label: "Check-in / Check-out",  icon: keyRoundIcon, group: "Recepção" },
+  { id: "hospedagens",  label: "Hospedagens",            icon: bedDoubleIcon, group: "Recepção" },
   { id: "consumos",     label: "Consumos",              icon: conciergeBellIcon, group: "Serviços" },
   { id: "estoque",      label: "Estoque",               icon: packageIcon, group: "Serviços" },
   { id: "pacotes",      label: "Pacotes",               icon: giftIcon, group: "Serviços" },

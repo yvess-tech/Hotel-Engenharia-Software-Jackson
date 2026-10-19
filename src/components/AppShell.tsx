@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { User } from "../App";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
@@ -7,6 +7,7 @@ import Hospedes from "./pages/Hospedes";
 import Reservas from "./pages/Reservas";
 import Quartos from "./pages/Quartos";
 import CheckInOut from "./pages/CheckInOut";
+import Hospedagens from "./pages/Hospedagens";
 import Consumos from "./pages/Consumos";
 import Estoque from "./pages/Estoque";
 import Pacotes from "./pages/Pacotes";
@@ -24,7 +25,7 @@ import { DemoEngineProvider } from "./demo/DemoEngineContext";
 import OperationalDemoPanel from "./demo/OperationalDemoPanel";
 
 export type Page =
-  | "dashboard" | "hospedes" | "reservas" | "quartos" | "checkinout"
+  | "dashboard" | "hospedes" | "reservas" | "quartos" | "checkinout" | "hospedagens"
   | "consumos" | "estoque" | "pacotes" | "financeiro" | "funcionarios"
   | "limpeza" | "eventos" | "comunicacoes" | "fiscal" | "usuarios" | "relatorios";
 
@@ -34,6 +35,7 @@ const pageComponents: Record<Page, React.ComponentType> = {
   reservas: Reservas,
   quartos: Quartos,
   checkinout: CheckInOut,
+  hospedagens: Hospedagens,
   consumos: Consumos,
   estoque: Estoque,
   pacotes: Pacotes,
@@ -53,6 +55,24 @@ export default function AppShell({ user, onLogout }: Props) {
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [presentationOpen, setPresentationOpen] = useState(false);
+
+  useEffect(() => {
+    const openStay = (event: Event) => {
+      const stayId = (event as CustomEvent<number>).detail;
+      if (!Number.isFinite(stayId)) return;
+      window.sessionStorage.setItem("hotel-open-stay", String(stayId));
+      setCurrentPage("hospedagens");
+    };
+    window.addEventListener("hotel:open-stay", openStay);
+    const openCheckout = (event: Event) => {
+      const reservationId = (event as CustomEvent<number>).detail;
+      if (!Number.isFinite(reservationId)) return;
+      window.sessionStorage.setItem("hotel-open-checkout", String(reservationId));
+      setCurrentPage("checkinout");
+    };
+    window.addEventListener("hotel:open-checkout", openCheckout);
+    return () => { window.removeEventListener("hotel:open-stay", openStay); window.removeEventListener("hotel:open-checkout", openCheckout); };
+  }, []);
 
   const PageComponent = pageComponents[currentPage];
 

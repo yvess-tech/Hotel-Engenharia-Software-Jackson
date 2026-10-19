@@ -1,105 +1,52 @@
-import { useEffect, useState } from "react";
-import { Alert, Badge, Btn, Card, FormActions, FormGrid, FullCol, Input, KpiCard, Modal, PageHeader, Select, Table } from "../ui";
-import { formatMoney, useHotelOperations } from "../HotelOperationsContext";
-import { useDemoEngine } from "../demo/DemoEngineContext";
+import { useMemo, useState } from "react";
+import { Alert, Badge, Btn, Card, FormActions, FormGrid, FullCol, Input, Modal, PageHeader, Select, Table, Textarea } from "../ui";
+import { formatMoney, OPERATIONAL_SERVICES, useHotelOperations } from "../HotelOperationsContext";
 
-const services = ["Café da manhã", "Decoração especial", "Jantar romântico", "Trilha guiada", "Ingresso parque nacional", "Restaurante", "Frigobar", "Room Service", "Lavanderia", "Spa", "Outros"];
+const services = OPERATIONAL_SERVICES;
+type Kind = "Serviço" | "Produto";
 
 export default function Consumos() {
-  const { reservations, rooms, stays, consumptions, recordConsumption } = useHotelOperations();
-  const [modal, setModal] = useState(false);
+  const { reservations, rooms, stays, consumptions, products, recordConsumption, reverseConsumption } = useHotelOperations();
+  const [modal, setModal] = useState<"new" | "reverse" | null>(null);
   const [search, setSearch] = useState("");
   const [feedback, setFeedback] = useState("");
-  const [form, setForm] = useState({ reservationId: "", service: "Restaurante", description: "", value: "" });
-  const demo = useDemoEngine();
-  const activeStays = stays.filter((stay) => stay.status === "Ativa").map((stay) => reservations.find((reservation) => reservation.id === stay.reservationId)).filter((reservation) => Boolean(reservation)) as typeof reservations;
-  const selectedStay = activeStays.find((reservation) => reservation.id === Number(form.reservationId));
-  const selectedStayRecord = stays.find((stay) => stay.reservationId === selectedStay?.id && stay.status === "Ativa");
-  const includedBenefits = selectedStay?.packageSnapshot?.benefits ?? [];
-  const included = includedBenefits.some((benefit) => benefit.toLocaleLowerCase("pt-BR") === form.service.toLocaleLowerCase("pt-BR"));
-  const filtered = consumptions.filter((consumption) => {
+  const [reverse, setReverse] = useState({ id: 0, reason: "", responsible: "Recepção" });
+  const [form, setForm] = useState({ reservationId: "", kind: "Serviço" as Kind, service: "Restaurante", productId: "", description: "", quantity: "1", unitPrice: "0", responsible: "Recepção" });
+  const activeStays = stays.filter((stay) => stay.status === "Ativa");
+  const selectedStay = activeStays.find((stay) => stay.reservationId === Number(form.reservationId));
+  const selectedReservation = reservations.find((reservation) => reservation.id === Number(form.reservationId));
+  const selectedProduct = products.find((product) => product.id === Number(form.productId));
+  const hasStructuredBenefits = Boolean(selectedReservation?.packageSnapshot?.structuredBenefits?.length);
+  const filtered = useMemo(() => consumptions.filter((consumption) => {
     const reservation = reservations.find((item) => item.id === consumption.reservationId);
     const room = rooms.find((item) => item.id === reservation?.roomId);
-    return !search || reservation?.guest.toLowerCase().includes(search.toLowerCase()) || room?.number.includes(search);
-  });
+    return !search || `${reservation?.guest ?? ""} ${room?.number ?? ""} ${consumption.service} ${consumption.status ?? "Lançado"}`.toLowerCase().includes(search.toLowerCase());
+  }), [consumptions, reservations, rooms, search]);
+  const total = Number(form.quantity) * Number(form.unitPrice);
 
-  useEffect(() => {
-    const command = demo.activeCommand;
-    if (!command || command.target !== "consumos" || command.command !== "prefill-consumption-form") return;
-    const reservation = reservations.find((item) => item.id === demo.scenario?.ids.reservationId);
-    if (!reservation) {
-      demo.resolveCommand(command.id, { status: "error", message: "Hospedagem do cenário não encontrada." });
-      return;
-    }
-    setForm({ reservationId: String(reservation.id), service: String(command.payload.service), description: "Consumo fictício da jornada demonstrativa.", value: String(command.payload.value) });
-    setFeedback("");
-    setModal(true);
-    demo.resolveCommand(command.id, { status: "running", message: "Consumo preenchido. Use Lançar para confirmar." });
-  }, [demo.activeCommand]);
-
-  useEffect(() => {
-    if (!modal || form.reservationId || form.description || form.value) return;
-    const stay = activeStays[0];
-    setForm({
-      reservationId: stay ? String(stay.id) : "",
-      service: "Room Service",
-      description: "Jantar demonstrativo lançado na hospedagem.",
-      value: "120",
-    });
-  }, [modal]);
-
+  const openNew = () => { setFeedback(""); setForm({ reservationId: "", kind: "Serviço", service: "Restaurante", productId: "", description: "", quantity: "1", unitPrice: "0", responsible: "Recepção" }); setModal("new"); };
+  const setKind = (kind: Kind) => setForm({ ...form, kind, service: kind === "Serviço" ? "Restaurante" : "", productId: "", unitPrice: "0" });
+  const chooseProduct = (productId: string) => { const product = products.find((item) => item.id === Number(productId)); setForm({ ...form, productId, service: product?.name ?? "", unitPrice: String(product?.unitPrice ?? 0) }); };
   const save = () => {
-    if (!selectedStay || (!included && Number(form.value) <= 0)) return;
-    if (!selectedStayRecord) return;
-    const result = recordConsumption({
-      stayId: selectedStayRecord.id,
-      reservationId: selectedStay.id,
-      service: form.service,
-      description: form.description,
-      value: included ? 0 : Number(form.value),
-      includedInPackage: included,
-      scenarioKey: selectedStay.scenarioKey,
-    });
-    if (!result.ok) return;
-    setModal(false);
-    setFeedback(included ? "Benefício registrado sem cobrança adicional." : "Consumo extra lançado na hospedagem.");
+    if (!selectedStay || !selectedReservation) return setFeedback("Selecione uma hospedagem ativa.");
+    const result = recordConsumption({ stayId: selectedStay.id, reservationId: selectedReservation.id, productId: form.kind === "Produto" ? Number(form.productId) : undefined, service: form.kind === "Produto" ? selectedProduct?.name ?? "" : form.service, serviceCode: form.kind === "Serviço" ? form.service : undefined, category: form.kind, description: form.description, quantity: Number(form.quantity), unitPrice: Number(form.unitPrice), value: total, responsible: form.responsible, includedInPackage: false });
+    if (!result.ok) return setFeedback(result.error ?? "Não foi possível registrar o consumo.");
+    setModal(null); setFeedback("Consumo registrado; os benefícios estruturados, a fatura e, se aplicável, o estoque foram atualizados.");
   };
-
-  const extrasTotal = consumptions.filter((item) => !item.includedInPackage).reduce((total, item) => total + item.value, 0);
-  const benefitsUsed = consumptions.filter((item) => item.includedInPackage).length;
+  const saveReverse = () => { const result = reverseConsumption(reverse.id, reverse.reason, reverse.responsible); if (!result.ok) return setFeedback(result.error ?? "Não foi possível estornar."); setModal(null); setFeedback("Estorno registrado; a fatura e o estoque vinculado foram atualizados."); };
 
   return <div className="ops-page">
-    <PageHeader title="Consumos" actions={<Btn onClick={() => { setForm({ reservationId: "", service: "Restaurante", description: "", value: "" }); setFeedback(""); setModal(true); }}>+ Lançar Consumo</Btn>} />
-    {feedback && <Alert type="success">{feedback}</Alert>}
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <KpiCard label="Hospedagens ativas" value={String(activeStays.length)} icon="hotel" />
-      <KpiCard label="Lançamentos" value={String(consumptions.length)} icon="file-text" />
-      <KpiCard label="Benefícios utilizados" value={String(benefitsUsed)} icon="gift" />
-      <KpiCard label="Extras acumulados" value={formatMoney(extrasTotal)} icon="banknote" />
-    </div>
-    <Card>
-      <div className="ops-filters"><div className="ops-filter-search"><Input label="Buscar por hóspede ou quarto" value={search} onChange={(event) => setSearch(event.target.value)} /></div></div>
-      <Table headers={["Hospedagem", "Hóspede", "Quarto", "Serviço", "Descrição", "Classificação", "Valor", "Data/Hora"]} rows={filtered.map((consumption) => {
-        const reservation = reservations.find((item) => item.id === consumption.reservationId);
-        const room = rooms.find((item) => item.id === reservation?.roomId);
-        return [reservation?.code.replace("RES", "HOS") ?? "—", reservation?.guest ?? "—", room?.number ?? "—", consumption.service, consumption.description || "—", <Badge label={consumption.includedInPackage ? "Incluso no pacote" : "Extra"} />, formatMoney(consumption.value), new Date(consumption.createdAt).toLocaleString("pt-BR")];
-      })} />
+    <PageHeader title="Consumos" actions={<Btn onClick={openNew}>+ Lançar consumo</Btn>} />
+    {feedback && <Alert type={feedback.includes("não") || feedback.includes("Selecione") ? "error" : "success"}>{feedback}</Alert>}
+    <Card><div className="ops-filters"><div className="ops-filter-search"><Input label="Buscar por hóspede, quarto, item ou situação" value={search} onChange={(event) => setSearch(event.target.value)} /></div></div>
+      <Table headers={["Hospedagem", "Hóspede", "Quarto", "Item", "Categoria", "Qtd.", "Unitário", "Total", "Situação", "Ação"]} rows={filtered.map((consumption) => { const reservation = reservations.find((item) => item.id === consumption.reservationId); const room = rooms.find((item) => item.id === reservation?.roomId); return [reservation?.code.replace("RES", "HOS") ?? "—", reservation?.guest ?? "—", room?.number ?? "—", consumption.service, consumption.category ?? "Serviço", String(consumption.quantity ?? 1), formatMoney(consumption.unitPrice ?? consumption.value), formatMoney(consumption.value), <Badge label={consumption.status ?? "Lançado"} />, consumption.status !== "Estornado" ? <Btn small variant="danger" onClick={() => { setReverse({ id: consumption.id, reason: "", responsible: "Recepção" }); setModal("reverse"); }}>Estornar</Btn> : "—"]; })} />
     </Card>
-
-    {modal && <Modal title="Lançar Consumo ou Benefício" onClose={() => setModal(false)}>
-      <FormGrid cols={2}>
-        <FullCol><Select label="Hospedagem ativa *" value={form.reservationId} onChange={(event) => setForm({ ...form, reservationId: event.target.value })}><option value="">Selecione</option>{activeStays.map((reservation) => <option key={reservation.id} value={reservation.id}>{reservation.code.replace("RES", "HOS")} — {reservation.guest} · quarto {rooms.find((room) => room.id === reservation.roomId)?.number}</option>)}</Select></FullCol>
-        <Input label="Hóspede" value={selectedStay?.guest ?? ""} readOnly />
-        <Input label="Quarto" value={rooms.find((room) => room.id === selectedStay?.roomId)?.number ?? ""} readOnly />
-        <FullCol><Select label="Serviço *" value={form.service} onChange={(event) => setForm({ ...form, service: event.target.value, value: "" })}>{services.map((service) => <option key={service}>{service}</option>)}</Select></FullCol>
-        <FullCol><Input label="Descrição" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></FullCol>
-        <Input label="Valor *" type="number" min="0" step="0.01" disabled={included} value={included ? "0" : form.value} onChange={(event) => setForm({ ...form, value: event.target.value })} />
-      </FormGrid>
-      {selectedStay?.packageSnapshot && <Alert type="info">Benefícios disponíveis: {includedBenefits.join(" · ")}.</Alert>}
-      {included && <Alert type="success">{form.service} está contemplado pelo pacote e será registrado sem nova cobrança.</Alert>}
-      {!included && selectedStay && <Alert type="warning">Este serviço será lançado como extra no check-out.</Alert>}
-      {activeStays.length === 0 && <Alert type="warning">Não há hospedagem ativa disponível para lançamentos.</Alert>}
-      <FormActions><Btn variant="ghost" onClick={() => setModal(false)}>Cancelar</Btn><Btn disabled={!selectedStay || (!included && Number(form.value) <= 0)} onClick={save}>Lançar</Btn></FormActions>
-    </Modal>}
+    {modal === "new" && <Modal title="Lançar produto ou serviço" onClose={() => setModal(null)}><FormGrid cols={2}>
+      <FullCol><Select label="Hospedagem ativa *" value={form.reservationId} onChange={(event) => setForm({ ...form, reservationId: event.target.value })}><option value="">Selecione</option>{activeStays.map((stay) => <option key={stay.id} value={stay.reservationId}>{stay.code} — {stay.guest} · quarto {rooms.find((room) => room.id === stay.roomId)?.number}</option>)}</Select></FullCol>
+      <Select label="Tipo" value={form.kind} onChange={(event) => setKind(event.target.value as Kind)}><option>Serviço</option><option>Produto</option></Select>
+      {form.kind === "Produto" ? <Select label="Produto ativo *" value={form.productId} onChange={(event) => chooseProduct(event.target.value)}><option value="">Selecione</option>{products.filter((product) => product.status === "Ativo").map((product) => <option key={product.id} value={product.id}>{product.name} · disponível {product.quantity} {product.unit}</option>)}</Select> : <Select label="Serviço *" value={form.service} onChange={(event) => setForm({ ...form, service: event.target.value })}>{services.map((service) => <option key={service}>{service}</option>)}</Select>}
+      <Input label="Quantidade *" type="number" min="1" value={form.quantity} onChange={(event) => setForm({ ...form, quantity: event.target.value })} /><Input label="Valor unitário" type="number" min="0" step="0.01" value={form.unitPrice} onChange={(event) => setForm({ ...form, unitPrice: event.target.value })} /><Input label="Responsável" value={form.responsible} onChange={(event) => setForm({ ...form, responsible: event.target.value })} /><FullCol><Textarea label="Descrição" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></FullCol>
+    </FormGrid>{selectedProduct && <Alert type="info">Disponível: {selectedProduct.quantity} {selectedProduct.unit}. Total calculado: {formatMoney(total)}.</Alert>}{hasStructuredBenefits && <Alert type="info">O sistema aplicará automaticamente as cotas contratadas e cobrará apenas excedentes.</Alert>}<FormActions><Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn><Btn disabled={!selectedStay || (form.kind === "Produto" && !selectedProduct) || Number(form.quantity) <= 0 || Number(form.unitPrice) < 0} onClick={save}>Lançar {formatMoney(total)}</Btn></FormActions></Modal>}
+    {modal === "reverse" && <Modal title="Estornar consumo" onClose={() => setModal(null)}><Textarea label="Motivo *" value={reverse.reason} onChange={(event) => setReverse({ ...reverse, reason: event.target.value })} /><Input label="Responsável" value={reverse.responsible} onChange={(event) => setReverse({ ...reverse, responsible: event.target.value })} /><FormActions><Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn><Btn variant="danger" disabled={!reverse.reason.trim()} onClick={saveReverse}>Confirmar estorno</Btn></FormActions></Modal>}
   </div>;
 }
