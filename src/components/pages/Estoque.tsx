@@ -3,6 +3,7 @@ import {
   PageHeader, Card, Btn, Input, Select, Table, Modal,
   Alert, Badge, SectionTitle, Tabs, FormGrid, FullCol, FormActions, KpiCard, Icon,
 } from "../ui";
+import { useHotelOperations } from "../HotelOperationsContext";
 
 const SERIF = "'Inria Serif', Georgia, serif";
 
@@ -91,8 +92,9 @@ function pctEstoque(p: Produto) {
 
 /* ── componente ──────────────────────────────────────────────────────── */
 export default function Estoque() {
-  const [produtos, setProdutos]           = useState<Produto[]>(initialProdutos);
-  const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>(initialMovimentacoes);
+  const { products: stockProducts, stockMovements, saveProduct: persistProduct, changeProductStock } = useHotelOperations();
+  const produtos: Produto[] = stockProducts.map((product) => ({ id: product.id, codigo: product.code, nome: product.name, categoria: product.category as Categoria, unidade: product.unit, quantidade: product.quantity, estoqueMinimo: product.minimumStock, estoqueMaximo: product.maximumStock, localizacao: product.location, fornecedor: product.supplier, observacoes: product.notes, status: product.status, dataCadastro: product.createdAt }));
+  const movimentacoes: Movimentacao[] = stockMovements.map((movement) => ({ id: movement.id, idProduto: movement.productId, nomeProduto: movement.productName, tipo: movement.type, quantidade: movement.quantity, responsavel: movement.responsible, observacoes: movement.notes, dataHora: new Date(movement.createdAt).toLocaleString("pt-BR") }));
   const [tab, setTab]                     = useState<Tab>("produtos");
 
   /* modais */
@@ -111,12 +113,12 @@ export default function Estoque() {
   const emptyProduto = () => ({
     codigo: "", nome: "", categoria: "Limpeza" as Categoria,
     unidade: "un", quantidade: "", estoqueMinimo: "", estoqueMaximo: "",
-    localizacao: "", fornecedor: "", observacoes: "",
+    localizacao: "", fornecedor: "", observacoes: "", precoUnitario: "0",
   });
   const mockProduto = () => ({
     codigo: "AME-900", nome: "Kit boas-vindas demo", categoria: "Amenities" as Categoria,
     unidade: "un", quantidade: "60", estoqueMinimo: "20", estoqueMaximo: "120",
-    localizacao: "Dep. A3", fornecedor: "Distribuidora Pacaas", observacoes: "Produto exemplo para apresentação.",
+    localizacao: "Dep. A3", fornecedor: "Distribuidora Pacaas", observacoes: "Produto exemplo para apresentação.", precoUnitario: "0",
   });
   const [fp, setFp] = useState(emptyProduto());
   const fp_ = (k: keyof ReturnType<typeof emptyProduto>, v: string) =>
@@ -146,23 +148,23 @@ export default function Estoque() {
     const quantidade = Number(fp.quantidade);
     const estoqueMinimo = Number(fp.estoqueMinimo);
     const estoqueMaximo = Number(fp.estoqueMaximo);
-    if (!fp.codigo.trim() || !fp.nome.trim() || !Number.isFinite(quantidade) || !Number.isFinite(estoqueMinimo) || !Number.isFinite(estoqueMaximo) || quantidade < 0 || estoqueMinimo < 0 || estoqueMaximo < 0) return;
+    const unitPrice = Number(fp.precoUnitario);
+    if (!fp.codigo.trim() || !fp.nome.trim() || !Number.isFinite(quantidade) || !Number.isFinite(estoqueMinimo) || !Number.isFinite(estoqueMaximo) || !Number.isFinite(unitPrice) || quantidade < 0 || estoqueMinimo < 0 || estoqueMaximo < 0 || unitPrice < 0) return;
     const base = {
       codigo: fp.codigo, nome: fp.nome, categoria: fp.categoria,
       unidade: fp.unidade, quantidade,
       estoqueMinimo, estoqueMaximo,
       localizacao: fp.localizacao, fornecedor: fp.fornecedor, observacoes: fp.observacoes,
     };
-    if (modalProduto === "new") {
-      setProdutos([...produtos, { id: Date.now(), ...base, status: "Ativo", dataCadastro: new Date().toISOString().slice(0, 10) }]);
-    } else if (modalProduto === "edit" && selected) {
-      setProdutos(produtos.map((p) => p.id === selected.id ? { ...p, ...base } : p));
-    }
-    setModalProduto(null);
+    const result = persistProduct({ id: modalProduto === "edit" ? selected?.id : undefined, code: base.codigo, name: base.nome, category: base.categoria, unit: base.unidade, quantity: base.quantidade, minimumStock: base.estoqueMinimo, maximumStock: base.estoqueMaximo, location: base.localizacao, supplier: base.fornecedor, notes: base.observacoes, status: selected?.status ?? "Ativo", unitPrice });
+    if (result.ok) setModalProduto(null);
   };
 
-  const inativar = (id: number) =>
-    setProdutos(produtos.map((p) => p.id === id ? { ...p, status: p.status === "Ativo" ? "Inativo" : "Ativo" } : p));
+  const inativar = (id: number) => {
+    const product = produtos.find((item) => item.id === id);
+    if (!product) return;
+    persistProduct({ id: product.id, code: product.codigo, name: product.nome, category: product.categoria, unit: product.unidade, quantity: product.quantidade, minimumStock: product.estoqueMinimo, maximumStock: product.estoqueMaximo, location: product.localizacao, supplier: product.fornecedor, notes: product.observacoes, status: product.status === "Ativo" ? "Inativo" : "Ativo", unitPrice: stockProducts.find((item) => item.id === id)?.unitPrice ?? 0 });
+  };
 
   const openMovimentacao = (tipo: TipoMov) => {
     const produto = tipo === "SaÃ­da"
@@ -191,16 +193,8 @@ export default function Estoque() {
       setMovError(`Saída bloqueada: o estoque atual de ${produto.nome} é ${produto.quantidade} ${produto.unidade}.`);
       return;
     }
-    const delta = modalMov === "Entrada" ? qty : -qty;
-    setProdutos(produtos.map((p) => p.id === produto.id ? { ...p, quantidade: p.quantidade + delta } : p));
-    setMovimentacoes([
-      {
-        id: Date.now(), idProduto: produto.id, nomeProduto: produto.nome,
-        tipo: modalMov!, quantidade: qty, responsavel: fm.responsavel,
-        observacoes: fm.observacoes, dataHora: new Date().toLocaleString("pt-BR"),
-      },
-      ...movimentacoes,
-    ]);
+    const result = changeProductStock({ productId: produto.id, type: modalMov!, quantity: qty, responsible: fm.responsavel, notes: fm.observacoes });
+    if (!result.ok) { setMovError(result.error ?? "Não foi possível registrar a movimentação."); return; }
     setFm({ idProduto: "", quantidade: "", responsavel: "", observacoes: "" });
     setModalMov(null);
   };
@@ -211,7 +205,7 @@ export default function Estoque() {
       codigo: p.codigo, nome: p.nome, categoria: p.categoria,
       unidade: p.unidade, quantidade: String(p.quantidade),
       estoqueMinimo: String(p.estoqueMinimo), estoqueMaximo: String(p.estoqueMaximo),
-      localizacao: p.localizacao, fornecedor: p.fornecedor, observacoes: p.observacoes,
+      localizacao: p.localizacao, fornecedor: p.fornecedor, observacoes: p.observacoes, precoUnitario: String(stockProducts.find((item) => item.id === p.id)?.unitPrice ?? 0),
     });
     setModalProduto("edit");
   };
@@ -467,6 +461,7 @@ export default function Estoque() {
               <option value="par">par</option>
             </Select>
             <Input label="Quantidade inicial *" type="number" min="0" value={fp.quantidade} onChange={(e) => fp_("quantidade", e.target.value)} />
+            <Input label="Preço unitário para consumo" type="number" min="0" step="0.01" value={fp.precoUnitario} onChange={(e) => fp_("precoUnitario", e.target.value)} />
             <Input label="Estoque mínimo *" type="number" min="0" value={fp.estoqueMinimo} onChange={(e) => fp_("estoqueMinimo", e.target.value)}
               helpText="Alerta de reposição ao atingir este valor" />
             <Input label="Estoque máximo" type="number" min="0" value={fp.estoqueMaximo} onChange={(e) => fp_("estoqueMaximo", e.target.value)} />

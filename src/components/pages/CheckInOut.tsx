@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, Badge, Btn, Card, ConfirmDialog, FormActions, FormGrid, FullCol, Input, Modal, PageHeader, SectionTitle, Select, Table, Tabs, Textarea, formatDisplayDate } from "../ui";
 import { PAYMENT_METHODS, countNights, formatMoney, reservationBaseValue, today, useHotelOperations, type Reservation } from "../HotelOperationsContext";
 import { useDemoEngine } from "../demo/DemoEngineContext";
+import { stayNavigationEvent } from "../../domain/stay-rules";
 
 type Tab = "checkin" | "checkout" | "fatura" | "historico";
 type ModalType = "checkin" | "checkout" | "fatura" | "payment" | null;
 
 export default function CheckInOut() {
-  const { clients, rooms, reservations, receipts, consumptions, stays, registerReceipt, activeReceiptsTotal, checkIn, checkOut } = useHotelOperations();
+  const { clients, rooms, reservations, receipts, consumptions, stays, packages, createClient, registerReceipt, activeReceiptsTotal, checkIn, walkInCheckIn, checkOut } = useHotelOperations();
   const [tab, setTab] = useState<Tab>("checkin");
   const [modal, setModal] = useState<ModalType>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -25,6 +26,10 @@ export default function CheckInOut() {
   const [issuing, setIssuing] = useState(false);
   const [issueSuccess, setIssueSuccess] = useState(false);
   const [paymentForm, setPaymentForm] = useState({ value: "", method: "pix", date: today(), responsible: "Recepcao", notes: "Regularizacao no check-out." });
+  const [walkIn, setWalkIn] = useState(false);
+  const [walkInClientOpen, setWalkInClientOpen] = useState(false);
+  const [walkInClient, setWalkInClient] = useState({ name: "", cpf: "", phone: "", email: "" });
+  const [walkInForm, setWalkInForm] = useState({ clientId: "", companions: "", entry: today(), exit: today(), roomId: "", guests: "1", contractType: "Tarifa convencional" as "Tarifa convencional" | "Pacote comercial", packageId: "", notes: "Atendimento direto no balcão." });
   const demo = useDemoEngine();
 
   const selected = reservations.find((item) => item.id === selectedId) ?? null;
@@ -45,7 +50,7 @@ export default function CheckInOut() {
 
   const invoiceFor = (reservation: Reservation) => {
     const reservationConsumptions = consumptions.filter((item) => item.reservationId === reservation.id);
-    const chargeableConsumptions = reservationConsumptions.filter((item) => !item.includedInPackage);
+    const chargeableConsumptions = reservationConsumptions.filter((item) => !item.includedInPackage && item.status !== "Estornado");
     const consumptionTotal = chargeableConsumptions.reduce((total, item) => total + item.value, 0);
     const baseTotal = reservationBaseValue(reservation);
     const received = activeReceiptsTotal(reservation.id);
@@ -95,7 +100,7 @@ export default function CheckInOut() {
     }
     setModal(null);
     setFeedback(`Check-in da reserva ${selected.code} confirmado. O quarto está ocupado e a hospedagem foi liberada para consumos e check-out.`);
-    setTab("checkout");
+    if (result.stayId) { const navigation = stayNavigationEvent(result.stayId); window.dispatchEvent(new CustomEvent(navigation.name, { detail: navigation.stayId })); }
   };
 
   const openCheckout = (reservation: Reservation) => {
@@ -104,6 +109,14 @@ export default function CheckInOut() {
     setError("");
     setModal("checkout");
   };
+
+  useEffect(() => {
+    const reservationId = Number(window.sessionStorage.getItem("hotel-open-checkout"));
+    if (!reservationId) return;
+    window.sessionStorage.removeItem("hotel-open-checkout");
+    const reservation = reservations.find((item) => item.id === reservationId);
+    if (reservation) { setTab("checkout"); openCheckout(reservation); }
+  }, []);
 
   useEffect(() => {
     const command = demo.activeCommand;
@@ -143,7 +156,7 @@ export default function CheckInOut() {
   };
 
   return <div className="ops-page">
-    <PageHeader title="Check-in / Check-out" />
+    <PageHeader title="Check-in / Check-out" actions={<Btn onClick={() => { const tomorrow = new Date(`${today()}T12:00`); tomorrow.setDate(tomorrow.getDate() + 1); setWalkInForm({ clientId: String(clients.find((item) => item.status === "Ativo")?.id ?? ""), companions: "", entry: today(), exit: tomorrow.toISOString().slice(0, 10), roomId: "", guests: "1", contractType: "Tarifa convencional", packageId: "", notes: "Atendimento direto no balcão." }); setWalkIn(true); }}>+ Check-in sem reserva</Btn>} />
     <Tabs tabs={[{ id: "checkin", label: "Check-in" }, { id: "checkout", label: "Check-out" }, { id: "fatura", label: "Faturas" }, { id: "historico", label: "Histórico" }]} active={tab} onChange={setTab} />
     {feedback && <Alert type="success">{feedback}</Alert>}
 
@@ -174,33 +187,36 @@ export default function CheckInOut() {
 
     {tab === "historico" && <Card><SectionTitle>Histórico de hospedagens</SectionTitle><Table headers={["Hospedagem", "Hóspede", "Quarto", "Entrada real", "Saída prevista", "Status", "Auditoria"]} rows={history.map((reservation) => [reservation.code.replace("RES", "HOS"), reservation.guest, roomFor(reservation)?.number ?? "—", reservation.checkedInAt ? new Date(reservation.checkedInAt).toLocaleString("pt-BR") : reservation.entry, reservation.exit, <Badge label={reservation.status} />, reservation.audit ?? "Registro concluído"])} /></Card>}
 
-    {modal === "checkin" && selected && <Modal wide title={`Check-in — ${selected.code}`} onClose={() => setModal(null)}>
-      <div className="wizard-steps">{["Reserva", "Hóspedes", "Quarto", "Confirmação"].map((label, index) => <span key={label} className={step === index + 1 ? "active" : step > index + 1 ? "done" : ""}>{index + 1}. {label}</span>)}</div>
+    {modal === "checkin" && selected && <Modal wide title={`Iniciar hospedagem — ${selected.code}`} onClose={() => setModal(null)}>
+      <div style={{ border: "1px solid var(--brand-200)", background: "var(--brand-50)", borderRadius: "14px", padding: "18px", marginBottom: "20px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: "16px", alignItems: "flex-start", flexWrap: "wrap" }}><div><p style={{ margin: 0, color: "var(--brand-700)", fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Recepção · início da estadia</p><h3 style={{ margin: "4px 0", color: "var(--brand-900)" }}>{selected.guest}</h3><p style={{ margin: 0, color: "var(--text-muted)" }}>{selected.code} · {formatDisplayDate(selected.entry)} a {formatDisplayDate(selected.exit)} · {selected.guests} hóspede(s)</p></div><Badge label={selected.packageSnapshot?.name ?? "Tarifa convencional"} /></div>
+        <div className="wizard-steps" style={{ marginTop: "16px" }}>{["Conferir reserva", "Identificar hóspedes", "Preparar quarto", "Confirmar início"].map((label, index) => <span key={label} className={step === index + 1 ? "active" : step > index + 1 ? "done" : ""}>{index + 1}. {label}</span>)}</div>
+      </div>
       {step === 1 && <>
-        <SectionTitle>Conferência da reserva</SectionTitle>
+        <SectionTitle>Conferir dados da reserva</SectionTitle>
         <div className="summary-grid"><Detail label="Código" value={selected.code} /><Detail label="Responsável" value={selected.guest} /><Detail label="Período" value={`${formatDisplayDate(selected.entry)} a ${formatDisplayDate(selected.exit)}`} /><Detail label="Quarto reservado" value={roomFor(selected)?.number ?? "—"} /><Detail label="Categoria" value={selected.category} /><Detail label="Contratação" value={selected.packageSnapshot?.name ?? "Tarifa convencional"} /></div>
-        {isFuture && <Alert type="warning">Esta reserva é futura. O check-in antecipado só poderá ser confirmado mediante autorização expressa.</Alert>}
+        <Alert type="info">Confira os dados contratados. A gestão de quarto, consumos e pagamentos ficará disponível após a confirmação, na área Hospedagens.</Alert>{isFuture && <Alert type="warning">Esta reserva é futura. O check-in antecipado só poderá ser confirmado mediante autorização expressa.</Alert>}
       </>}
       {step === 2 && <>
-        <SectionTitle>Identificação dos hóspedes</SectionTitle>
+        <SectionTitle>Confirmar identificação e acompanhantes</SectionTitle>
         <FormGrid cols={2}><Input label="Responsável" value={selected.guest} readOnly /><Input label="CPF do responsável" value={selectedClient?.cpf ?? "CPF não localizado"} readOnly />{companions.map((name, index) => <Input key={index} label={`Acompanhante ${index + 1} *`} value={name} onChange={(event) => setCompanions((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item))} />)}</FormGrid>
         <div className="check-row"><Check label="Documento do responsável conferido" checked={documents.main} onChange={(checked) => setDocuments({ ...documents, main: checked })} />{selected.guests > 1 && <Check label="Documentos dos acompanhantes conferidos" checked={documents.companions} onChange={(checked) => setDocuments({ ...documents, companions: checked })} />}</div>
       </>}
       {step === 3 && <>
-        <SectionTitle>Verificação do quarto</SectionTitle>
+        <SectionTitle>Preparar quarto e entrega de acesso</SectionTitle>
         <Select label="Quarto compatível e disponível *" value={roomId} onChange={(event) => { setRoomId(event.target.value); setKeyData((current) => ({ ...current, identifier: keyIdentifierFor(Number(event.target.value)) })); }}><option value="">Selecione</option>{candidateRooms.map((room) => <option key={room.id} value={room.id}>{room.number} — {room.category} · {room.status}</option>)}</Select>
         {candidateRooms.length === 0 ? <Alert type="error">Não há quarto compatível liberado. Quartos ocupados ou em manutenção não podem receber check-in.</Alert> : <Alert type="info">A troca mantém categoria, tarifa e condições contratadas. Alterações comerciais exigem edição autorizada da reserva.</Alert>}
         <FormGrid cols={2}><Input label="Identificação da chave/cartão *" value={keyData.identifier} onChange={(event) => setKeyData({ ...keyData, identifier: event.target.value })} /><Input label="Data/hora da entrega *" type="datetime-local" value={keyData.deliveredAt} onChange={(event) => setKeyData({ ...keyData, deliveredAt: event.target.value })} /><FullCol><Textarea label="Observação operacional" value={keyData.notes} onChange={(event) => setKeyData({ ...keyData, notes: event.target.value })} /></FullCol></FormGrid>
         <Btn variant="secondary" onClick={() => window.print()}>Imprimir ficha de check-in</Btn>
       </>}
       {step === 4 && <>
-        <SectionTitle>Confirmação da hospedagem</SectionTitle>
+        <SectionTitle>Resumo para iniciar a hospedagem</SectionTitle>
         <div className="summary-grid"><Detail label="Responsável" value={selected.guest} /><Detail label="Acompanhantes" value={companions.filter(Boolean).join(", ") || "Nenhum"} /><Detail label="Quarto" value={rooms.find((room) => room.id === Number(roomId))?.number ?? "—"} /><Detail label="Entrada efetiva" value={new Date().toLocaleString("pt-BR")} /><Detail label="Saída prevista" value={formatDisplayDate(selected.exit)} /><Detail label="Diárias" value={String(countNights(selected.entry, selected.exit))} /><Detail label="Tarifa / pacote" value={selected.packageSnapshot?.name ?? `${formatMoney(selected.dailyRate)} por diária`} /><Detail label="Valor previsto" value={formatMoney(reservationBaseValue(selected))} /><Detail label="Pagamentos antecipados" value={formatMoney(activeReceiptsTotal(selected.id))} /><Detail label="Saldo previsto" value={formatMoney(Math.max(0, reservationBaseValue(selected) - activeReceiptsTotal(selected.id)))} /></div>
-        {selected.packageSnapshot && <Alert type="success">Benefícios contratados: {selected.packageSnapshot.benefits.join(" · ")}.</Alert>}
+        <Alert type="success">Ao confirmar, o quarto será ocupado, uma hospedagem ativa e sua fatura serão criadas. Você será direcionado ao gerenciamento da estadia.</Alert>{selected.packageSnapshot && <Alert type="info">Pacote contratado: {selected.packageSnapshot.name}. Benefícios: {selected.packageSnapshot.benefits.join(" · ")}.</Alert>}
         {isFuture && <Check label="Autorizo o check-in antecipado e assumo a alteração operacional" checked={authorizeEarly} onChange={setAuthorizeEarly} />}
       </>}
       {error && <Alert type="error">{error}</Alert>}
-      <FormActions><Btn variant="ghost" onClick={() => step === 1 ? setModal(null) : setStep((current) => current - 1)}>{step === 1 ? "Cancelar" : "Voltar"}</Btn>{step < 4 ? <Btn disabled={(step === 2 && (!documents.main || !documents.companions || companions.some((name) => !name.trim()))) || (step === 3 && (!roomId || !keyData.identifier))} onClick={() => setStep((current) => current + 1)}>Continuar</Btn> : <Btn disabled={isFuture && !authorizeEarly} onClick={confirmCheckin}>Confirmar Check-in</Btn>}</FormActions>
+      <FormActions><Btn variant="ghost" onClick={() => step === 1 ? setModal(null) : setStep((current) => current - 1)}>{step === 1 ? "Cancelar atendimento" : "Voltar e revisar"}</Btn>{step < 4 ? <Btn disabled={(step === 2 && (!documents.main || !documents.companions || companions.some((name) => !name.trim()))) || (step === 3 && (!roomId || !keyData.identifier))} onClick={() => setStep((current) => current + 1)}>{step === 3 ? "Ver resumo da hospedagem" : "Continuar"}</Btn> : <Btn disabled={isFuture && !authorizeEarly} onClick={confirmCheckin}>Confirmar e iniciar hospedagem</Btn>}</FormActions>
     </Modal>}
 
     {modal === "checkout" && selected && selectedInvoice && <Modal wide title={`Check-out — ${selected.code.replace("RES", "HOS")}`} onClose={() => setModal(null)}>
@@ -218,6 +234,8 @@ export default function CheckInOut() {
     {modal === "fatura" && selected && selectedInvoice && <Modal wide title="Fatura da Hospedagem" onClose={() => setModal(null)}><Invoice reservation={selected} roomNumber={roomFor(selected)?.number ?? "—"} invoice={selectedInvoice} />{issuing && <p className="inline-state">Emitindo fatura...</p>}{issueSuccess && <Alert type="success">Fatura emitida e vinculada à hospedagem.</Alert>}<FormActions><Btn variant="ghost" onClick={() => setModal(null)}>Fechar</Btn><Btn variant="secondary" onClick={() => window.print()}>Visualizar Fatura</Btn><Btn disabled={issuing} onClick={issueInvoice}>{issuing ? "Emitindo..." : "Emitir Fatura"}</Btn></FormActions></Modal>}
     {confirmCheckout && selected && <ConfirmDialog title="Confirmar check-out" description="A hospedagem será encerrada e o quarto liberado." onCancel={() => setConfirmCheckout(false)} onConfirm={() => { const result = checkOut(selected.id); setConfirmCheckout(false); if (!result.ok) { setError(result.error ?? "Falha ao concluir."); return; } setModal(null); setFeedback("Check-out concluído e quarto liberado."); setTab("historico"); }} />}
     {modal === "payment" && selected && selectedInvoice && <Modal title="Registrar Recebimento" onClose={() => setModal("checkout")}><FormGrid cols={2}><Input label="Cliente" value={selected.guest} readOnly /><Input label="Saldo pendente" value={formatMoney(selectedInvoice.balance)} readOnly /><Input label="Valor a receber" type="number" min="0.01" max={selectedInvoice.balance} step="0.01" value={paymentForm.value} onChange={(event) => setPaymentForm({ ...paymentForm, value: event.target.value })} /><Select label="Forma" value={paymentForm.method} onChange={(event) => setPaymentForm({ ...paymentForm, method: event.target.value })}>{PAYMENT_METHODS.map((method) => <option key={method.id} value={method.id}>{method.label}</option>)}</Select><Input label="Data" type="date" value={paymentForm.date} onChange={(event) => setPaymentForm({ ...paymentForm, date: event.target.value })} /><Input label="Responsavel" value={paymentForm.responsible} onChange={(event) => setPaymentForm({ ...paymentForm, responsible: event.target.value })} /><FullCol><Textarea label="Observacao" value={paymentForm.notes} onChange={(event) => setPaymentForm({ ...paymentForm, notes: event.target.value })} /></FullCol></FormGrid><FormActions><Btn variant="ghost" onClick={() => setModal("checkout")}>Cancelar</Btn><Btn onClick={registerBalancePayment}>Confirmar recebimento</Btn></FormActions></Modal>}
+    {walkIn && <Modal wide title="Iniciar hospedagem sem reserva" onClose={() => setWalkIn(false)}><div style={{ border: "1px solid var(--brand-200)", background: "var(--brand-50)", borderRadius: "14px", padding: "16px", marginBottom: "18px" }}><strong style={{ color: "var(--brand-900)" }}>Atendimento de balcão</strong><p style={{ margin: "4px 0 0", color: "var(--text-muted)" }}>Selecione ou cadastre o hóspede, confirme o quarto e revise o resumo. A confirmação cria reserva operacional, hospedagem ativa e fatura.</p></div><FormGrid cols={2}><FullCol><SectionTitle>1. Hóspede responsável</SectionTitle><Select label="Hóspede responsável *" value={walkInForm.clientId} onChange={(event) => setWalkInForm({ ...walkInForm, clientId: event.target.value })}><option value="">Selecione um hóspede cadastrado</option>{clients.filter((item) => item.status === "Ativo").map((item) => <option key={item.id} value={item.id}>{item.name} · {item.cpf}</option>)}</Select><Btn small variant="secondary" onClick={() => { setWalkInClient({ name: "", cpf: "", phone: "", email: "" }); setWalkInClientOpen(true); }}>+ Cadastrar hóspede sem abandonar o atendimento</Btn></FullCol><FullCol><SectionTitle>2. Período e acomodação</SectionTitle></FullCol><Input label="Entrada" type="date" value={walkInForm.entry} onChange={(event) => setWalkInForm({ ...walkInForm, entry: event.target.value, roomId: "" })} /><Input label="Saída prevista" type="date" min={walkInForm.entry} value={walkInForm.exit} onChange={(event) => setWalkInForm({ ...walkInForm, exit: event.target.value, roomId: "" })} /><Input label="Quantidade de hóspedes" type="number" min="1" value={walkInForm.guests} onChange={(event) => setWalkInForm({ ...walkInForm, guests: event.target.value, roomId: "" })} /><Select label="Quarto disponível" value={walkInForm.roomId} onChange={(event) => setWalkInForm({ ...walkInForm, roomId: event.target.value })}><option value="">Selecione</option>{rooms.filter((item) => item.occupancyStatus === "Livre" && item.cleaningStatus === "Limpo" && item.maintenanceStatus === "Disponível" && item.capacity >= Number(walkInForm.guests)).map((item) => <option key={item.id} value={item.id}>{item.number} · {item.category} · {formatMoney(item.rate)}</option>)}</Select><FullCol><SectionTitle>3. Contratação e observações</SectionTitle></FullCol><Select label="Modalidade" value={walkInForm.contractType} onChange={(event) => setWalkInForm({ ...walkInForm, contractType: event.target.value as typeof walkInForm.contractType, packageId: "" })}><option>Tarifa convencional</option><option>Pacote comercial</option></Select>{walkInForm.contractType === "Pacote comercial" && <Select label="Pacote" value={walkInForm.packageId} onChange={(event) => setWalkInForm({ ...walkInForm, packageId: event.target.value })}><option value="">Selecione</option>{packages.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select>}<FullCol><Input label="Acompanhantes" value={walkInForm.companions} onChange={(event) => setWalkInForm({ ...walkInForm, companions: event.target.value })} /><Textarea label="Observações" value={walkInForm.notes} onChange={(event) => setWalkInForm({ ...walkInForm, notes: event.target.value })} /></FullCol></FormGrid><Alert type="info">Resumo: {clients.find((item) => item.id === Number(walkInForm.clientId))?.name ?? "hóspede não selecionado"} · quarto {rooms.find((item) => item.id === Number(walkInForm.roomId))?.number ?? "não selecionado"} · {walkInForm.guests} hóspede(s).</Alert>{error && <Alert type="error">{error}</Alert>}<FormActions><Btn variant="ghost" onClick={() => setWalkIn(false)}>Cancelar atendimento</Btn><Btn disabled={!walkInForm.clientId || !walkInForm.roomId || !walkInForm.exit || (walkInForm.contractType === "Pacote comercial" && !walkInForm.packageId)} onClick={() => { const result = walkInCheckIn({ clientId: Number(walkInForm.clientId), companions: walkInForm.companions.split(",").map((item) => item.trim()).filter(Boolean), entry: walkInForm.entry, exit: walkInForm.exit, roomId: Number(walkInForm.roomId), guests: Number(walkInForm.guests), contractType: walkInForm.contractType, packageId: walkInForm.packageId ? Number(walkInForm.packageId) : undefined, notes: walkInForm.notes }); if (!result.ok) return setError(result.error ?? "Não foi possível concluir."); setWalkIn(false); if (result.stayId) { const navigation = stayNavigationEvent(result.stayId); window.dispatchEvent(new CustomEvent(navigation.name, { detail: navigation.stayId })); } }}>Confirmar e iniciar hospedagem</Btn></FormActions></Modal>}
+    {walkInClientOpen && <Modal title="Cadastro rápido de hóspede" onClose={() => setWalkInClientOpen(false)}><FormGrid cols={2}><FullCol><Input label="Nome completo *" value={walkInClient.name} onChange={(event) => setWalkInClient({ ...walkInClient, name: event.target.value })} /></FullCol><Input label="CPF *" value={walkInClient.cpf} onChange={(event) => setWalkInClient({ ...walkInClient, cpf: event.target.value })} /><Input label="Telefone" value={walkInClient.phone} onChange={(event) => setWalkInClient({ ...walkInClient, phone: event.target.value })} /><FullCol><Input label="E-mail" type="email" value={walkInClient.email} onChange={(event) => setWalkInClient({ ...walkInClient, email: event.target.value })} /></FullCol></FormGrid><FormActions><Btn variant="ghost" onClick={() => setWalkInClientOpen(false)}>Cancelar</Btn><Btn onClick={() => { const result = createClient({ name: walkInClient.name, cpf: walkInClient.cpf, documentType: "RG", documentNumber: "", birthDate: "", nationality: "Brasileira", gender: "", postalCode: "", street: "", addressNumber: "", complement: "", district: "", city: "", state: "", email: walkInClient.email, phone: walkInClient.phone, emergencyPhone: "", emergencyContact: "", preferredRoomType: "", preferredFloor: "", smoker: "Não", preferences: "" }); if (!result.ok || !result.client) return setError(result.error ?? "Não foi possível cadastrar o hóspede."); setWalkInForm({ ...walkInForm, clientId: String(result.client.id) }); setWalkInClientOpen(false); setError(""); }}>Cadastrar e selecionar</Btn></FormActions></Modal>}
   </div>;
 }
 

@@ -23,6 +23,9 @@ import {
   type EventStatus,
 } from "../domain/event-rules";
 import { countNights, financialBalance, normalizeCpf, periodsOverlap, roomReadiness, validateCpf } from "../domain/hotel-rules";
+import { hasRemainingStayRoomConflict } from "../domain/stay-rules";
+import { applyStockMovement, canConsumeStock, canReverseConsumption, consumptionTotal, migrateStockCollections } from "../domain/consumption-stock-rules";
+import { allocateBenefit, benefitLimitForStay, benefitMatches, type BenefitLimitType } from "../domain/package-benefit-rules";
 
 export { countNights, normalizeCpf, validateCpf } from "../domain/hotel-rules";
 export { PAYMENT_METHODS, derivePayableStatus, isCashPayment, paymentMethodLabel, pendingBalance } from "../domain/financial-rules";
@@ -36,6 +39,9 @@ export type MaintenanceStatus = "Disponível" | "Bloqueado";
 export type ReceiptStatus = "Confirmado" | "Cancelado" | "Estornado";
 export type ContractType = "Tarifa convencional" | "Pacote comercial";
 export type PackagePriceRule = "Preço fechado" | "Por diária";
+export const OPERATIONAL_SERVICES = ["Café da manhã", "Decoração especial", "Jantar romântico", "Trilha guiada", "Ingresso parque nacional", "Restaurante", "Frigobar", "Room Service", "Lavanderia", "Spa", "Transfer aeroporto", "Ceia especial"] as const;
+
+export type PackageBenefit = { id: string; kind: "Produto" | "Serviço"; productId?: number; serviceCode?: string; label: string; description: string; quantityIncluded: number; unit: string; limitType: BenefitLimitType; excessRule: "Cobrar preço unitário"; active: boolean };
 
 export type ConferenceRoomStatus = "Ativo" | "Inativo";
 export type EventType = "Corporativo" | "Social";
@@ -126,6 +132,7 @@ export type CommercialPackage = {
   validFrom: string;
   validTo: string;
   benefits: string[];
+  structuredBenefits?: PackageBenefit[];
   conditions: string;
   active: boolean;
 };
@@ -140,6 +147,7 @@ export type PackageSnapshot = {
   basePrice: number;
   discountPercent: number;
   benefits: string[];
+  structuredBenefits?: PackageBenefit[];
   conditions: string;
   contractedValue: number;
 };
@@ -228,6 +236,9 @@ export type CashSession = {
   closedAt?: string;
   countedCash?: number;
   notes: string;
+  shift?: "Manhã" | "Tarde" | "Noite";
+  expectedCash?: number;
+  difference?: number;
 };
 
 export type CashMovement = {
@@ -266,6 +277,30 @@ export type Consumption = {
   createdAt: string;
   includedInPackage: boolean;
   originEventId?: number;
+  category?: "Produto" | "Serviço";
+  quantity?: number;
+  unitPrice?: number;
+  responsible?: string;
+  status?: "Lançado" | "Estornado";
+  reversedAt?: string;
+  reversalReason?: string;
+  productId?: number;
+  serviceCode?: string;
+  benefitId?: string;
+  benefitCoveredQuantity?: number;
+  excessQuantity?: number;
+};
+
+export type StockProduct = {
+  id: number; code: string; name: string; category: string; unit: string; quantity: number;
+  minimumStock: number; maximumStock: number; location: string; supplier: string; notes: string;
+  status: "Ativo" | "Inativo"; createdAt: string; unitPrice?: number;
+};
+
+export type StockMovement = {
+  id: number; productId: number; productName: string; type: "Entrada" | "Saída";
+  quantity: number; responsible: string; notes: string; createdAt: string;
+  source?: "Manual" | "Consumo" | "Estorno"; consumptionId?: number;
 };
 
 export type Stay = {
@@ -281,6 +316,8 @@ export type Stay = {
   checkedInAt: string;
   checkedOutAt?: string;
   status: "Ativa" | "Encerrada";
+  origin?: "Reserva" | "Atendimento direto";
+  history?: { at: string; type: string; description: string }[];
 };
 
 export type Invoice = {
@@ -546,6 +583,17 @@ const initialRooms: Room[] = [
   { id: 6, number: "407", floor: "4", category: "Standard", capacity: 2, status: "Livre", occupancyStatus: "Livre", cleaningStatus: "Limpo", maintenanceStatus: "Disponível", rate: 260, notes: "", accessibility: false, view: "Cidade", bedType: "Casal", balcony: false, minibar: true, airConditioning: true },
 ];
 
+const initialStockProducts: StockProduct[] = [
+  { id: 1, code: "LMP-001", name: "Sabonete", category: "Amenities", unit: "un", quantity: 12, minimumStock: 50, maximumStock: 300, location: "Dep. A1", supplier: "Distribuidora X", notes: "", status: "Ativo", createdAt: "2026-01-10", unitPrice: 0 },
+  { id: 2, code: "LMP-002", name: "Detergente 1L", category: "Limpeza", unit: "L", quantity: 8, minimumStock: 15, maximumStock: 80, location: "Dep. A2", supplier: "Distribuidora X", notes: "", status: "Ativo", createdAt: "2026-01-10", unitPrice: 0 },
+  { id: 3, code: "RDC-001", name: "Toalha de banho", category: "Roupas de cama", unit: "un", quantity: 80, minimumStock: 40, maximumStock: 200, location: "Dep. B1", supplier: "Têxteis Sul", notes: "", status: "Ativo", createdAt: "2026-01-15", unitPrice: 0 },
+  { id: 4, code: "RDC-002", name: "Lençol solteiro", category: "Roupas de cama", unit: "un", quantity: 120, minimumStock: 60, maximumStock: 300, location: "Dep. B1", supplier: "Têxteis Sul", notes: "", status: "Ativo", createdAt: "2026-01-15", unitPrice: 0 },
+  { id: 5, code: "BEB-001", name: "Água mineral 500ml", category: "Bebidas", unit: "cx", quantity: 30, minimumStock: 20, maximumStock: 100, location: "Dep. C1", supplier: "Bebidas RO", notes: "Cx c/ 12 un.", status: "Ativo", createdAt: "2026-02-01", unitPrice: 0 },
+  { id: 6, code: "ALI-001", name: "Café em pó 500g", category: "Alimentos", unit: "kg", quantity: 6, minimumStock: 10, maximumStock: 40, location: "Dep. C2", supplier: "Café Seleção", notes: "", status: "Ativo", createdAt: "2026-02-01", unitPrice: 0 },
+  { id: 7, code: "MAN-001", name: "Lâmpada LED 9W", category: "Manutenção", unit: "un", quantity: 25, minimumStock: 20, maximumStock: 100, location: "Dep. D1", supplier: "Elétrica Norte", notes: "", status: "Ativo", createdAt: "2026-03-05", unitPrice: 0 },
+  { id: 8, code: "AME-001", name: "Shampoo 30ml", category: "Amenities", unit: "un", quantity: 45, minimumStock: 80, maximumStock: 400, location: "Dep. A1", supplier: "Distribuidora X", notes: "Frasco individual", status: "Ativo", createdAt: "2026-01-10", unitPrice: 0 },
+];
+
 const initialPackages: CommercialPackage[] = [
   {
     id: 1, code: "PAC-001", name: "Pacote Romântico",
@@ -593,6 +641,7 @@ function snapshotFor(commercialPackage: CommercialPackage, nights: number): Pack
     basePrice: commercialPackage.price,
     discountPercent: commercialPackage.discountPercent,
     benefits: [...commercialPackage.benefits],
+    structuredBenefits: commercialPackage.structuredBenefits ? structuredClone(commercialPackage.structuredBenefits) : undefined,
     conditions: commercialPackage.conditions,
     contractedValue,
   };
@@ -811,6 +860,8 @@ type StoredOperations = {
   cashSessions: CashSession[];
   cashMovements: CashMovement[];
   bankTransactions: BankTransaction[];
+  products: StockProduct[];
+  stockMovements: StockMovement[];
   conferenceRooms: ConferenceRoom[];
   eventServices: EventService[];
   events: EventRecord[];
@@ -818,9 +869,8 @@ type StoredOperations = {
   fiscalProfile: HotelFiscalProfile;
   fiscalDocuments: FiscalDocument[];
   communications: Communication[];
-  fiscalProfile: HotelFiscalProfile;
-  fiscalDocuments: FiscalDocument[];
-  communications: Communication[];
+  products: StockProduct[];
+  stockMovements: StockMovement[];
 };
 
 function demonstrationState(): StoredOperations {
@@ -848,10 +898,15 @@ function demonstrationState(): StoredOperations {
     fiscalProfile: structuredClone(initialFiscalProfile),
     fiscalDocuments: structuredClone(initialFiscalDocuments),
     communications: structuredClone(initialCommunications),
+    products: structuredClone(initialStockProducts),
+    stockMovements: [],
   };
 }
 
 function migrateRelationships(state: StoredOperations) {
+  const stock = migrateStockCollections(state.products, state.stockMovements, initialStockProducts);
+  state.products = stock.products;
+  state.stockMovements = stock.movements;
   const nameCounts = new Map<string, Client[]>();
   state.clients.forEach((client) => nameCounts.set(client.name.toLocaleLowerCase("pt-BR"), [...(nameCounts.get(client.name.toLocaleLowerCase("pt-BR")) ?? []), client]));
   state.reservations = state.reservations.map((reservation) => {
@@ -901,6 +956,8 @@ function loadStoredOperations(): StoredOperations {
       fiscalProfile: parsed.fiscalProfile ?? structuredClone(initialFiscalProfile),
       fiscalDocuments: Array.isArray(parsed.fiscalDocuments) ? parsed.fiscalDocuments : structuredClone(initialFiscalDocuments),
       communications: Array.isArray(parsed.communications) ? parsed.communications : structuredClone(initialCommunications),
+      products: Array.isArray(parsed.products) ? parsed.products : structuredClone(initialStockProducts),
+      stockMovements: Array.isArray(parsed.stockMovements) ? parsed.stockMovements : [],
     } as StoredOperations);
   } catch {
     return demonstrationState();
@@ -930,13 +987,18 @@ type OperationsContextValue = {
   setReceipts: React.Dispatch<React.SetStateAction<Receipt[]>>;
   setPackages: React.Dispatch<React.SetStateAction<CommercialPackage[]>>;
   setConsumptions: React.Dispatch<React.SetStateAction<Consumption[]>>;
+  saveProduct: (input: Omit<StockProduct, "id" | "createdAt"> & { id?: number }) => OperationResult;
+  changeProductStock: (input: { productId: number; type: "Entrada" | "Saída"; quantity: number; responsible: string; notes: string }) => OperationResult;
   createClient: (input: ClientInput) => ClientResult;
   updateClient: (id: number, input: ClientInput) => ClientResult;
   recordConsumption: (input: Omit<Consumption, "id" | "createdAt">) => OperationResult;
+  reverseConsumption: (consumptionId: number, reason: string, responsible: string) => OperationResult;
   registerReceipt: (input: { reservationId: number; value: number; method: string; notes: string; responsible: string; scenarioKey?: string; date?: string; operationKey?: string }) => OperationResult;
   changeReceiptStatus: (receiptId: number, status: Exclude<ReceiptStatus, "Confirmado">, responsible: string) => OperationResult;
   cancelReservation: (id: number, reason: string) => void;
-  checkIn: (reservationId: number, payload: CheckInPayload) => OperationResult;
+  checkIn: (reservationId: number, payload: CheckInPayload) => OperationResult & { stayId?: number };
+  walkInCheckIn: (input: { clientId: number; companions: string[]; entry: string; exit: string; roomId: number; guests: number; contractType: ContractType; packageId?: number; notes: string }) => OperationResult & { stayId?: number };
+  transferStayRoom: (stayId: number, roomId: number, reason: string, responsible: string) => OperationResult;
   checkOut: (reservationId: number) => OperationResult;
   completeHousekeeping: (taskId: number, completedBy: string, notes: string) => OperationResult;
   setRoomMaintenance: (roomNumber: string, blocked: boolean) => void;
@@ -948,7 +1010,7 @@ type OperationsContextValue = {
   updatePayable: (id: number, input: PayableInput) => OperationResult;
   cancelPayable: (id: number, responsible: string) => OperationResult;
   registerPayablePayment: (input: { payableId: number; value: number; method: string; responsible: string; notes: string; date?: string; operationKey?: string }) => OperationResult;
-  openCashSession: (input: { responsible: string; openingCash: number; notes: string }) => OperationResult;
+  openCashSession: (input: { responsible: string; openingCash: number; notes: string; shift?: "Manhã" | "Tarde" | "Noite" }) => OperationResult;
   closeCashSession: (input: { sessionId: number; countedCash: number; notes: string }) => OperationResult;
   registerManualCashMovement: (input: { direction: "entrada" | "saida"; value: number; method: string; description: string; responsible: string; notes: string }) => OperationResult;
   createCostCenter: (input: { code: string; name: string; description: string }) => OperationResult;
@@ -1016,6 +1078,8 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
   const [cashSessions, setCashSessions] = useState(loadedState.current.cashSessions);
   const [cashMovements, setCashMovements] = useState(loadedState.current.cashMovements);
   const [bankTransactions, setBankTransactions] = useState(loadedState.current.bankTransactions);
+  const [products, setProducts] = useState(loadedState.current.products);
+  const [stockMovements, setStockMovements] = useState(loadedState.current.stockMovements);
   const [conferenceRooms, setConferenceRooms] = useState(loadedState.current.conferenceRooms);
   const [eventServices, setEventServices] = useState(loadedState.current.eventServices);
   const [events, setEvents] = useState(loadedState.current.events);
@@ -1030,10 +1094,10 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
       clients, rooms, categories, reservations, receipts, packages, consumptions, stays, invoices, housekeepingTasks,
       payables, costCenters, cashSessions, cashMovements, bankTransactions,
       conferenceRooms, eventServices, events, eventReceipts,
-      fiscalProfile, fiscalDocuments, communications,
+      fiscalProfile, fiscalDocuments, communications, products, stockMovements,
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
-  }, [clients, rooms, categories, reservations, receipts, packages, consumptions, stays, invoices, housekeepingTasks, payables, costCenters, cashSessions, cashMovements, bankTransactions, conferenceRooms, eventServices, events, eventReceipts, fiscalProfile, fiscalDocuments, communications]);
+  }, [clients, rooms, categories, reservations, receipts, packages, consumptions, stays, invoices, housekeepingTasks, payables, costCenters, cashSessions, cashMovements, bankTransactions, conferenceRooms, eventServices, events, eventReceipts, fiscalProfile, fiscalDocuments, communications, products, stockMovements]);
 
   const createClient = (input: ClientInput): ClientResult => {
     if (!input.name.trim()) return { ok: false, error: "Informe o nome completo do cliente." };
@@ -1064,18 +1128,102 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     return { ok: true, client };
   };
 
+  const saveProduct = (input: Omit<StockProduct, "id" | "createdAt"> & { id?: number }): OperationResult => {
+    if (!input.code.trim() || !input.name.trim()) return { ok: false, error: "Informe código e nome do produto." };
+    if (!Number.isFinite(input.quantity) || input.quantity < 0 || !Number.isFinite(input.unitPrice ?? 0) || (input.unitPrice ?? 0) < 0) return { ok: false, error: "Quantidade ou preço unitário inválido." };
+    const duplicate = products.some((item) => item.code.trim().toLowerCase() === input.code.trim().toLowerCase() && item.id !== input.id);
+    if (duplicate) return { ok: false, error: "Já existe um produto com este código." };
+    if (input.id) {
+      setProducts((current) => current.map((item) => item.id === input.id ? { ...item, ...input, code: input.code.trim(), name: input.name.trim() } : item));
+    } else {
+      const id = Math.max(0, ...products.map((item) => item.id)) + 1;
+      setProducts((current) => [...current, { ...input, id, code: input.code.trim(), name: input.name.trim(), createdAt: new Date().toISOString() }]);
+    }
+    return { ok: true };
+  };
+
+  const changeProductStock = (input: { productId: number; type: "Entrada" | "Saída"; quantity: number; responsible: string; notes: string }): OperationResult => {
+    const product = products.find((item) => item.id === input.productId);
+    if (!product || product.status !== "Ativo") return { ok: false, error: "Produto ativo não encontrado." };
+    if (!Number.isFinite(input.quantity) || input.quantity <= 0) return { ok: false, error: "Informe uma quantidade válida." };
+    if (applyStockMovement(product.quantity, input.type, input.quantity) === null) return { ok: false, error: "Quantidade superior ao estoque disponível." };
+    const nextId = Math.max(0, ...stockMovements.map((item) => item.id)) + 1;
+    setProducts((current) => current.map((item) => item.id === product.id ? { ...item, quantity: item.quantity + (input.type === "Entrada" ? input.quantity : -input.quantity) } : item));
+    setStockMovements((current) => [...current, { id: nextId, productId: product.id, productName: product.name, type: input.type, quantity: input.quantity, responsible: input.responsible || "Sistema", notes: input.notes, createdAt: new Date().toISOString(), source: "Manual" }]);
+    return { ok: true };
+  };
+
   const recordConsumption = (input: Omit<Consumption, "id" | "createdAt">): OperationResult => {
     const stay = stays.find((item) => item.id === input.stayId && item.status === "Ativa");
     if (!stay || stay.reservationId !== input.reservationId) return { ok: false, error: "Hospedagem ativa não encontrada." };
     const nextId = Math.max(0, ...consumptions.map((item) => item.id)) + 1;
-    setConsumptions((current) => [...current, { ...input, id: nextId, createdAt: new Date().toISOString() }]);
+    const quantity = input.quantity ?? 1;
+    const product = input.productId ? products.find((item) => item.id === input.productId) : undefined;
+    if (input.productId && (!product || product.status !== "Ativo")) return { ok: false, error: "Produto ativo não encontrado no estoque." };
+    if (product && !canConsumeStock(product.quantity, quantity)) return { ok: false, error: `Estoque insuficiente para ${product.name}. Disponível: ${product.quantity}.` };
+    const unitPrice = input.unitPrice ?? product?.unitPrice ?? input.value / quantity;
+    if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(unitPrice) || unitPrice < 0) return { ok: false, error: "Quantidade e valor unitário inválidos." };
+    const reservation = reservations.find((item) => item.id === input.reservationId);
+    const serviceCode = input.serviceCode ?? input.service;
+    const benefits = reservation?.packageSnapshot?.structuredBenefits ?? [];
+    const benefit = benefits.find((item) => benefitMatches(item, { category: product ? "Produto" : input.category ?? "Serviço", productId: input.productId, serviceCode }));
+    const used = benefit ? consumptions.filter((item) => item.stayId === stay.id && item.benefitId === benefit.id && item.status !== "Estornado").reduce((total, item) => total + (item.benefitCoveredQuantity ?? 0), 0) : 0;
+    const nights = reservation ? countNights(reservation.entry, reservation.exit) : 1;
+    const allocation = benefit ? allocateBenefit(quantity, unitPrice, benefitLimitForStay(benefit.quantityIncluded, benefit.limitType, nights), used) : { coveredQuantity: 0, excessQuantity: quantity, charge: consumptionTotal(quantity, unitPrice, input.includedInPackage) };
+    const value = benefit ? allocation.charge : consumptionTotal(quantity, unitPrice, input.includedInPackage);
+    const createdAt = new Date().toISOString();
+    const service = product?.name ?? input.service;
+    setConsumptions((current) => [...current, { ...input, service, serviceCode, category: product ? "Produto" : input.category ?? "Serviço", benefitId: benefit?.id, benefitCoveredQuantity: allocation.coveredQuantity, excessQuantity: allocation.excessQuantity, includedInPackage: Boolean(benefit && allocation.excessQuantity === 0), value, quantity, unitPrice, status: "Lançado", id: nextId, createdAt }]);
+    if (product) {
+      const movementId = Math.max(0, ...stockMovements.map((item) => item.id)) + 1;
+      setProducts((current) => current.map((item) => item.id === product.id ? { ...item, quantity: item.quantity - quantity } : item));
+      setStockMovements((current) => [...current, { id: movementId, productId: product.id, productName: product.name, type: "Saída", quantity, responsible: input.responsible || "Sistema", notes: `Consumo #${nextId} da hospedagem ${stay.code}.`, createdAt, source: "Consumo", consumptionId: nextId }]);
+    }
     setInvoices((current) => current.map((invoice) => invoice.stayId === stay.id ? {
       ...invoice,
-      extrasValue: invoice.extrasValue + (input.includedInPackage ? 0 : input.value),
-      total: invoice.total + (input.includedInPackage ? 0 : input.value),
+      extrasValue: invoice.extrasValue + value,
+      total: invoice.total + value,
       status: "Aberta",
       updatedAt: new Date().toISOString(),
     } : invoice));
+    setStays((current) => current.map((item) => item.id === stay.id ? { ...item, history: [...(item.history ?? []), { at: createdAt, type: "Consumo", description: `${service}: ${formatMoney(value)}${benefit ? ` (${allocation.coveredQuantity} incluso(s), ${allocation.excessQuantity} excedente(s))` : ""}.` }] } : item));
+    return { ok: true };
+  };
+
+  const reverseConsumption = (consumptionId: number, reason: string, responsible: string): OperationResult => {
+    const consumption = consumptions.find((item) => item.id === consumptionId);
+    const stay = consumption ? stays.find((item) => item.id === consumption.stayId) : undefined;
+    if (!consumption || !stay || stay.status !== "Ativa") return { ok: false, error: "Consumo de hospedagem ativa não encontrado." };
+    if (!canReverseConsumption(consumption.status, stay.status)) return { ok: false, error: "Este consumo já foi estornado." };
+    if (!reason.trim()) return { ok: false, error: "Informe o motivo do estorno." };
+    const reversedAt = new Date().toISOString();
+    const product = consumption.productId ? products.find((item) => item.id === consumption.productId) : undefined;
+    const reservation = reservations.find((item) => item.id === consumption.reservationId);
+    const benefit = reservation?.packageSnapshot?.structuredBenefits?.find((item) => item.id === consumption.benefitId);
+    const recalculated = new Map<number, { covered: number; excess: number; value: number }>();
+    if (benefit) {
+      const limit = benefitLimitForStay(benefit.quantityIncluded, benefit.limitType, reservation ? countNights(reservation.entry, reservation.exit) : 1);
+      let used = 0;
+      consumptions.filter((item) => item.stayId === stay.id && item.benefitId === benefit.id && item.id !== consumptionId && item.status !== "Estornado").sort((a, b) => a.createdAt.localeCompare(b.createdAt)).forEach((item) => {
+        const allocation = allocateBenefit(item.quantity ?? 1, item.unitPrice ?? item.value, limit, used);
+        used += allocation.coveredQuantity;
+        recalculated.set(item.id, { covered: allocation.coveredQuantity, excess: allocation.excessQuantity, value: allocation.charge });
+      });
+    }
+    const nextConsumptions = consumptions.map((item) => {
+      if (item.id === consumptionId) return { ...item, status: "Estornado" as const, reversedAt, reversalReason: `${reason.trim()} · ${responsible || "Sistema"}`, value: 0 };
+      const next = recalculated.get(item.id);
+      return next ? { ...item, benefitCoveredQuantity: next.covered, excessQuantity: next.excess, includedInPackage: next.excess === 0, value: next.value } : item;
+    });
+    setConsumptions(nextConsumptions);
+    if (product) {
+      const movementId = Math.max(0, ...stockMovements.map((item) => item.id)) + 1;
+      setProducts((current) => current.map((item) => item.id === product.id ? { ...item, quantity: item.quantity + (consumption.quantity ?? 1) } : item));
+      setStockMovements((current) => [...current, { id: movementId, productId: product.id, productName: product.name, type: "Entrada", quantity: consumption.quantity ?? 1, responsible: responsible || "Sistema", notes: `Estorno do consumo #${consumption.id}: ${reason.trim()}.`, createdAt: reversedAt, source: "Estorno", consumptionId }]);
+    }
+    const nextExtras = nextConsumptions.filter((item) => item.stayId === stay.id && item.status !== "Estornado" && !item.includedInPackage).reduce((total, item) => total + item.value, 0);
+    setInvoices((current) => current.map((invoice) => invoice.stayId === stay.id ? { ...invoice, extrasValue: nextExtras, total: Math.max(0, invoice.baseValue - invoice.discounts + nextExtras), status: "Aberta", updatedAt: new Date().toISOString() } : invoice));
+    setStays((current) => current.map((item) => item.id === stay.id ? { ...item, history: [...(item.history ?? []), { at: new Date().toISOString(), type: "Estorno de consumo", description: `${consumption.service}. Motivo: ${reason.trim()}.` }] } : item));
     return { ok: true };
   };
 
@@ -1087,7 +1235,7 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     const reservation = reservations.find((item) => item.id === reservationId);
     if (!reservation) return null;
     const invoice = invoices.find((item) => item.reservationId === reservationId);
-    const extras = consumptions.filter((item) => item.reservationId === reservationId && !item.includedInPackage).reduce((total, item) => total + item.value, 0);
+    const extras = consumptions.filter((item) => item.reservationId === reservationId && !item.includedInPackage && item.status !== "Estornado").reduce((total, item) => total + item.value, 0);
     const total = invoice?.total ?? reservationBaseValue(reservation) + extras;
     const received = confirmedReceiptsTotal(reservationId);
     return {
@@ -1132,6 +1280,7 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
       responsible: input.responsible,
       operationKey: input.operationKey,
     }]);
+    if (stay) setStays((current) => current.map((item) => item.id === stay.id ? { ...item, history: [...(item.history ?? []), { at: createdAt, type: "Recebimento", description: `${formatMoney(input.value)} via ${paymentMethodLabel(methodId)}.` }] } : item));
     setCashMovements((current) => [...current, {
       id: Math.max(0, ...current.map((item) => item.id)) + 1,
       sessionId: openSession?.id,
@@ -1525,12 +1674,12 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     return { ok: true };
   };
 
-  const openCashSession = (input: { responsible: string; openingCash: number; notes: string }): OperationResult => {
+  const openCashSession = (input: { responsible: string; openingCash: number; notes: string; shift?: "Manhã" | "Tarde" | "Noite" }): OperationResult => {
     if (cashSessions.some((session) => !session.closedAt)) return { ok: false, error: "Ja existe um caixa aberto." };
     if (!input.responsible.trim()) return { ok: false, error: "Informe o responsavel pelo caixa." };
     if (!Number.isFinite(input.openingCash) || input.openingCash < 0) return { ok: false, error: "Informe um valor inicial valido." };
     const nextId = Math.max(0, ...cashSessions.map((item) => item.id)) + 1;
-    setCashSessions((current) => [{ id: nextId, code: `CX-${String(nextId).padStart(4, "0")}`, openedAt: new Date().toISOString(), responsible: input.responsible, openingCash: input.openingCash, notes: input.notes }, ...current]);
+    setCashSessions((current) => [{ id: nextId, code: `CX-${String(nextId).padStart(4, "0")}`, openedAt: new Date().toISOString(), responsible: input.responsible, openingCash: input.openingCash, notes: input.notes, shift: input.shift ?? "Manhã" }, ...current]);
     return { ok: true };
   };
 
@@ -1545,7 +1694,8 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     const session = cashSessions.find((item) => item.id === input.sessionId);
     if (!session || session.closedAt) return { ok: false, error: "Caixa aberto nao encontrado." };
     if (!Number.isFinite(input.countedCash) || input.countedCash < 0) return { ok: false, error: "Informe o valor contado." };
-    setCashSessions((current) => current.map((item) => item.id === input.sessionId ? { ...item, closedAt: new Date().toISOString(), countedCash: input.countedCash, notes: input.notes } : item));
+    const expectedCash = cashExpectedTotal(input.sessionId);
+    setCashSessions((current) => current.map((item) => item.id === input.sessionId ? { ...item, closedAt: new Date().toISOString(), countedCash: input.countedCash, expectedCash, difference: input.countedCash - expectedCash, notes: input.notes } : item));
     return { ok: true };
   };
 
@@ -1609,7 +1759,7 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     ));
   };
 
-  const checkIn = (reservationId: number, payload: CheckInPayload): OperationResult => {
+  const checkIn = (reservationId: number, payload: CheckInPayload): OperationResult & { stayId?: number } => {
     const reservation = reservations.find((item) => item.id === reservationId);
     const room = rooms.find((item) => item.id === payload.roomId);
     if (!reservation) return { ok: false, error: "Reserva não encontrada." };
@@ -1653,6 +1803,8 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
       expectedExit: reservation.exit,
       checkedInAt: new Date().toISOString(),
       status: "Ativa",
+      origin: "Reserva",
+      history: [{ at: new Date().toISOString(), type: "Check-in", description: `Hospedagem iniciada a partir da reserva ${reservation.code}.` }],
     }]);
     setInvoices((current) => [...current, {
       id: Math.max(0, ...current.map((item) => item.id)) + 1,
@@ -1666,7 +1818,47 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
       status: activeReceiptsTotal(reservation.id) >= reservationBaseValue(reservation) ? "Quitada" : "Aberta",
       updatedAt: new Date().toISOString(),
     }]);
+    return { ok: true, stayId: nextStayId };
+  };
+
+  const transferStayRoom = (stayId: number, roomId: number, reason: string, responsible: string): OperationResult => {
+    const stay = stays.find((item) => item.id === stayId && item.status === "Ativa");
+    const destination = rooms.find((item) => item.id === roomId);
+    if (!stay || !destination) return { ok: false, error: "Hospedagem ou quarto não encontrado." };
+    if (stay.roomId === roomId) return { ok: false, error: "Selecione um quarto diferente do atual." };
+    if (!reason.trim()) return { ok: false, error: "Informe o motivo da transferência." };
+    const reservation = reservations.find((item) => item.id === stay.reservationId);
+    if (!reservation || destination.capacity < reservation.guests || !roomReadiness(destination).ready) return { ok: false, error: "O quarto selecionado não está apto para transferência." };
+    if (hasRemainingStayRoomConflict({ reservationId: reservation.id, roomId: destination.id, remainingFrom: today(), expectedExit: stay.expectedExit, reservations })) return { ok: false, error: "O quarto possui reserva ou hospedagem conflitante no período restante." };
+    const at = new Date().toISOString();
+    const previousRoomId = stay.roomId;
+    setStays((current) => current.map((item) => item.id === stayId ? { ...item, roomId, history: [...(item.history ?? []), { at, type: "Transferência de quarto", description: `Quarto ${rooms.find((room) => room.id === previousRoomId)?.number ?? previousRoomId} → ${destination.number}. Motivo: ${reason.trim()}. Responsável: ${responsible || "Recepção"}.` }] } : item));
+    setReservations((current) => current.map((item) => item.id === stay.reservationId ? { ...item, roomId, audit: `Transferência para o quarto ${destination.number} em ${new Date(at).toLocaleString("pt-BR")}.` } : item));
+    setRooms((current) => current.map((room) => room.id === roomId ? { ...room, status: "Ocupado", occupancyStatus: "Ocupado" } : room.id === previousRoomId ? { ...room, status: "Livre", occupancyStatus: "Livre", cleaningStatus: "Sujo" } : room));
     return { ok: true };
+  };
+
+  const walkInCheckIn = (input: { clientId: number; companions: string[]; entry: string; exit: string; roomId: number; guests: number; contractType: ContractType; packageId?: number; notes: string }): OperationResult & { stayId?: number } => {
+    const client = clients.find((item) => item.id === input.clientId && item.status === "Ativo");
+    const room = rooms.find((item) => item.id === input.roomId);
+    const commercialPackage = input.packageId ? packages.find((item) => item.id === input.packageId) : undefined;
+    const nights = countNights(input.entry, input.exit);
+    if (!client || !room || nights < 1 || input.guests < 1) return { ok: false, error: "Preencha hóspede, período e quarto." };
+    if (room.capacity < input.guests || !roomReadiness(room).ready) return { ok: false, error: "O quarto não está disponível para esta hospedagem." };
+    if (stays.some((stay) => stay.roomId === room.id && stay.status === "Ativa")) return { ok: false, error: "O quarto já possui hospedagem ativa." };
+    if (input.contractType === "Pacote comercial" && (!commercialPackage || !packageEligibility(commercialPackage, input.entry, input.exit, room.category, input.guests).eligible)) return { ok: false, error: "Pacote comercial incompatível." };
+    const reservationId = Math.max(0, ...reservations.map((item) => item.id)) + 1;
+    const stayId = Math.max(0, ...stays.map((item) => item.id)) + 1;
+    const code = `RES-${1000 + reservationId}`;
+    const snapshot = commercialPackage ? createPackageSnapshot(commercialPackage, nights) : undefined;
+    const contractedValue = snapshot?.contractedValue ?? nights * room.rate;
+    const at = new Date().toISOString();
+    const reservation: Reservation = { id: reservationId, code, clientId: client.id, guest: client.name, companions: input.companions, entry: input.entry, exit: input.exit, category: room.category, roomId: room.id, guests: input.guests, status: "Hospedado", dailyRate: room.rate, contractType: input.contractType, contractedValue, packageId: commercialPackage?.id, packageSnapshot: snapshot, checkedInAt: at, notes: input.notes, audit: "Atendimento direto: reserva operacional criada no check-in." };
+    setReservations((current) => [...current, reservation]);
+    setStays((current) => [...current, { id: stayId, code: `HOS-${code.replace("RES-", "")}`, reservationId, clientId: client.id, roomId: room.id, guest: client.name, companions: input.companions, expectedExit: input.exit, checkedInAt: at, status: "Ativa", origin: "Atendimento direto", history: [{ at, type: "Check-in direto", description: "Hospedagem criada no balcão sem reserva prévia." }] }]);
+    setInvoices((current) => [...current, { id: Math.max(0, ...current.map((item) => item.id)) + 1, stayId, reservationId, baseValue: contractedValue, extrasValue: 0, discounts: 0, total: contractedValue, status: "Aberta", updatedAt: at }]);
+    setRooms((current) => current.map((item) => item.id === room.id ? { ...item, status: "Ocupado", occupancyStatus: "Ocupado" } : item));
+    return { ok: true, stayId };
   };
 
   const checkOut = (reservationId: number): OperationResult => {
@@ -1675,7 +1867,7 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     if (!reservation || reservation.status !== "Hospedado" || !stay) return { ok: false, error: "Hospedagem ativa não encontrada." };
     const invoice = invoices.find((item) => item.stayId === stay.id && item.reservationId === reservationId);
     if (!invoice) return { ok: false, error: "A hospedagem não possui fatura vinculada." };
-    const extras = consumptions.filter((item) => item.stayId === stay.id && !item.includedInPackage).reduce((total, item) => total + item.value, 0);
+    const extras = consumptions.filter((item) => item.stayId === stay.id && !item.includedInPackage && item.status !== "Estornado").reduce((total, item) => total + item.value, 0);
     const amounts = financialBalance(reservationBaseValue(reservation), extras, invoice.discounts, activeReceiptsTotal(reservationId));
     const total = amounts.total;
     const received = activeReceiptsTotal(reservationId);
@@ -1685,7 +1877,7 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
       status: "Concluída",
       audit: `Check-out finalizado em ${new Date().toLocaleString("pt-BR")}.`,
     } : item));
-    setStays((current) => current.map((item) => item.id === stay.id ? { ...item, status: "Encerrada", checkedOutAt: new Date().toISOString() } : item));
+    setStays((current) => current.map((item) => item.id === stay.id ? { ...item, status: "Encerrada", checkedOutAt: new Date().toISOString(), history: [...(item.history ?? []), { at: new Date().toISOString(), type: "Check-out", description: "Hospedagem encerrada após conferência financeira." }] } : item));
     setInvoices((current) => current.map((item) => item.id === invoice.id ? {
       ...item, baseValue: reservationBaseValue(reservation), extrasValue: extras, total, status: "Quitada", updatedAt: new Date().toISOString(),
     } : item));
@@ -1744,6 +1936,8 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     setCashSessions(demo.cashSessions);
     setCashMovements(demo.cashMovements);
     setBankTransactions(demo.bankTransactions);
+    setProducts(demo.products);
+    setStockMovements(demo.stockMovements);
     setConferenceRooms(demo.conferenceRooms);
     setEventServices(demo.eventServices);
     setEvents(demo.events);
@@ -1782,12 +1976,12 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
   const activeReceiptsTotal = confirmedReceiptsTotal;
 
   const value = useMemo(() => ({
-    clients, rooms, categories, reservations, receipts, packages, consumptions, stays, housekeepingTasks, invoices,
+    clients, rooms, categories, reservations, receipts, packages, consumptions, stays, housekeepingTasks, invoices, products, stockMovements,
     payables, costCenters, cashSessions, cashMovements, bankTransactions,
     conferenceRooms, eventServices, events, eventReceipts,
     fiscalProfile, fiscalDocuments, communications,
-    setClients, setRooms, setCategories, setReservations, setReceipts, setPackages, setConsumptions,
-    createClient, updateClient, recordConsumption, registerReceipt, changeReceiptStatus, cancelReservation, checkIn, checkOut,
+    setClients, setRooms, setCategories, setReservations, setReceipts, setPackages, setConsumptions, saveProduct, changeProductStock,
+    createClient, updateClient, recordConsumption, reverseConsumption, registerReceipt, changeReceiptStatus, cancelReservation, checkIn, walkInCheckIn, transferStayRoom, checkOut,
     completeHousekeeping, setRoomMaintenance, resetDemonstrationData, cleanupDemoScenario, activeReceiptsTotal,
     getReservationFinancials, createPayable, updatePayable, cancelPayable, registerPayablePayment,
     openCashSession, closeCashSession, registerManualCashMovement, createCostCenter, updateCostCenter,
@@ -1796,7 +1990,7 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     createEventService, updateEventService, inactivateEventService,
     createEvent, updateEvent, cancelEvent, registerEventReceipt, getEventFinancials,
     updateFiscalProfile, issueFiscalDocument, cancelFiscalDocument, reissueFiscalDocument, setCommunications,
-  }), [clients, rooms, categories, reservations, receipts, packages, consumptions, stays, housekeepingTasks, invoices, payables, costCenters, cashSessions, cashMovements, bankTransactions, conferenceRooms, eventServices, events, eventReceipts, fiscalProfile, fiscalDocuments, communications]);
+  }), [clients, rooms, categories, reservations, receipts, packages, consumptions, stays, housekeepingTasks, invoices, payables, costCenters, cashSessions, cashMovements, bankTransactions, conferenceRooms, eventServices, events, eventReceipts, fiscalProfile, fiscalDocuments, communications, products, stockMovements]);
 
   return <OperationsContext.Provider value={value}>{children}</OperationsContext.Provider>;
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, Badge, Btn, Card, FormActions, FormGrid, FullCol, Input, KpiCard, Modal, PageHeader, SectionTitle, Select, Table, Tabs, Textarea, formatDisplayDate } from "../ui";
-import { formatMoney, today, useHotelOperations, type CommercialPackage, type PackagePriceRule } from "../HotelOperationsContext";
+import { formatMoney, OPERATIONAL_SERVICES, today, useHotelOperations, type CommercialPackage, type PackageBenefit, type PackagePriceRule } from "../HotelOperationsContext";
 import { useDemoEngine } from "../demo/DemoEngineContext";
 
 type Tab = "lista" | "cards" | "promocoes";
@@ -12,7 +12,7 @@ const emptyForm = {
   code: "", name: "", description: "", season: "Ano inteiro", mealPlan: "Café da manhã",
   roomCategories: "Standard", minNights: "1", maxNights: "7", includedGuests: "2",
   price: "", priceRule: "Preço fechado" as PackagePriceRule, discountPercent: "0",
-  validFrom: "", validTo: "", benefits: "", conditions: "", active: true,
+  validFrom: "", validTo: "", benefits: "", structuredBenefits: [] as PackageBenefit[], conditions: "", active: true,
 };
 
 const mockForm = () => {
@@ -41,7 +41,7 @@ function isCurrent(commercialPackage: CommercialPackage) {
 }
 
 export default function Pacotes() {
-  const { packages, setPackages, reservations } = useHotelOperations();
+  const { packages, setPackages, reservations, products } = useHotelOperations();
   const [tab, setTab] = useState<Tab>("lista");
   const [modal, setModal] = useState<PackageModal>(null);
   const [selected, setSelected] = useState<CommercialPackage | null>(null);
@@ -49,6 +49,7 @@ export default function Pacotes() {
   const [statusFilter, setStatusFilter] = useState("Ativo");
   const [validation, setValidation] = useState("");
   const [form, setForm] = useState(emptyForm);
+  const [benefitDraft, setBenefitDraft] = useState({ kind: "Serviço" as "Produto" | "Serviço", reference: "Café da manhã", quantity: "1", limitType: "Por hospedagem" as "Por hospedagem" | "Por diária" });
   const [demoScenarioKey, setDemoScenarioKey] = useState("");
   const demo = useDemoEngine();
 
@@ -105,6 +106,7 @@ export default function Pacotes() {
       priceRule: commercialPackage.priceRule, discountPercent: String(commercialPackage.discountPercent),
       validFrom: commercialPackage.validFrom, validTo: commercialPackage.validTo,
       benefits: commercialPackage.benefits.join(", "), conditions: commercialPackage.conditions,
+      structuredBenefits: structuredClone(commercialPackage.structuredBenefits ?? []),
       active: commercialPackage.active,
     });
     setValidation("");
@@ -140,7 +142,7 @@ export default function Pacotes() {
       roomCategories: form.roomCategories.split(",").map((value) => value.trim()).filter(Boolean),
       minNights, maxNights, includedGuests, price, priceRule: form.priceRule, discountPercent,
       validFrom: form.validFrom, validTo: form.validTo,
-      benefits: form.benefits.split(",").map((value) => value.trim()).filter(Boolean),
+      benefits: form.benefits.split(",").map((value) => value.trim()).filter(Boolean), structuredBenefits: form.structuredBenefits,
       conditions: form.conditions.trim(), active: form.active,
     };
     if (modal === "new") {
@@ -150,6 +152,14 @@ export default function Pacotes() {
       setPackages((current) => current.map((item) => item.id === selected.id ? { ...item, ...packageData } : item));
     }
     setModal(null);
+  };
+  const addStructuredBenefit = () => {
+    const quantity = Number(benefitDraft.quantity);
+    const product = products.find((item) => item.id === Number(benefitDraft.reference));
+    const label = benefitDraft.kind === "Produto" ? product?.name : benefitDraft.reference;
+    if (!label || !Number.isFinite(quantity) || quantity <= 0) return setValidation("Selecione um item e uma quantidade válida para o benefício.");
+    const benefit: PackageBenefit = { id: `BEN-${Date.now()}`, kind: benefitDraft.kind, productId: benefitDraft.kind === "Produto" ? product?.id : undefined, serviceCode: benefitDraft.kind === "Serviço" ? benefitDraft.reference : undefined, label, description: label, quantityIncluded: quantity, unit: benefitDraft.kind === "Produto" ? product?.unit ?? "un" : "un", limitType: benefitDraft.limitType, excessRule: "Cobrar preço unitário", active: true };
+    setForm({ ...form, structuredBenefits: [...form.structuredBenefits, benefit] }); setValidation("");
   };
 
   const toggleActive = (commercialPackage: CommercialPackage) => {
@@ -201,6 +211,12 @@ export default function Pacotes() {
         <Input label="Vigência inicial *" type="date" value={form.validFrom} onChange={(event) => setForm({ ...form, validFrom: event.target.value })} />
         <Input label="Vigência final *" type="date" min={form.validFrom} value={form.validTo} onChange={(event) => setForm({ ...form, validTo: event.target.value })} />
         <FullCol><Textarea label="Benefícios inclusos" placeholder="Café da manhã, Decoração especial" value={form.benefits} onChange={(event) => setForm({ ...form, benefits: event.target.value })} /></FullCol>
+        <FullCol><SectionTitle>Benefícios com controle de cota</SectionTitle><Alert type="info">Os textos legados permanecem apenas como descrição comercial. Configure abaixo os itens que devem gerar gratuidade e cobrança de excedentes.</Alert></FullCol>
+        <Select label="Tipo do benefício" value={benefitDraft.kind} onChange={(event) => setBenefitDraft({ ...benefitDraft, kind: event.target.value as "Produto" | "Serviço", reference: event.target.value === "Produto" ? "" : "Café da manhã" })}><option>Serviço</option><option>Produto</option></Select>
+        {benefitDraft.kind === "Produto" ? <Select label="Produto do estoque" value={benefitDraft.reference} onChange={(event) => setBenefitDraft({ ...benefitDraft, reference: event.target.value })}><option value="">Selecione</option>{products.filter((item) => item.status === "Ativo").map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select> : <Select label="Serviço" value={benefitDraft.reference} onChange={(event) => setBenefitDraft({ ...benefitDraft, reference: event.target.value })}>{OPERATIONAL_SERVICES.map((service) => <option key={service}>{service}</option>)}</Select>}
+        <Input label="Quantidade incluída" type="number" min="1" value={benefitDraft.quantity} onChange={(event) => setBenefitDraft({ ...benefitDraft, quantity: event.target.value })} />
+        <Select label="Limite" value={benefitDraft.limitType} onChange={(event) => setBenefitDraft({ ...benefitDraft, limitType: event.target.value as "Por hospedagem" | "Por diária" })}><option>Por hospedagem</option><option>Por diária</option></Select>
+        <FullCol><Btn small variant="secondary" onClick={addStructuredBenefit}>Adicionar benefício estruturado</Btn><Table headers={["Item", "Tipo", "Cota", "Limite", "Excedente", "Ação"]} rows={form.structuredBenefits.map((benefit) => [benefit.label, benefit.kind, `${benefit.quantityIncluded} ${benefit.unit}`, benefit.limitType, benefit.excessRule, <Btn small variant="danger" onClick={() => setForm({ ...form, structuredBenefits: form.structuredBenefits.filter((item) => item.id !== benefit.id) })}>Remover</Btn>])} /></FullCol>
         <FullCol><Textarea label="Condições de contratação" value={form.conditions} onChange={(event) => setForm({ ...form, conditions: event.target.value })} /></FullCol>
         <Select label="Status" value={form.active ? "Ativo" : "Inativo"} onChange={(event) => setForm({ ...form, active: event.target.value === "Ativo" })}><option>Ativo</option><option>Inativo</option></Select>
       </FormGrid>
