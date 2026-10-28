@@ -54,6 +54,7 @@ export default function TopBar({ user, onLogout, onMenuToggle, currentPage, onPr
         {/* Hamburger */}
         <button
           onClick={onMenuToggle}
+          aria-label="Alternar menu de navegação"
           style={{
             width: "36px",
             height: "36px",
@@ -113,7 +114,7 @@ export default function TopBar({ user, onLogout, onMenuToggle, currentPage, onPr
       {/* Right */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         <div className="presentation-trigger">
-          <Btn variant="secondary" small onClick={onPresent}><Icon name="presentation" size={16} /><span>Tour do Sistema</span></Btn>
+          <Btn variant="secondary" small ariaLabel="Tour do Sistema" onClick={onPresent}><Icon name="presentation" size={16} /><span>Tour do Sistema</span></Btn>
         </div>
         {/* User info */}
         <div style={{ textAlign: "right", display: "flex", flexDirection: "column" }}>

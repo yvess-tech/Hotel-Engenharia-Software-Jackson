@@ -1,27 +1,38 @@
+import ManagementPage, {
+  Surface as Card,
+  ManagementBadge as Badge,
+  ManagementModal as Modal,
+  ManagementTable as Table,
+  ManagementTabs as Tabs,
+  ManagementHeader,
+  MetricCard,
+} from "../management-ui"
+
 import { useEffect, useMemo, useState } from "react"
+
 import { useAccessControl } from "../../access-control"
+
 import { validateBankMatch } from "../../domain/financial-rules"
+
 import CashFlowPanel from "./CashFlowPanel"
+
 import printDocument from "../print-document"
+
 import {
   Alert,
-  Badge,
   Btn,
-  Card,
   FormActions,
   FormGrid,
   FullCol,
   Input,
-  Modal,
-  PageHeader,
+  Icon,
   ResponsibleSelect,
   SectionTitle,
   Select,
-  Table,
-  Tabs,
   Textarea,
   formatDisplayDate,
 } from "../ui"
+
 import {
   PAYMENT_METHODS,
   derivePayableStatus,
@@ -38,15 +49,18 @@ import {
   type PayableAccount,
   type Reservation,
 } from "../HotelOperationsContext"
+
 import { useDemoEngine } from "../demo/DemoEngineContext"
 
 type Tab = "fluxo" | "receber" | "pagar" | "caixa" | "centros" | "conciliacao"
+
 type ModalType = "receber" | "receberEvento" | "newPagar" | "editPagar" | "payPagar" | "abrirCaixa" | "fecharCaixa" | "movCaixa" | "newCentro" | "editCentro" | "concilia" | null
 
 const methodOptions = PAYMENT_METHODS.map((method) => ({
   value: method.id,
   label: method.label,
 }))
+
 const emptyPayable = {
   description: "",
   supplier: "",
@@ -56,6 +70,7 @@ const emptyPayable = {
   dueDate: today(),
   notes: "",
 }
+
 const emptyPayment = {
   value: "",
   method: "pix",
@@ -63,6 +78,7 @@ const emptyPayment = {
   notes: "",
   date: today(),
 }
+
 const emptyReceipt = {
   value: "",
   method: "pix",
@@ -73,6 +89,7 @@ const emptyReceipt = {
 
 export default function Financeiro() {
   const { activeAccount } = useAccessControl()
+
   const {
     reservations,
     receipts,
@@ -100,29 +117,42 @@ export default function Financeiro() {
     getEventFinancials,
     registerEventReceipt,
   } = useHotelOperations()
+
   const demo = useDemoEngine()
+
   const [tab, setTab] = useState<Tab>("receber")
+
   const [modal, setModal] = useState<ModalType>(null)
+
   const [selectedReservationId, setSelectedReservationId] =
     useState<number | null>(null)
+
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null)
+
   const [selectedPayableId, setSelectedPayableId] = useState<number | null>(
     null,
   )
+
   const [selectedCenterId, setSelectedCenterId] = useState<number | null>(null)
+
   const [receiptForm, setReceiptForm] = useState(emptyReceipt)
+
   const [payableForm, setPayableForm] = useState(emptyPayable)
+
   const [paymentForm, setPaymentForm] = useState(emptyPayment)
+
   const [cashOpenForm, setCashOpenForm] = useState({
     responsible: activeAccount?.name ?? "",
     openingCash: "500",
     shift: "Manhã" as "Manhã" | "Tarde" | "Noite",
     notes: "",
   })
+
   const [cashCloseForm, setCashCloseForm] = useState({
     countedCash: "",
     notes: "",
   })
+
   const [cashMoveForm, setCashMoveForm] = useState({
     direction: "saida",
     value: "",
@@ -131,12 +161,14 @@ export default function Financeiro() {
     responsible: "Recepcao",
     notes: "",
   })
+
   const [centerForm, setCenterForm] = useState({
     code: "",
     name: "",
     description: "",
     active: true,
   })
+
   const [bankForm, setBankForm] = useState({
     date: today(),
     description: "",
@@ -145,30 +177,43 @@ export default function Financeiro() {
     movementId: "",
     notes: "",
   })
+
   const [message, setMessage] = useState("")
+
   const [notice, setNotice] = useState("")
-  useEffect(() => { setMessage(""); if (modal) setNotice("") }, [modal])
+
+  useEffect(() => {
+    setMessage("")
+    if (modal) setNotice("")
+  }, [modal])
 
   useEffect(() => {
     const command = demo.activeCommand
+
     if (
       !command ||
       command.target !== "financeiro" ||
       command.command !== "open-receivable"
     )
       return
+
     const reservationId = demo.scenario?.ids.reservationId
+
     setTab("receber")
+
     if (reservationId) {
       setSelectedReservationId(reservationId)
+
       setReceiptForm({
         ...emptyReceipt,
         value: "300",
         method: "debit_card",
         notes: "Pagamento parcial da jornada demonstrativa.",
       })
+
       setModal("receber")
     }
+
     demo.resolveCommand(command.id, {
       status: "running",
       message:
@@ -179,12 +224,16 @@ export default function Financeiro() {
   const receivables = useMemo(
     () =>
       reservations
+
         .filter((reservation) => reservation.status !== "Cancelada")
+
         .map((reservation) => {
           const financials = getReservationFinancials(reservation.id)
+
           const invoice = invoices.find(
             (item) => item.reservationId === reservation.id,
           )
+
           return {
             reservation,
             invoice,
@@ -206,9 +255,12 @@ export default function Financeiro() {
   const eventReceivables = useMemo(
     () =>
       events
+
         .filter((event) => event.billingType === "Separada")
+
         .map((event) => {
           const financials = getEventFinancials(event.id)
+
           return {
             event,
             total: financials?.total ?? event.totalContracted,
@@ -225,16 +277,25 @@ export default function Financeiro() {
   )
 
   const openCash = cashSessions.find((session) => !session.closedAt)
+
   const todayMovements = cashMovements.filter(
     (movement) => movement.date === today(),
   )
+
   const financialEntriesToday = todayMovements
+
     .filter((movement) => movement.direction === "entrada")
+
     .reduce((total, movement) => total + movement.value, 0)
+
   const financialOutflowsToday = todayMovements
+
     .filter((movement) => movement.direction === "saida")
+
     .reduce((total, movement) => total + movement.value, 0)
+
   const financialNetToday = financialEntriesToday - financialOutflowsToday
+
   const payablePending = payables.reduce(
     (total, payable) =>
       total +
@@ -243,24 +304,33 @@ export default function Financeiro() {
         : pendingBalance(payable.originalValue, paidValue(payable))),
     0,
   )
+
   const receivablePending =
     receivables.reduce((total, item) => total + item.balance, 0) +
-    eventReceivables.reduce((total, item) => total + (item.status === "Cancelada" ? 0 : item.balance), 0)
+    eventReceivables.reduce(
+      (total, item) => total + (item.status === "Cancelada" ? 0 : item.balance),
+      0,
+    )
+
   const cashBalance = openCash ? cashExpectedTotal(openCash.id) : 0
 
   const selectedReceivable = receivables.find(
     (item) => item.reservation.id === selectedReservationId,
   )
+
   const selectedEventReceivable = eventReceivables.find(
     (item) => item.event.id === selectedEventId,
   )
+
   const selectedPayable = payables.find((item) => item.id === selectedPayableId)
+
   const selectedCenter = costCenters.find(
     (item) => item.id === selectedCenterId,
   )
 
   const saveReceipt = () => {
     if (!selectedReceivable) return
+
     const result = registerReceipt({
       reservationId: selectedReceivable.reservation.id,
       value: Number(receiptForm.value),
@@ -270,16 +340,21 @@ export default function Financeiro() {
       notes: receiptForm.notes,
       operationKey: `financeiro-receipt-${Date.now()}`,
     })
+
     if (!result.ok) {
       setMessage(result.error ?? "Nao foi possivel registrar o recebimento.")
+
       return
     }
+
     setModal(null)
+
     setNotice("Recebimento registrado e fatura atualizada.")
   }
 
   const saveEventReceipt = () => {
     if (!selectedEventReceivable) return
+
     const result = registerEventReceipt({
       eventId: selectedEventReceivable.event.id,
       value: Number(receiptForm.value),
@@ -289,11 +364,15 @@ export default function Financeiro() {
       notes: receiptForm.notes,
       operationKey: `financeiro-event-receipt-${Date.now()}`,
     })
+
     if (!result.ok) {
       setMessage(result.error ?? "Nao foi possivel registrar o recebimento.")
+
       return
     }
+
     setModal(null)
+
     setNotice("Recebimento do evento registrado no financeiro.")
   }
 
@@ -307,20 +386,26 @@ export default function Financeiro() {
       dueDate: payableForm.dueDate,
       notes: payableForm.notes,
     }
+
     const result =
       modal === "editPagar" && selectedPayable
         ? updatePayable(selectedPayable.id, input)
         : createPayable(input)
+
     if (!result.ok) {
       setMessage(result.error ?? "Nao foi possivel salvar a conta.")
+
       return
     }
+
     setModal(null)
+
     setNotice("Conta a pagar salva.")
   }
 
   const savePayablePayment = () => {
     if (!selectedPayable) return
+
     const result = registerPayablePayment({
       payableId: selectedPayable.id,
       value: Number(paymentForm.value),
@@ -330,11 +415,15 @@ export default function Financeiro() {
       notes: paymentForm.notes,
       operationKey: `financeiro-payable-${Date.now()}`,
     })
+
     if (!result.ok) {
       setMessage(result.error ?? "Nao foi possivel registrar o pagamento.")
+
       return
     }
+
     setModal(null)
+
     setNotice("Pagamento registrado.")
   }
 
@@ -347,10 +436,13 @@ export default function Financeiro() {
             name: centerForm.name,
             description: centerForm.description,
           })
+
     if (!result.ok) {
       setMessage(result.error ?? "Nao foi possivel salvar o centro de custo.")
+
       return
     }
+
     setModal(null)
   }
 
@@ -358,6 +450,7 @@ export default function Financeiro() {
     const movement = cashMovements.find(
       (item) => item.id === transaction.matchedMovementId,
     )
+
     return {
       transaction,
       movement,
@@ -368,62 +461,65 @@ export default function Financeiro() {
   })
 
   return (
-    <div className="ops-page">
-      <PageHeader title="Financeiro" />
-      <Alert type="info">
-        Conciliação simulada - sem integração bancária externa. Os dados
-        financeiros sao compartilhados com reservas, hospedagens, consumos,
-        faturas e dashboard.
-      </Alert>
-      {notice && !modal && (
-        <Alert type="success">
-          {notice}
-        </Alert>
-      )}
+    <ManagementPage module="finance">
+      <ManagementHeader
+        title="Financeiro"
+        eyebrow="Gestão financeira"
+        description="Recebimentos, pagamentos e conferência do caixa em uma visão integrada."
+      />
+      <div className="management-inline-note">
+        <Icon name="link" size={16} />
+        <p>
+          <strong>
+            Conciliação simulada, sem integração bancária externa.
+          </strong>{" "}
+          Dados compartilhados com reservas, hospedagens, consumos, faturas e
+          dashboard.
+        </p>
+      </div>
+      {notice && !modal && <Alert type="success">{notice}</Alert>}
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card>
-          <Kpi
-            title="Total a receber"
-            value={formatMoney(receivablePending)}
-            help="Soma dos saldos pendentes de reservas, hospedagens, faturas e eventos com cobrança separada."
-          />
-        </Card>
-        <Card>
-          <Kpi
-            title="Total a pagar"
-            value={formatMoney(payablePending)}
-            help="Soma dos saldos de contas a pagar nao canceladas."
-          />
-        </Card>
-        <Card>
-          <Kpi
-            title="Entradas financeiras hoje"
-            value={formatMoney(financialEntriesToday)}
-            help="Recebimentos em dinheiro, PIX, cartão e transferência."
-          />
-        </Card>
-        <Card>
-          <Kpi
-            title="Saídas financeiras hoje"
-            value={formatMoney(financialOutflowsToday)}
-            help="Pagamentos, reembolsos e demais saídas registradas no dia."
-          />
-        </Card>
-        <Card>
-          <Kpi
-            title="Fluxo líquido hoje"
-            value={formatMoney(financialNetToday)}
-            help="Entradas financeiras menos saídas financeiras do dia."
-          />
-        </Card>
-        <Card>
-          <Kpi
-            title="Dinheiro físico no caixa"
-            value={formatMoney(cashBalance)}
-            help="Dinheiro fisico esperado: abertura + entradas em dinheiro - saidas em dinheiro."
-          />
-        </Card>
+      <div className="management-metrics">
+        <MetricCard
+          label="Total a receber"
+          value={formatMoney(receivablePending)}
+          description="Reservas, hospedagens e eventos pendentes."
+          icon="log-in"
+        />
+        <MetricCard
+          label="Total a pagar"
+          value={formatMoney(payablePending)}
+          description="Obrigações pendentes, sem contas canceladas."
+          icon="log-out"
+          tone="warning"
+        />
+        <MetricCard
+          label="Entradas financeiras hoje"
+          value={formatMoney(financialEntriesToday)}
+          description="Recebimentos em todas as formas de pagamento."
+          icon="trending-up"
+          tone="positive"
+        />
+        <MetricCard
+          label="Saídas financeiras hoje"
+          value={formatMoney(financialOutflowsToday)}
+          description="Pagamentos, devoluções e outras saídas."
+          icon="arrow-left-right"
+          tone="negative"
+        />
+        <MetricCard
+          label="Fluxo líquido hoje"
+          value={formatMoney(financialNetToday)}
+          description="Entradas menos saídas registradas hoje."
+          icon="banknote"
+          tone={financialNetToday < 0 ? "negative" : "default"}
+        />
+        <MetricCard
+          label="Dinheiro físico no caixa"
+          value={formatMoney(cashBalance)}
+          description="Abertura + entradas − saídas em dinheiro."
+          icon="hotel"
+        />
       </div>
 
       <Tabs
@@ -433,7 +529,7 @@ export default function Financeiro() {
           { id: "pagar", label: "Contas a Pagar" },
           { id: "caixa", label: "Caixa" },
           { id: "centros", label: "Centros de Custo" },
-          { id: "conciliacao", label: "Conciliacao Bancaria" },
+          { id: "conciliacao", label: "Conciliação Bancária" },
         ]}
         active={tab}
         onChange={setTab}
@@ -442,95 +538,104 @@ export default function Financeiro() {
       {tab === "fluxo" && <CashFlowPanel />}
 
       {tab === "receber" && (
-        <Card>
-          <SectionTitle>Contas a Receber Operacionais</SectionTitle>
-          <Alert type="info">
-            Faturas vencidas recebem multa de {OVERDUE_INVOICE_POLICY.lateFeePercent}% e juros de {OVERDUE_INVOICE_POLICY.dailyInterestPercent}% ao dia após {OVERDUE_INVOICE_POLICY.graceDays} dias de tolerância. Os encargos entram no saldo a receber.
-          </Alert>
+        <Card
+          title="Contas a receber"
+          description="Reservas, faturas e eventos com cobrança separada."
+        >
+          <details className="management-policy">
+            <summary>Política de encargos por atraso</summary>
+            <Alert type="info">
+              Faturas vencidas recebem multa de{" "}
+              {OVERDUE_INVOICE_POLICY.lateFeePercent}% e juros de{" "}
+              {OVERDUE_INVOICE_POLICY.dailyInterestPercent}% ao dia após{" "}
+              {OVERDUE_INVOICE_POLICY.graceDays} dias de tolerância. Os encargos
+              entram no saldo a receber.
+            </Alert>
+          </details>
           <Table
-            headers={[
-              "Origem",
-              "Cliente",
-              "Descricao",
-              "Total",
-              "Encargos",
-              "Recebido",
-              "Saldo",
-              "Situacao",
-              "Historico",
-              "Acao",
-            ]}
+            caption="Contas a receber de reservas, hospedagens e eventos"
+            headers={["Origem / cliente","Total / encargos","Recebido","Saldo","Situação","Recebimentos","Ação"]}
             rows={[
               ...receivables.map((item) => [
-                item.invoice
+<div className="management-cell"><strong>{item.invoice
                   ? `Fatura ${item.reservation.code.replace("RES", "HOS")}`
-                  : `Reserva ${item.reservation.code}`,
-                item.reservation.guest,
-                receivableDescription(item.reservation),
-                formatMoney(item.total),
-                item.lateCharges > 0 ? formatMoney(item.lateCharges) : "—",
-                formatMoney(item.received),
-                item.received > item.total ? `Crédito: ${formatMoney(item.received - item.total)}` : formatMoney(item.balance),
-                <Badge label={item.status} />,
-                item.history.length
-                  ? item.history
-                      .map(
-                        (receipt) =>
-                          `${formatDisplayDate(receipt.date)} ${formatMoney(receipt.value)} ${receipt.method}`,
-                      )
-                      .join(" | ")
-                  : "Sem recebimentos",
-                <Btn
+                  : `Reserva ${item.reservation.code}`}</strong><span>{item.reservation.guest}</span><small>{receivableDescription(item.reservation)}</small></div>,
+<div className="management-cell"><strong>{formatMoney(item.total)}</strong><small>Encargos: {item.lateCharges > 0 ? formatMoney(item.lateCharges) : "—"}</small></div>,
+formatMoney(item.received),
+item.received > item.total
+                  ? `Crédito: ${formatMoney(item.received - item.total)}`
+                  : formatMoney(item.balance),
+<Badge label={item.status} />,
+<details className="management-receipt-history"><summary>{item.history.length} {item.history.length === 1 ? "recebimento" : "recebimentos"}</summary>{item.history.length ? (
+                  <div className="management-history">
+                    {item.history.map((receipt) => (
+                      <span key={receipt.id}>
+                        {formatDisplayDate(receipt.date)} ·{" "}
+                        {formatMoney(receipt.value)} · {receipt.method}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  "Sem recebimentos"
+                )}</details>,
+<Btn
                   small
                   disabled={item.balance <= 0}
                   onClick={() => {
                     setSelectedReservationId(item.reservation.id)
+
                     setReceiptForm({
                       ...emptyReceipt,
                       value: String(item.balance),
                     })
+
                     setMessage("")
+
                     setModal("receber")
                   }}
                 >
                   Receber
-                </Btn>,
-              ]),
+                </Btn>
+]),
               ...eventReceivables.map((item) => [
-                `Evento ${item.event.code}`,
-                item.event.contractorName,
-                item.event.name,
-                formatMoney(item.total),
-                "—",
-                formatMoney(item.received),
-                formatMoney(item.balance),
-                <Badge label={item.status} />,
-                item.history.length
-                  ? item.history
-                      .map(
-                        (receipt) =>
-                          `${formatDisplayDate(receipt.date)} ${formatMoney(receipt.value)} ${receipt.method}`,
-                      )
-                      .join(" | ")
-                  : "Sem recebimentos",
-                <Btn
+<div className="management-cell"><strong>{`Evento ${item.event.code}`}</strong><span>{item.event.contractorName}</span><small>{item.event.name}</small></div>,
+<div className="management-cell"><strong>{formatMoney(item.total)}</strong><small>Encargos: {"—"}</small></div>,
+formatMoney(item.received),
+formatMoney(item.balance),
+<Badge label={item.status} />,
+<details className="management-receipt-history"><summary>{item.history.length} {item.history.length === 1 ? "recebimento" : "recebimentos"}</summary>{item.history.length ? (
+                  <div className="management-history">
+                    {item.history.map((receipt) => (
+                      <span key={receipt.id}>
+                        {formatDisplayDate(receipt.date)} ·{" "}
+                        {formatMoney(receipt.value)} · {receipt.method}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  "Sem recebimentos"
+                )}</details>,
+<Btn
                   small
                   disabled={
                     item.balance <= 0 || item.event.status === "Cancelado"
                   }
                   onClick={() => {
                     setSelectedEventId(item.event.id)
+
                     setReceiptForm({
                       ...emptyReceipt,
                       value: String(item.balance),
                     })
+
                     setMessage("")
+
                     setModal("receberEvento")
                   }}
                 >
                   Receber
-                </Btn>,
-              ]),
+                </Btn>
+]),
             ]}
           />
         </Card>
@@ -538,15 +643,20 @@ export default function Financeiro() {
 
       {tab === "pagar" && (
         <Card>
-          <div className="flex justify-between items-center gap-3 mb-4">
-            <SectionTitle>Contas a Pagar</SectionTitle>
+          <div className="management-section-heading">
+            <div>
+              <h2>Contas a pagar</h2>
+              <p>Obrigações, fornecedores e vencimentos.</p>
+            </div>
             <Btn
               onClick={() => {
                 setSelectedPayableId(null)
+
                 setPayableForm({
                   ...emptyPayable,
                   costCenterId: String(costCenters[0]?.id ?? ""),
                 })
+
                 setModal("newPagar")
               }}
             >
@@ -554,6 +664,7 @@ export default function Financeiro() {
             </Btn>
           </div>
           <Table
+            caption="Contas a pagar"
             headers={[
               "Codigo",
               "Descricao",
@@ -567,6 +678,7 @@ export default function Financeiro() {
             ]}
             rows={payables.map((payable) => {
               const paid = paidValue(payable)
+
               const status = derivePayableStatus(
                 payable.originalValue,
                 paid,
@@ -574,8 +686,12 @@ export default function Financeiro() {
                 Boolean(payable.canceledAt),
                 today(),
               )
+
               return [
-                payable.code,
+                <div className="management-cell">
+                  <strong>{payable.code}</strong>
+                  <small>{payable.category}</small>
+                </div>,
                 payable.description,
                 payable.supplier,
                 costCenterName(costCenters, payable.costCenterId),
@@ -589,6 +705,7 @@ export default function Financeiro() {
                     variant="ghost"
                     onClick={() => {
                       setSelectedPayableId(payable.id)
+
                       setPayableForm({
                         description: payable.description,
                         supplier: payable.supplier,
@@ -598,6 +715,7 @@ export default function Financeiro() {
                         dueDate: payable.dueDate,
                         notes: payable.notes,
                       })
+
                       setModal("editPagar")
                     }}
                   >
@@ -611,12 +729,14 @@ export default function Financeiro() {
                     }
                     onClick={() => {
                       setSelectedPayableId(payable.id)
+
                       setPaymentForm({
                         ...emptyPayment,
                         value: String(
                           pendingBalance(payable.originalValue, paid),
                         ),
                       })
+
                       setModal("payPagar")
                     }}
                   >
@@ -630,18 +750,25 @@ export default function Financeiro() {
       )}
 
       {tab === "caixa" && (
-        <div className="space-y-4">
+        <div className="management-stack">
           <Card>
-            <div className="flex justify-between items-center gap-3 mb-4">
-              <SectionTitle>Caixa</SectionTitle>
+            <div className="management-section-heading">
+              <div>
+                <h2>Caixa e turnos</h2>
+                <p>
+                  Confira o dinheiro físico e as movimentações de cada turno.
+                </p>
+              </div>
               {openCash ? (
                 <Btn
-                  variant="danger" confirmAction={false}
+                  variant="danger"
+                  confirmAction={false}
                   onClick={() => {
                     setCashCloseForm({
                       countedCash: "",
                       notes: "",
                     })
+
                     setModal("fecharCaixa")
                   }}
                 >
@@ -651,25 +778,59 @@ export default function Financeiro() {
                 <Btn onClick={() => setModal("abrirCaixa")}>Abrir Caixa</Btn>
               )}
             </div>
+            <div className="management-balance">
+              <div className="management-balance__value">
+                <span>Dinheiro físico disponível</span>
+                <strong>{formatMoney(cashBalance)}</strong>
+              </div>
+              <div className="management-balance__meta">
+                <div>
+                  <span>Situação do caixa</span>
+                  <strong>{openCash ? openCash.code : "Fechado"}</strong>
+                </div>
+                <div>
+                  <span>Responsável</span>
+                  <strong>
+                    {openCash?.responsible ?? "Nenhum turno aberto"}
+                  </strong>
+                </div>
+                <div>
+                  <span>Turno</span>
+                  <strong>{openCash?.shift ?? "Não informado"}</strong>
+                </div>
+              </div>
+            </div>
+
             {openCash ? (
               <Alert type="success">
                 Caixa {openCash.code} aberto por {openCash.responsible} · turno{" "}
-                {openCash.shift ?? "Não informado"}. Apenas dinheiro compõe o saldo físico. Pix, cartões e transferências aparecem nos movimentos financeiros.
+                {openCash.shift ?? "Não informado"}. Apenas dinheiro compõe o
+                saldo físico. Pix, cartões e transferências aparecem nos
+                movimentos financeiros.
               </Alert>
             ) : (
               <Alert type="warning">
-                Não há caixa aberto. Abra o caixa para receber, pagar ou devolver em dinheiro. Pix, cartões e transferências podem ser registrados normalmente.
+                Não há caixa aberto. Abra o caixa para receber, pagar ou
+                devolver em dinheiro. Pix, cartões e transferências podem ser
+                registrados normalmente.
               </Alert>
             )}
             <FormActions>
-              <Btn variant="secondary" disabled={!openCash} onClick={() => setModal("movCaixa")}>
+              <Btn
+                variant="secondary"
+                disabled={!openCash}
+                onClick={() => setModal("movCaixa")}
+              >
                 + Movimento Manual
               </Btn>
             </FormActions>
           </Card>
-          <Card>
-            <SectionTitle>Movimentacoes</SectionTitle>
+          <Card
+            title="Movimentações"
+            description="Entradas e saídas com origem, forma de pagamento e responsável."
+          >
             <Table
+              caption="Movimentações financeiras"
               headers={[
                 "Data",
                 "Tipo",
@@ -681,7 +842,9 @@ export default function Financeiro() {
               ]}
               rows={cashMovements.map((movement) => [
                 movement.date,
-                movement.direction === "entrada" ? "Entrada" : "Saida",
+                <Badge
+                  label={movement.direction === "entrada" ? "Entrada" : "Saída"}
+                />,
                 paymentMethodLabel(movement.methodId),
                 movement.description,
                 `${
@@ -695,9 +858,12 @@ export default function Financeiro() {
               ])}
             />
           </Card>
-          <Card>
-            <SectionTitle>Histórico de fechamentos</SectionTitle>
+          <Card
+            title="Histórico de fechamentos"
+            description="Conferência de valores e identificação dos operadores de cada turno."
+          >
             <Table
+              caption="Histórico de fechamentos de caixa"
               headers={[
                 "Caixa",
                 "Turno",
@@ -710,7 +876,9 @@ export default function Financeiro() {
                 "Conferência",
               ]}
               rows={cashSessions
+
                 .filter((session) => session.closedAt)
+
                 .map((session) => [
                   session.code,
                   session.shift ?? "—",
@@ -722,14 +890,72 @@ export default function Financeiro() {
                   ),
                   formatMoney(session.countedCash ?? 0),
                   formatMoney(session.difference ?? 0),
-                  <div className="space-y-1 text-xs">
-                    <p>Aberto por {session.openedBy?.name ?? session.responsible}</p>
-                    <p>Fechado por {session.closedBy?.name ?? "Não registrado"}</p>
+                  <div className="management-history">
+                    <p>
+                      Aberto por {session.openedBy?.name ?? session.responsible}
+                    </p>
+                    <p>
+                      Fechado por {session.closedBy?.name ?? "Não registrado"}
+                    </p>
                     {session.closingNotes && <p>{session.closingNotes}</p>}
-                    <Btn small variant="ghost" onClick={() => printDocument(`Fechamento de caixa · ${session.code}`, [
-                      { title: "Conferência do turno", headers: ["Informação", "Valor"], rows: [["Turno", session.shift ?? "—"], ["Responsável", session.responsible], ["Aberto por", session.openedBy?.name ?? session.responsible], ["Fechado por", session.closedBy?.name ?? "Não registrado"], ["Esperado", formatMoney(session.expectedCash ?? cashExpectedTotal(session.id))], ["Contado", formatMoney(session.countedCash ?? 0)], ["Diferença", formatMoney(session.difference ?? 0)], ["Justificativa", session.closingNotes ?? "—"]] },
-                      { title: "Movimentos do turno", headers: ["Descrição", "Tipo", "Forma", "Valor"], rows: cashMovements.filter((movement) => movement.sessionId === session.id).map((movement) => [movement.description, movement.direction === "entrada" ? "Entrada" : "Saída", paymentMethodLabel(movement.methodId), formatMoney(movement.value)]) },
-                    ])}>Imprimir fechamento</Btn>
+                    <Btn
+                      small
+                      variant="ghost"
+                      onClick={() =>
+                        printDocument(`Fechamento de caixa · ${session.code}`, [
+                          {
+                            title: "Conferência do turno",
+                            headers: ["Informação", "Valor"],
+                            rows: [
+                              ["Turno", session.shift ?? "—"],
+                              ["Responsável", session.responsible],
+                              [
+                                "Aberto por",
+                                session.openedBy?.name ?? session.responsible,
+                              ],
+                              [
+                                "Fechado por",
+                                session.closedBy?.name ?? "Não registrado",
+                              ],
+                              [
+                                "Esperado",
+                                formatMoney(
+                                  session.expectedCash ??
+                                    cashExpectedTotal(session.id),
+                                ),
+                              ],
+                              [
+                                "Contado",
+                                formatMoney(session.countedCash ?? 0),
+                              ],
+                              [
+                                "Diferença",
+                                formatMoney(session.difference ?? 0),
+                              ],
+                              ["Justificativa", session.closingNotes ?? "—"],
+                            ],
+                          },
+                          {
+                            title: "Movimentos do turno",
+                            headers: ["Descrição", "Tipo", "Forma", "Valor"],
+                            rows: cashMovements
+                              .filter(
+                                (movement) => movement.sessionId === session.id,
+                              )
+                              .map((movement) => [
+                                movement.description,
+                                movement.direction === "entrada"
+                                  ? "Entrada"
+                                  : "Saída",
+                                paymentMethodLabel(movement.methodId),
+                                formatMoney(movement.value),
+                              ]),
+                          },
+                        ])
+                      }
+                    >
+                      Imprimir fechamento
+                    </Btn>
                   </div>,
                 ])}
             />
@@ -739,17 +965,22 @@ export default function Financeiro() {
 
       {tab === "centros" && (
         <Card>
-          <div className="flex justify-between items-center gap-3 mb-4">
-            <SectionTitle>Centros de Custo</SectionTitle>
+          <div className="management-section-heading">
+            <div>
+              <h2>Centros de custo</h2>
+              <p>Classificação e acompanhamento das despesas.</p>
+            </div>
             <Btn
               onClick={() => {
                 setSelectedCenterId(null)
+
                 setCenterForm({
                   code: "",
                   name: "",
                   description: "",
                   active: true,
                 })
+
                 setModal("newCentro")
               }}
             >
@@ -757,6 +988,7 @@ export default function Financeiro() {
             </Btn>
           </div>
           <Table
+            caption="Centros de custo"
             headers={[
               "Codigo",
               "Nome",
@@ -774,6 +1006,7 @@ export default function Financeiro() {
                 payables,
                 cashMovements,
               )
+
               return [
                 center.code,
                 center.name,
@@ -787,12 +1020,14 @@ export default function Financeiro() {
                   variant="ghost"
                   onClick={() => {
                     setSelectedCenterId(center.id)
+
                     setCenterForm({
                       code: center.code,
                       name: center.name,
                       description: center.description,
                       active: center.active,
                     })
+
                     setModal("editCentro")
                   }}
                 >
@@ -806,8 +1041,13 @@ export default function Financeiro() {
 
       {tab === "conciliacao" && (
         <Card>
-          <div className="flex justify-between items-center gap-3 mb-4">
-            <SectionTitle>Conciliação Bancária</SectionTitle>
+          <div className="management-section-heading">
+            <div>
+              <h2>Conciliação bancária</h2>
+              <p>
+                Compare o extrato informado com as movimentações registradas.
+              </p>
+            </div>
             <Btn
               onClick={() => {
                 setBankForm({
@@ -818,6 +1058,7 @@ export default function Financeiro() {
                   movementId: "",
                   notes: "",
                 })
+
                 setModal("concilia")
               }}
             >
@@ -830,6 +1071,7 @@ export default function Financeiro() {
             substituir valores.
           </Alert>
           <Table
+            caption="Conciliação bancária"
             headers={[
               "Data",
               "Banco",
@@ -851,9 +1093,20 @@ export default function Financeiro() {
                 formatMoney(Math.abs(difference)),
                 <Badge
                   label={
-                    movement && validateBankMatch(transaction, movement, bankTransactions.some((other) => other.id !== transaction.id && other.matchedMovementId === movement.id)).ok
+                    movement &&
+                    validateBankMatch(
+                      transaction,
+                      movement,
+                      bankTransactions.some(
+                        (other) =>
+                          other.id !== transaction.id &&
+                          other.matchedMovementId === movement.id,
+                      ),
+                    ).ok
                       ? "Conciliado"
-                      : movement ? "Divergente" : "A conferir"
+                      : movement
+                        ? "Divergente"
+                        : "A conferir"
                   }
                 />,
               ],
@@ -867,8 +1120,25 @@ export default function Financeiro() {
           wide
           title={`Receber ${selectedReceivable.reservation.code}`}
           onClose={() => setModal(null)}
+          footer={
+            <>
+              {message && <Alert type="error">{message}</Alert>}
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setModal(null)}>
+                  Cancelar
+                </Btn>
+                <Btn onClick={saveReceipt}>Confirmar recebimento</Btn>
+              </FormActions>
+            </>
+          }
         >
-          <Alert type="info">{receiptForm.method === "cash" ? openCash ? "Dinheiro será movimentado no caixa aberto deste turno." : "Para usar dinheiro, abra o caixa em Financeiro → Caixa. Seus dados serão preservados enquanto você confere a operação." : "Este pagamento será registrado no financeiro. Ele não altera o dinheiro físico da gaveta."}</Alert>
+          <Alert type="info">
+            {receiptForm.method === "cash"
+              ? openCash
+                ? "Dinheiro será movimentado no caixa aberto deste turno."
+                : "Para usar dinheiro, abra o caixa em Financeiro → Caixa. Seus dados serão preservados enquanto você confere a operação."
+              : "Este pagamento será registrado no financeiro. Ele não altera o dinheiro físico da gaveta."}
+          </Alert>
           <FormGrid cols={2}>
             <Input
               label="Cliente"
@@ -939,7 +1209,7 @@ export default function Financeiro() {
             />
             <FullCol>
               <Textarea
-                label="Observacoes"
+                label="Observações"
                 value={receiptForm.notes}
                 onChange={(event) =>
                   setReceiptForm({ ...receiptForm, notes: event.target.value })
@@ -947,13 +1217,6 @@ export default function Financeiro() {
               />
             </FullCol>
           </FormGrid>
-          {message && <Alert type="error">{message}</Alert>}
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setModal(null)}>
-              Cancelar
-            </Btn>
-            <Btn onClick={saveReceipt}>Confirmar recebimento</Btn>
-          </FormActions>
         </Modal>
       )}
 
@@ -962,8 +1225,25 @@ export default function Financeiro() {
           wide
           title={`Receber ${selectedEventReceivable.event.code}`}
           onClose={() => setModal(null)}
+          footer={
+            <>
+              {message && <Alert type="error">{message}</Alert>}
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setModal(null)}>
+                  Cancelar
+                </Btn>
+                <Btn onClick={saveEventReceipt}>Confirmar recebimento</Btn>
+              </FormActions>
+            </>
+          }
         >
-          <Alert type="info">{receiptForm.method === "cash" ? openCash ? "Dinheiro será movimentado no caixa aberto deste turno." : "Para usar dinheiro, abra o caixa em Financeiro → Caixa. Seus dados serão preservados enquanto você confere a operação." : "Este pagamento será registrado no financeiro. Ele não altera o dinheiro físico da gaveta."}</Alert>
+          <Alert type="info">
+            {receiptForm.method === "cash"
+              ? openCash
+                ? "Dinheiro será movimentado no caixa aberto deste turno."
+                : "Para usar dinheiro, abra o caixa em Financeiro → Caixa. Seus dados serão preservados enquanto você confere a operação."
+              : "Este pagamento será registrado no financeiro. Ele não altera o dinheiro físico da gaveta."}
+          </Alert>
           <FormGrid cols={2}>
             <Input
               label="Cliente"
@@ -1030,7 +1310,7 @@ export default function Financeiro() {
             />
             <FullCol>
               <Textarea
-                label="Observacoes"
+                label="Observações"
                 value={receiptForm.notes}
                 onChange={(event) =>
                   setReceiptForm({ ...receiptForm, notes: event.target.value })
@@ -1038,13 +1318,6 @@ export default function Financeiro() {
               />
             </FullCol>
           </FormGrid>
-          {message && <Alert type="error">{message}</Alert>}
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setModal(null)}>
-              Cancelar
-            </Btn>
-            <Btn onClick={saveEventReceipt}>Confirmar recebimento</Btn>
-          </FormActions>
         </Modal>
       )}
 
@@ -1055,19 +1328,23 @@ export default function Financeiro() {
             modal === "newPagar" ? "Nova Conta a Pagar" : "Editar Conta a Pagar"
           }
           onClose={() => setModal(null)}
+          footer={
+            <>
+              {message && <Alert type="error">{message}</Alert>}
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setModal(null)}>
+                  Cancelar
+                </Btn>
+                <Btn onClick={savePayable}>Salvar</Btn>
+              </FormActions>
+            </>
+          }
         >
           <PayableForm
             form={payableForm}
             setForm={setPayableForm}
             costCenters={costCenters}
           />
-          {message && <Alert type="error">{message}</Alert>}
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setModal(null)}>
-              Cancelar
-            </Btn>
-            <Btn onClick={savePayable}>Salvar</Btn>
-          </FormActions>
         </Modal>
       )}
 
@@ -1075,8 +1352,25 @@ export default function Financeiro() {
         <Modal
           title={`Pagar ${selectedPayable.code}`}
           onClose={() => setModal(null)}
+          footer={
+            <>
+              {message && <Alert type="error">{message}</Alert>}
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setModal(null)}>
+                  Cancelar
+                </Btn>
+                <Btn onClick={savePayablePayment}>Registrar pagamento</Btn>
+              </FormActions>
+            </>
+          }
         >
-          <Alert type="info">{paymentForm.method === "cash" ? openCash ? "Dinheiro será movimentado no caixa aberto deste turno." : "Para usar dinheiro, abra o caixa em Financeiro → Caixa. Seus dados serão preservados enquanto você confere a operação." : "Este pagamento será registrado no financeiro. Ele não altera o dinheiro físico da gaveta."}</Alert>
+          <Alert type="info">
+            {paymentForm.method === "cash"
+              ? openCash
+                ? "Dinheiro será movimentado no caixa aberto deste turno."
+                : "Para usar dinheiro, abra o caixa em Financeiro → Caixa. Seus dados serão preservados enquanto você confere a operação."
+              : "Este pagamento será registrado no financeiro. Ele não altera o dinheiro físico da gaveta."}
+          </Alert>
           <FormGrid cols={2}>
             <Input
               label="Fornecedor"
@@ -1132,7 +1426,7 @@ export default function Financeiro() {
             />
             <FullCol>
               <Textarea
-                label="Observacoes"
+                label="Observações"
                 value={paymentForm.notes}
                 onChange={(event) =>
                   setPaymentForm({ ...paymentForm, notes: event.target.value })
@@ -1140,18 +1434,40 @@ export default function Financeiro() {
               />
             </FullCol>
           </FormGrid>
-          {message && <Alert type="error">{message}</Alert>}
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setModal(null)}>
-              Cancelar
-            </Btn>
-            <Btn onClick={savePayablePayment}>Registrar pagamento</Btn>
-          </FormActions>
         </Modal>
       )}
 
       {modal === "abrirCaixa" && (
-        <Modal title="Abrir Caixa" onClose={() => setModal(null)}>
+        <Modal
+          title="Abrir Caixa"
+          onClose={() => setModal(null)}
+          footer={
+            <>
+              {message && <Alert type="error">{message}</Alert>}
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setModal(null)}>
+                  Cancelar
+                </Btn>
+                <Btn
+                  onClick={() => {
+                    const result = openCashSession({
+                      responsible: cashOpenForm.responsible,
+                      openingCash: Number(cashOpenForm.openingCash),
+                      shift: cashOpenForm.shift,
+                      notes: cashOpenForm.notes,
+                    })
+
+                    if (!result.ok)
+                      setMessage(result.error ?? "Falha ao abrir caixa.")
+                    else setModal(null)
+                  }}
+                >
+                  Abrir
+                </Btn>
+              </FormActions>
+            </>
+          }
+        >
           <FormGrid cols={1}>
             <ResponsibleSelect
               value={cashOpenForm.responsible}
@@ -1186,45 +1502,60 @@ export default function Financeiro() {
               }
             />
             <Textarea
-              label="Observacoes"
+              label="Observações"
               value={cashOpenForm.notes}
               onChange={(event) =>
                 setCashOpenForm({ ...cashOpenForm, notes: event.target.value })
               }
             />
           </FormGrid>
-          {message && <Alert type="error">{message}</Alert>}
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setModal(null)}>
-              Cancelar
-            </Btn>
-            <Btn
-              onClick={() => {
-                const result = openCashSession({
-                  responsible: cashOpenForm.responsible,
-                  openingCash: Number(cashOpenForm.openingCash),
-                  shift: cashOpenForm.shift,
-                  notes: cashOpenForm.notes,
-                })
-                if (!result.ok)
-                  setMessage(result.error ?? "Falha ao abrir caixa.")
-                else setModal(null)
-              }}
-            >
-              Abrir
-            </Btn>
-          </FormActions>
         </Modal>
       )}
 
       {modal === "fecharCaixa" && openCash && (
-        <Modal title="Fechar Caixa" onClose={() => setModal(null)}>
+        <Modal
+          title="Fechar Caixa"
+          onClose={() => setModal(null)}
+          footer={
+            <>
+              {message && <Alert type="error">{message}</Alert>}
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setModal(null)}>
+                  Cancelar
+                </Btn>
+                <Btn
+                  variant="danger"
+                  confirmAction={false}
+                  onClick={() => {
+                    const result = closeCashSession({
+                      sessionId: openCash.id,
+                      countedCash:
+                        cashCloseForm.countedCash === ""
+                          ? NaN
+                          : Number(cashCloseForm.countedCash),
+                      notes: cashCloseForm.notes,
+                    })
+
+                    if (!result.ok)
+                      setMessage(result.error ?? "Falha ao fechar caixa.")
+                    else setModal(null)
+                  }}
+                >
+                  Fechar
+                </Btn>
+              </FormActions>
+            </>
+          }
+        >
           <Alert type="info">
             Turno {openCash.shift ?? "Não informado"} · valor físico esperado:{" "}
             {formatMoney(cashExpectedTotal(openCash.id))}. Pix e cartão não
             aumentam o dinheiro em gaveta.
           </Alert>
-          <p className="my-3 text-sm text-gray-500">Fechamento registrado por {activeAccount?.name}. Se houver diferença, explique o motivo. O histórico será preservado.</p>
+          <p className="my-3 text-sm text-gray-500">
+            Fechamento registrado por {activeAccount?.name}. Se houver
+            diferença, explique o motivo. O histórico será preservado.
+          </p>
           <FormGrid cols={1}>
             <Input
               label="Dinheiro contado na gaveta (R$) *"
@@ -1242,9 +1573,14 @@ export default function Financeiro() {
             />
             <Input
               label="Diferença entre contado e esperado"
-              value={cashCloseForm.countedCash === "" ? "Informe o valor contado" : formatMoney(
-                Number(cashCloseForm.countedCash) - cashExpectedTotal(openCash.id),
-              )}
+              value={
+                cashCloseForm.countedCash === ""
+                  ? "Informe o valor contado"
+                  : formatMoney(
+                      Number(cashCloseForm.countedCash) -
+                        cashExpectedTotal(openCash.id),
+                    )
+              }
               readOnly
             />
             <Textarea
@@ -1258,32 +1594,39 @@ export default function Financeiro() {
               }
             />
           </FormGrid>
-          {message && <Alert type="error">{message}</Alert>}
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setModal(null)}>
-              Cancelar
-            </Btn>
-            <Btn
-              variant="danger" confirmAction={false}
-              onClick={() => {
-                const result = closeCashSession({
-                  sessionId: openCash.id,
-                  countedCash: cashCloseForm.countedCash === "" ? NaN : Number(cashCloseForm.countedCash),
-                  notes: cashCloseForm.notes,
-                })
-                if (!result.ok)
-                  setMessage(result.error ?? "Falha ao fechar caixa.")
-                else setModal(null)
-              }}
-            >
-              Fechar
-            </Btn>
-          </FormActions>
         </Modal>
       )}
 
       {modal === "movCaixa" && (
-        <Modal title="Movimento Manual de Caixa" onClose={() => setModal(null)}>
+        <Modal
+          title="Movimento Manual de Caixa"
+          onClose={() => setModal(null)}
+          footer={
+            <>
+              {message && <Alert type="error">{message}</Alert>}
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setModal(null)}>
+                  Cancelar
+                </Btn>
+                <Btn
+                  onClick={() => {
+                    const result = registerManualCashMovement({
+                      ...cashMoveForm,
+                      direction: cashMoveForm.direction as "entrada" | "saida",
+                      value: Number(cashMoveForm.value),
+                    })
+
+                    if (!result.ok)
+                      setMessage(result.error ?? "Falha no movimento.")
+                    else setModal(null)
+                  }}
+                >
+                  Registrar
+                </Btn>
+              </FormActions>
+            </>
+          }
+        >
           <FormGrid cols={2}>
             <Select
               label="Tipo"
@@ -1299,7 +1642,7 @@ export default function Financeiro() {
               <option value="saida">Saida</option>
             </Select>
             <Select
-              label="Metodo"
+              label="Método"
               value={cashMoveForm.method}
               onChange={(event) =>
                 setCashMoveForm({ ...cashMoveForm, method: event.target.value })
@@ -1328,7 +1671,7 @@ export default function Financeiro() {
             />
             <FullCol>
               <Input
-                label="Descricao"
+                label="Descrição"
                 value={cashMoveForm.description}
                 onChange={(event) =>
                   setCashMoveForm({
@@ -1340,7 +1683,7 @@ export default function Financeiro() {
             </FullCol>
             <FullCol>
               <Textarea
-                label="Observacoes"
+                label="Observações"
                 value={cashMoveForm.notes}
                 onChange={(event) =>
                   setCashMoveForm({
@@ -1351,34 +1694,28 @@ export default function Financeiro() {
               />
             </FullCol>
           </FormGrid>
-          {message && <Alert type="error">{message}</Alert>}
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setModal(null)}>
-              Cancelar
-            </Btn>
-            <Btn
-              onClick={() => {
-                const result = registerManualCashMovement({
-                  ...cashMoveForm,
-                  direction: cashMoveForm.direction as "entrada" | "saida",
-                  value: Number(cashMoveForm.value),
-                })
-                if (!result.ok)
-                  setMessage(result.error ?? "Falha no movimento.")
-                else setModal(null)
-              }}
-            >
-              Registrar
-            </Btn>
-          </FormActions>
         </Modal>
       )}
 
       {(modal === "newCentro" || modal === "editCentro") && (
-        <Modal title="Centro de Custo" onClose={() => setModal(null)}>
+        <Modal
+          title="Centro de Custo"
+          onClose={() => setModal(null)}
+          footer={
+            <>
+              {message && <Alert type="error">{message}</Alert>}
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setModal(null)}>
+                  Cancelar
+                </Btn>
+                <Btn onClick={saveCenter}>Salvar</Btn>
+              </FormActions>
+            </>
+          }
+        >
           <FormGrid cols={2}>
             <Input
-              label="Codigo"
+              label="Código"
               value={centerForm.code}
               onChange={(event) =>
                 setCenterForm({ ...centerForm, code: event.target.value })
@@ -1392,7 +1729,7 @@ export default function Financeiro() {
               }
             />
             <Select
-              label="Situacao"
+              label="Situação"
               value={centerForm.active ? "ativo" : "inativo"}
               onChange={(event) =>
                 setCenterForm({
@@ -1406,7 +1743,7 @@ export default function Financeiro() {
             </Select>
             <FullCol>
               <Textarea
-                label="Descricao"
+                label="Descrição"
                 value={centerForm.description}
                 onChange={(event) =>
                   setCenterForm({
@@ -1417,13 +1754,6 @@ export default function Financeiro() {
               />
             </FullCol>
           </FormGrid>
-          {message && <Alert type="error">{message}</Alert>}
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setModal(null)}>
-              Cancelar
-            </Btn>
-            <Btn onClick={saveCenter}>Salvar</Btn>
-          </FormActions>
         </Modal>
       )}
 
@@ -1432,6 +1762,36 @@ export default function Financeiro() {
           wide
           title="Registrar Conciliação"
           onClose={() => setModal(null)}
+          footer={
+            <>
+              {message && <Alert type="error">{message}</Alert>}
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setModal(null)}>
+                  Cancelar
+                </Btn>
+                <Btn
+                  onClick={() => {
+                    const result = reconcileBankTransaction({
+                      date: bankForm.date,
+                      description: bankForm.description,
+                      value: Number(bankForm.value),
+                      direction: bankForm.direction as "credito" | "debito",
+                      movementId: bankForm.movementId
+                        ? Number(bankForm.movementId)
+                        : undefined,
+                      notes: bankForm.notes,
+                    })
+
+                    if (!result.ok)
+                      setMessage(result.error ?? "Falha na conciliacao.")
+                    else setModal(null)
+                  }}
+                >
+                  Salvar
+                </Btn>
+              </FormActions>
+            </>
+          }
         >
           <FormGrid cols={2}>
             <Input
@@ -1446,7 +1806,11 @@ export default function Financeiro() {
               label="Tipo"
               value={bankForm.direction}
               onChange={(event) =>
-                setBankForm({ ...bankForm, direction: event.target.value, movementId: "" })
+                setBankForm({
+                  ...bankForm,
+                  direction: event.target.value,
+                  movementId: "",
+                })
               }
             >
               <option value="credito">Credito</option>
@@ -1469,12 +1833,23 @@ export default function Financeiro() {
               }
             >
               <option value="">Nao vincular</option>
-              {cashMovements.filter((movement) => !isCashPayment(movement.methodId) && (bankForm.direction === "credito") === (movement.direction === "entrada") && !bankTransactions.some((transaction) => transaction.matchedMovementId === movement.id)).map((movement) => (
-                <option key={movement.id} value={movement.id}>
-                  {movement.date} - {movement.description} -{" "}
-                  {formatMoney(movement.value)}
-                </option>
-              ))}
+              {cashMovements
+                .filter(
+                  (movement) =>
+                    !isCashPayment(movement.methodId) &&
+                    (bankForm.direction === "credito") ===
+                      (movement.direction === "entrada") &&
+                    !bankTransactions.some(
+                      (transaction) =>
+                        transaction.matchedMovementId === movement.id,
+                    ),
+                )
+                .map((movement) => (
+                  <option key={movement.id} value={movement.id}>
+                    {movement.date} - {movement.description} -{" "}
+                    {formatMoney(movement.value)}
+                  </option>
+                ))}
             </Select>
             <FullCol>
               <Input
@@ -1487,7 +1862,7 @@ export default function Financeiro() {
             </FullCol>
             <FullCol>
               <Textarea
-                label="Observacoes"
+                label="Observações"
                 value={bankForm.notes}
                 onChange={(event) =>
                   setBankForm({ ...bankForm, notes: event.target.value })
@@ -1495,52 +1870,9 @@ export default function Financeiro() {
               />
             </FullCol>
           </FormGrid>
-          {message && <Alert type="error">{message}</Alert>}
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setModal(null)}>
-              Cancelar
-            </Btn>
-            <Btn
-              onClick={() => {
-                const result = reconcileBankTransaction({
-                  date: bankForm.date,
-                  description: bankForm.description,
-                  value: Number(bankForm.value),
-                  direction: bankForm.direction as "credito" | "debito",
-                  movementId: bankForm.movementId
-                    ? Number(bankForm.movementId)
-                    : undefined,
-                  notes: bankForm.notes,
-                })
-                if (!result.ok)
-                  setMessage(result.error ?? "Falha na conciliacao.")
-                else setModal(null)
-              }}
-            >
-              Salvar
-            </Btn>
-          </FormActions>
         </Modal>
       )}
-    </div>
-  )
-}
-
-function Kpi({
-  title,
-  value,
-  help,
-}: {
-  title: string
-  value: string
-  help: string
-}) {
-  return (
-    <div className="summary-item">
-      <span>{title}</span>
-      <strong>{value}</strong>
-      <small>{help}</small>
-    </div>
+    </ManagementPage>
   )
 }
 
@@ -1550,14 +1882,16 @@ function PayableForm({
   costCenters,
 }: {
   form: typeof emptyPayable
+
   setForm: (form: typeof emptyPayable) => void
+
   costCenters: CostCenter[]
 }) {
   return (
     <FormGrid cols={2}>
       <FullCol>
         <Input
-          label="Descricao *"
+          label="Descrição *"
           value={form.description}
           onChange={(event) =>
             setForm({ ...form, description: event.target.value })
@@ -1582,7 +1916,9 @@ function PayableForm({
         }
       >
         {costCenters
+
           .filter((center) => center.active)
+
           .map((center) => (
             <option key={center.id} value={center.id}>
               {center.name}
@@ -1607,7 +1943,7 @@ function PayableForm({
       />
       <FullCol>
         <Textarea
-          label="Observacoes"
+          label="Observações"
           value={form.notes}
           onChange={(event) => setForm({ ...form, notes: event.target.value })}
         />
@@ -1633,27 +1969,36 @@ function receivableDescription(reservation: Reservation) {
 
 function costCenterTotals(
   center: CostCenter,
-  receipts: { value: number ;status: string }[],
+  receipts: { value: number; status: string }[],
   payables: PayableAccount[],
   movements: CashMovement[],
 ) {
   const receiptsTotal =
     center.name === "Hospedagem"
       ? receipts
+
           .filter((receipt) => receipt.status === "Confirmado")
+
           .reduce((total, receipt) => total + receipt.value, 0)
       : 0
+
   const paymentsTotal = payables
+
     .filter((payable) => payable.costCenterId === center.id)
+
     .reduce((total, payable) => total + paidValue(payable), 0)
+
   const manualCash = movements
+
     .filter(
       (movement) =>
         movement.source === "manual" &&
         movement.direction === "saida" &&
         isCashPayment(movement.methodId),
     )
+
     .reduce((total, movement) => total + movement.value, 0)
+
   return {
     receipts: receiptsTotal,
     payments:

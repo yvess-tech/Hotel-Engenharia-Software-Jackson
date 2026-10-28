@@ -1,10 +1,25 @@
+import ManagementPage, {
+  Surface as Card,
+  ManagementBadge as Badge,
+  ManagementModal as Modal,
+  ManagementTable as Table,
+  ManagementTabs as Tabs,
+  ManagementHeader,
+  MetricCard,
+  DetailValue as Info,
+} from "../management-ui"
+
 import { useEffect, useMemo, useState } from "react"
+
 import { useAccessControl } from "../../access-control"
+
 import printDocument from "../print-document"
+
 import {
   findRoomScheduleConflict,
   validateTimelineTimes,
 } from "../../domain/event-rules"
+
 import {
   PAYMENT_METHODS,
   formatMoney,
@@ -22,29 +37,28 @@ import {
   type EventTimelineItem,
   type EventType,
 } from "../HotelOperationsContext"
+
 import { useDemoEngine } from "../demo/DemoEngineContext"
+
 import {
   Alert,
-  Badge,
   Btn,
-  Card,
   FormActions,
   FormGrid,
   FullCol,
   Input,
-  Modal,
-  PageHeader,
+  Icon,
   ResponsibleSelect,
   SectionTitle,
   Select,
-  Table,
-  Tabs,
   Textarea,
   formatDisplayDate,
 } from "../ui"
 
 type Tab = "agenda" | "eventos" | "salas" | "servicos"
+
 type ModalMode = "event-new" | "event-edit" | "event-view" | "event-cancel" | "event-receipt" | "room-new" | "room-edit" | "room-view" | "service-new" | "service-edit" | "service-view" | null
+
 type EventStep = 1 | 2 | 3 | 4 | 5 | 6
 
 const eventStatuses: EventStatus[] = [
@@ -54,6 +68,7 @@ const eventStatuses: EventStatus[] = [
   "Concluido",
   "Cancelado",
 ]
+
 const paymentMethods = PAYMENT_METHODS.map((method) => ({
   value: method.id,
   label: method.label,
@@ -66,6 +81,7 @@ const emptyTimeline = (): EventTimelineItem => ({
   responsible: "",
   notes: "",
 })
+
 const emptyRoom = (): ConferenceRoomInput => ({
   name: "",
   location: "",
@@ -74,6 +90,7 @@ const emptyRoom = (): ConferenceRoomInput => ({
   hourlyRate: 0,
   resources: "",
 })
+
 const emptyService = (): EventServiceInput => ({
   name: "",
   category: "Coffee break",
@@ -84,7 +101,9 @@ const emptyService = (): EventServiceInput => ({
 
 function localDateTime(days: number, time: string) {
   const date = new Date()
+
   date.setDate(date.getDate() + days)
+
   return `${date.toISOString().slice(0, 10)}T${time}`
 }
 
@@ -93,7 +112,9 @@ function emptyEvent(
   services: EventService[] = [],
 ): EventInput {
   const start = localDateTime(10, "08:00")
+
   const end = localDateTime(10, "12:00")
+
   return {
     name: "",
     type: "Corporativo",
@@ -118,7 +139,8 @@ function emptyEvent(
     depositPercent: 30,
     depositDueDate: start.slice(0, 10),
     balanceDueDate: start.slice(0, 10),
-    cancellationPolicy: "Sinal não reembolsável em caso de cancelamento a menos de 7 dias do evento.",
+    cancellationPolicy:
+      "Sinal não reembolsável em caso de cancelamento a menos de 7 dias do evento.",
     status: "Planejado",
     timeline: [
       {
@@ -203,6 +225,7 @@ function eventToForm(event: EventRecord): EventInput {
 
 function durationHours(start: string, end: string) {
   const ms = new Date(end).getTime() - new Date(start).getTime()
+
   return Number.isFinite(ms) ? Math.max(0, ms / 3600000) : 0
 }
 
@@ -215,15 +238,18 @@ function formTotals(form: EventInput) {
     Math.round(
       durationHours(form.start, form.end) * form.roomHourlyRateContracted * 100,
     ) / 100
+
   const servicesValue =
     Math.round(
       form.services.reduce((total, line) => total + lineSubtotal(line), 0) *
         100,
     ) / 100
+
   const total = Math.max(
     0,
     roomValue + servicesValue - Number(form.discountValue || 0),
   )
+
   return {
     roomValue,
     servicesValue,
@@ -234,7 +260,9 @@ function formTotals(form: EventInput) {
 
 export default function Eventos() {
   const { activeAccount, registerLog } = useAccessControl()
+
   const demo = useDemoEngine()
+
   const {
     clients,
     reservations,
@@ -257,15 +285,22 @@ export default function Eventos() {
   } = useHotelOperations()
 
   const [tab, setTab] = useState<Tab>("agenda")
+
   const [modal, setModal] = useState<ModalMode>(null)
+
   const [selectedId, setSelectedId] = useState<number | null>(null)
+
   const [eventStep, setEventStep] = useState<EventStep>(1)
+
   const [eventForm, setEventForm] = useState<EventInput>(() =>
     emptyEvent(conferenceRooms.find((room) => room.status === "Ativo")),
   )
+
   const [roomForm, setRoomForm] = useState<ConferenceRoomInput>(emptyRoom)
+
   const [serviceForm, setServiceForm] =
     useState<EventServiceInput>(emptyService)
+
   const [filters, setFilters] = useState({
     search: "",
     status: "",
@@ -274,12 +309,27 @@ export default function Eventos() {
     from: "",
     to: "",
   })
+
   const [agendaDate, setAgendaDate] = useState(today())
+
   const [agendaView, setAgendaView] = useState<"dia" | "semana">("dia")
+
   const [agendaRoomId, setAgendaRoomId] = useState("")
+
   const [message, setMessage] = useState("")
-  const [cancelForm, setCancelForm] = useState({ reason: "", treatment: "", refundValue: "", refundMethod: "pix", choice: "full" })
-  useEffect(() => { setMessage("") }, [modal])
+
+  const [cancelForm, setCancelForm] = useState({
+    reason: "",
+    treatment: "",
+    refundValue: "",
+    refundMethod: "pix",
+    choice: "full",
+  })
+
+  useEffect(() => {
+    setMessage("")
+  }, [modal])
+
   const [receiptForm, setReceiptForm] = useState({
     value: "",
     method: "pix",
@@ -289,16 +339,23 @@ export default function Eventos() {
   })
 
   const selectedEvent = events.find((event) => event.id === selectedId) ?? null
+
   const selectedRoom =
     conferenceRooms.find((room) => room.id === selectedId) ?? null
+
   const selectedService =
     eventServices.find((service) => service.id === selectedId) ?? null
+
   const activeRooms = conferenceRooms.filter((room) => room.status === "Ativo")
+
   const activeServices = eventServices.filter(
     (service) => service.status === "Ativo",
   )
+
   const formRoom = conferenceRooms.find((room) => room.id === eventForm.roomId)
+
   const totals = formTotals(eventForm)
+
   const conflict =
     eventForm.roomId && eventForm.start && eventForm.end
       ? findRoomScheduleConflict(
@@ -311,29 +368,39 @@ export default function Eventos() {
           eventForm.teardownMinutes,
         )
       : null
+
   const eligibleStays = stays
+
     .filter((stay) => stay.status === "Ativa")
+
     .map((stay) => ({
       stay,
       reservation: reservations.find(
         (reservation) => reservation.id === stay.reservationId,
       ),
     }))
+
     .filter((item) => item.reservation)
 
   useEffect(() => {
     const command = demo.activeCommand
+
     if (!command || command.target !== "eventos") return
+
     if (command.command === "prefill-event-form") {
       openNewEvent()
+
       const room =
         conferenceRooms.find((item) => item.name === "Sala A") ?? activeRooms[0]
+
       const coffee = eventServices.find((item) =>
         item.name.toLowerCase().includes("coffee"),
       )
+
       const projector = eventServices.find((item) =>
         item.name.toLowerCase().includes("projetor"),
       )
+
       setEventForm({
         ...emptyEvent(room),
         name: "Treinamento Corporativo",
@@ -345,7 +412,9 @@ export default function Eventos() {
         roomId: room?.id ?? 0,
         roomHourlyRateContracted: room?.hourlyRate ?? 300,
         services: [coffee, projector]
+
           .filter((item): item is EventService => Boolean(item))
+
           .map((service) =>
             serviceToLine(
               service,
@@ -353,6 +422,7 @@ export default function Eventos() {
             ),
           ),
       })
+
       demo.resolveCommand(command.id, {
         status: "running",
         message:
@@ -364,15 +434,19 @@ export default function Eventos() {
   const actor = activeAccount
     ? { id: activeAccount.id, name: activeAccount.name }
     : undefined
+
   const roomName = (id: number) =>
     conferenceRooms.find((room) => room.id === id)?.name ?? "Sala historica"
 
   const filteredEvents = events.filter((event) => {
     const query = filters.search.trim().toLowerCase()
+
     return (
       (!query ||
         `${event.code} ${event.name} ${event.contractorName}`
+
           .toLowerCase()
+
           .includes(query)) &&
       (!filters.status || event.status === filters.status) &&
       (!filters.type || event.type === filters.type) &&
@@ -389,22 +463,27 @@ export default function Eventos() {
         event.start >= new Date().toISOString().slice(0, 16),
     ).length,
     contracted: filteredEvents
+
       .filter((event) => event.status !== "Cancelado")
+
       .reduce((total, event) => total + event.totalContracted, 0),
     received: events
+
       .filter(
-        (event) =>
-          event.billingType === "Separada",
+        (event) => event.billingType === "Separada",
       )
+
       .reduce(
         (total, event) => total + (getEventFinancials(event.id)?.received ?? 0),
         0,
       ),
     pending: events
+
       .filter(
         (event) =>
           event.billingType === "Separada" && event.status !== "Cancelado",
       )
+
       .reduce(
         (total, event) => total + (getEventFinancials(event.id)?.balance ?? 0),
         0,
@@ -413,39 +492,54 @@ export default function Eventos() {
 
   const openNewEvent = () => {
     setSelectedId(null)
+
     setEventStep(1)
+
     setMessage("")
+
     setEventForm(emptyEvent(activeRooms[0], activeServices))
+
     setModal("event-new")
   }
 
   const openEditEvent = (event: EventRecord) => {
     setSelectedId(event.id)
+
     setEventForm(eventToForm(event))
+
     setEventStep(1)
+
     setMessage("")
+
     setModal("event-edit")
   }
 
   const saveEvent = () => {
     setMessage("")
+
     const timelineValidation = validateTimelineTimes(
       eventForm.timeline.map((item) => item.time),
       eventForm.start,
       eventForm.end,
     )
+
     if (!timelineValidation.ok) {
       setMessage(timelineValidation.error ?? "Cronograma invalido.")
+
       return
     }
+
     const result =
       modal === "event-edit" && selectedEvent
         ? updateEvent(selectedEvent.id, eventForm)
         : createEvent(eventForm)
+
     if (!result.ok) {
       setMessage(result.error ?? "Nao foi possivel salvar o evento.")
+
       return
     }
+
     registerLog(
       modal === "event-edit" ? "Evento atualizado" : "Evento cadastrado",
       "Eventos",
@@ -453,7 +547,9 @@ export default function Eventos() {
       "Sucesso",
       actor,
     )
+
     setModal(null)
+
     setTab("eventos")
   }
 
@@ -462,6 +558,7 @@ export default function Eventos() {
       modal === "room-edit" && selectedRoom
         ? updateConferenceRoom(selectedRoom.id, roomForm)
         : createConferenceRoom(roomForm)
+
     if (!result.ok)
       setMessage(result.error ?? "Nao foi possivel salvar a sala.")
     else {
@@ -472,6 +569,7 @@ export default function Eventos() {
         "Sucesso",
         actor,
       )
+
       setModal(null)
     }
   }
@@ -481,6 +579,7 @@ export default function Eventos() {
       modal === "service-edit" && selectedService
         ? updateEventService(selectedService.id, serviceForm)
         : createEventService(serviceForm)
+
     if (!result.ok)
       setMessage(result.error ?? "Nao foi possivel salvar o servico.")
     else {
@@ -491,15 +590,27 @@ export default function Eventos() {
         "Sucesso",
         actor,
       )
+
       setModal(null)
     }
   }
 
   const confirmCancel = () => {
     if (!selectedEvent) return
+
     const received = getEventFinancials(selectedEvent.id)?.received ?? 0
-    const refundValue = cancelForm.choice === "full" ? received : cancelForm.choice === "retain" ? 0 : cancelForm.refundValue === "" ? NaN : Number(cancelForm.refundValue)
+
+    const refundValue =
+      cancelForm.choice === "full"
+        ? received
+        : cancelForm.choice === "retain"
+          ? 0
+          : cancelForm.refundValue === ""
+            ? NaN
+            : Number(cancelForm.refundValue)
+
     const result = cancelEvent(selectedEvent.id, { ...cancelForm, refundValue })
+
     if (!result.ok) setMessage(result.error ?? "Nao foi possivel cancelar.")
     else {
       registerLog(
@@ -509,12 +620,14 @@ export default function Eventos() {
         "Sucesso",
         actor,
       )
+
       setModal(null)
     }
   }
 
   const saveReceipt = () => {
     if (!selectedEvent) return
+
     const result = registerEventReceipt({
       eventId: selectedEvent.id,
       value: Number(receiptForm.value),
@@ -524,18 +637,22 @@ export default function Eventos() {
       date: receiptForm.date,
       operationKey: `event-receipt-${Date.now()}`,
     })
+
     if (!result.ok)
       setMessage(result.error ?? "Nao foi possivel registrar o recebimento.")
     else {
       setModal(null)
+
       setMessage("Recebimento do evento registrado como entrada no caixa.")
     }
   }
 
   return (
-    <div className="ops-page">
-      <PageHeader
+    <ManagementPage module="events">
+      <ManagementHeader
         title="Eventos"
+        eyebrow="Operações e planejamento"
+        description="Organize espaços, contratações e serviços. Acompanhe cada evento até a conclusão."
         actions={<Btn onClick={openNewEvent}>+ Novo Evento</Btn>}
       />
       {message && (
@@ -552,17 +669,33 @@ export default function Eventos() {
         </Alert>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Metric label="Eventos futuros" value={String(metrics.future)} />
-        <Metric
+      <div className="management-metrics management-metrics--events">
+        <MetricCard
+          label="Eventos futuros"
+          value={String(metrics.future)}
+          description="Eventos não cancelados com início futuro."
+          icon="calendar-range"
+        />
+        <MetricCard
           label="Valor contratado"
+          description="Contratos não cancelados nos filtros atuais."
+          icon="file-text"
           value={formatMoney(metrics.contracted)}
         />
-        <Metric
+        <MetricCard
           label="Recebido líquido em eventos"
+          description="Cobrança separada, descontadas as devoluções."
+          icon="badge-check"
+          tone="positive"
           value={formatMoney(metrics.received)}
         />
-        <Metric label="Saldo a receber" value={formatMoney(metrics.pending)} />
+        <MetricCard
+          label="Saldo a receber"
+          value={formatMoney(metrics.pending)}
+          description="Saldo de eventos com cobrança separada."
+          icon="banknote"
+          tone="warning"
+        />
       </div>
 
       <Tabs
@@ -570,7 +703,7 @@ export default function Eventos() {
           { id: "agenda", label: "Agenda" },
           { id: "eventos", label: "Eventos" },
           { id: "salas", label: "Salas" },
-          { id: "servicos", label: "Servicos" },
+          { id: "servicos", label: "Serviços" },
         ]}
         active={tab}
         onChange={setTab}
@@ -588,10 +721,12 @@ export default function Eventos() {
           setRoomId={setAgendaRoomId}
           openEvent={(event) => {
             setSelectedId(event.id)
+
             setModal("event-view")
           }}
           startEvent={(roomId, start, end) => {
             const room = conferenceRooms.find((item) => item.id === roomId)
+
             setEventForm({
               ...emptyEvent(room),
               roomId,
@@ -599,120 +734,128 @@ export default function Eventos() {
               end,
               roomHourlyRateContracted: room?.hourlyRate ?? 0,
             })
+
             setEventStep(1)
+
             setModal("event-new")
           }}
         />
       )}
 
       {tab === "eventos" && (
-        <Card>
+        <Card
+          title="Eventos cadastrados"
+          description="Consulte contratos, acompanhe os recebimentos e gerencie cada etapa."
+        >
           <Alert type="info">
             Fluxo do evento: cadastre a contratação, registre o pagamento em{" "}
             <strong>Receber</strong> e o sistema cria uma{" "}
             <strong>entrada no Caixa</strong>. Eventos vinculados à hospedagem
             são recebidos na fatura da reserva.
           </Alert>
-          <FormGrid cols={3}>
-            <Input
-              label="Buscar"
-              placeholder="Codigo, evento ou contratante"
-              value={filters.search}
-              onChange={(event) =>
-                setFilters({ ...filters, search: event.target.value })
-              }
-            />
-            <Select
-              label="Sala"
-              value={filters.roomId}
-              onChange={(event) =>
-                setFilters({ ...filters, roomId: event.target.value })
-              }
-            >
-              <option value="">Todas</option>
-              {conferenceRooms.map((room) => (
-                <option key={room.id} value={room.id}>
-                  {room.name}
-                </option>
-              ))}
-            </Select>
-            <Select
-              label="Situacao"
-              value={filters.status}
-              onChange={(event) =>
-                setFilters({ ...filters, status: event.target.value })
-              }
-            >
-              <option value="">Todas</option>
-              {eventStatuses.map((status) => (
-                <option key={status}>{status}</option>
-              ))}
-            </Select>
-            <Select
-              label="Tipo"
-              value={filters.type}
-              onChange={(event) =>
-                setFilters({ ...filters, type: event.target.value })
-              }
-            >
-              <option value="">Todos</option>
-              <option>Corporativo</option>
-              <option>Social</option>
-            </Select>
-            <Input
-              label="De"
-              type="date"
-              value={filters.from}
-              onChange={(event) =>
-                setFilters({ ...filters, from: event.target.value })
-              }
-            />
-            <Input
-              label="Ate"
-              type="date"
-              value={filters.to}
-              onChange={(event) =>
-                setFilters({ ...filters, to: event.target.value })
-              }
-            />
-          </FormGrid>
+          <div className="management-filters">
+            <FormGrid cols={3}>
+              <Input
+                label="Buscar"
+                placeholder="Codigo, evento ou contratante"
+                value={filters.search}
+                onChange={(event) =>
+                  setFilters({ ...filters, search: event.target.value })
+                }
+              />
+              <Select
+                label="Sala"
+                value={filters.roomId}
+                onChange={(event) =>
+                  setFilters({ ...filters, roomId: event.target.value })
+                }
+              >
+                <option value="">Todas</option>
+                {conferenceRooms.map((room) => (
+                  <option key={room.id} value={room.id}>
+                    {room.name}
+                  </option>
+                ))}
+              </Select>
+              <Select
+                label="Situação"
+                value={filters.status}
+                onChange={(event) =>
+                  setFilters({ ...filters, status: event.target.value })
+                }
+              >
+                <option value="">Todas</option>
+                {eventStatuses.map((status) => (
+                  <option key={status}>{status}</option>
+                ))}
+              </Select>
+              <Select
+                label="Tipo"
+                value={filters.type}
+                onChange={(event) =>
+                  setFilters({ ...filters, type: event.target.value })
+                }
+              >
+                <option value="">Todos</option>
+                <option>Corporativo</option>
+                <option>Social</option>
+              </Select>
+              <Input
+                label="De"
+                type="date"
+                value={filters.from}
+                onChange={(event) =>
+                  setFilters({ ...filters, from: event.target.value })
+                }
+              />
+              <Input
+                label="Até"
+                type="date"
+                value={filters.to}
+                onChange={(event) =>
+                  setFilters({ ...filters, to: event.target.value })
+                }
+              />
+            </FormGrid>
+          </div>
           <Table
-            headers={[
-              "Codigo",
-              "Nome",
-              "Contratante",
-              "Data",
-              "Cobrança",
-              "Sinal",
-              "Contratado",
-              "Recebido",
-              "Saldo",
-              "Situação",
-              "Ações",
-            ]}
+            caption="Eventos cadastrados"
+            headers={["Evento","Contratante","Período e espaço","Cobrança e sinal","Contratado","Recebido","Saldo","Situação","Ações"]}
             rows={filteredEvents.map((event) => [
-              event.code,
-              event.name,
-              event.contractorName,
-              event.start.slice(0, 10),
-              event.billingType === "Separada"
+<div className="management-cell"><strong>{event.name}</strong><small>{event.code} · {event.type}</small></div>,
+event.contractorName,
+<div className="management-cell">
+                <strong>
+                  {formatDisplayDate(event.start).replace("T", " · ")}
+                </strong>
+                <small>
+                  Até {formatDisplayDate(event.end).replace("T", " · ")} ·{" "}
+                  {event.roomName}
+                </small>
+              </div>,
+<div className="management-cell"><span>{event.billingType === "Separada"
                 ? "Evento"
-                : "Fatura da hospedagem",
-              event.billingType === "Separada" && event.depositRequired
-                ? `${event.depositPercent ?? 0}% · ${formatMoney(event.totalContracted * (event.depositPercent ?? 0) / 100)}`
-                : "Sem sinal",
-              formatMoney(event.totalContracted),
-              event.billingType === "Vinculada a hospedagem" ? "Na fatura" : formatMoney(getEventFinancials(event.id)?.received ?? 0),
-              event.billingType === "Vinculada a hospedagem" ? "Consultar hospedagem" : formatMoney(
-                getEventFinancials(event.id)?.balance ?? event.totalContracted,
-              ),
-              <Badge label={event.status} />,
-              <div className="table-actions">
+                : "Fatura da hospedagem"}</span><small>{event.billingType === "Separada" && event.depositRequired
+                ? `${event.depositPercent ?? 0}% · ${formatMoney((event.totalContracted * (event.depositPercent ?? 0)) / 100)}`
+                : "Sem sinal"}</small></div>,
+formatMoney(event.totalContracted),
+event.billingType === "Vinculada a hospedagem"
+                ? "Na fatura"
+                : formatMoney(getEventFinancials(event.id)?.received ?? 0),
+event.billingType === "Vinculada a hospedagem"
+                ? "Consultar hospedagem"
+                : formatMoney(
+                    getEventFinancials(event.id)?.balance ??
+                      event.totalContracted,
+                  ),
+<Badge label={event.status} />,
+<div className="table-actions">
                 <Btn
                   small
                   variant="ghost"
                   onClick={() => {
                     setSelectedId(event.id)
+
                     setModal("event-view")
                   }}
                 >
@@ -734,12 +877,14 @@ export default function Eventos() {
                       variant="secondary"
                       onClick={() => {
                         setSelectedId(event.id)
+
                         setReceiptForm({
                           ...receiptForm,
                           value: String(
                             getEventFinancials(event.id)?.balance ?? 0,
                           ),
                         })
+
                         setModal("event-receipt")
                       }}
                     >
@@ -749,29 +894,43 @@ export default function Eventos() {
                 {["Planejado", "Confirmado"].includes(event.status) && (
                   <Btn
                     small
-                    variant="danger" confirmAction={false}
+                    variant="danger"
+                    confirmAction={false}
                     onClick={() => {
                       setSelectedId(event.id)
-                      setCancelForm({ reason: "", treatment: "", refundValue: "", refundMethod: "pix", choice: "full" })
+
+                      setCancelForm({
+                        reason: "",
+                        treatment: "",
+                        refundValue: "",
+                        refundMethod: "pix",
+                        choice: "full",
+                      })
+
                       setModal("event-cancel")
                     }}
                   >
                     Cancelar
                   </Btn>
                 )}
-              </div>,
-            ])}
+              </div>
+])}
           />
         </Card>
       )}
 
       {tab === "salas" && (
-        <Card>
-          <div className="mb-4 flex justify-end">
+        <Card
+          title="Salas e espaços"
+          description="Capacidade, estrutura e valores dos espaços de eventos."
+        >
+          <div className="management-section-heading">
             <Btn
               onClick={() => {
                 setSelectedId(null)
+
                 setRoomForm(emptyRoom())
+
                 setModal("room-new")
               }}
             >
@@ -779,6 +938,7 @@ export default function Eventos() {
             </Btn>
           </div>
           <Table
+            caption="Salas e espaços para eventos"
             headers={[
               "Nome",
               "Localizacao",
@@ -803,6 +963,7 @@ export default function Eventos() {
                   variant="ghost"
                   onClick={() => {
                     setSelectedId(room.id)
+
                     setModal("room-view")
                   }}
                 >
@@ -815,6 +976,7 @@ export default function Eventos() {
                       variant="ghost"
                       onClick={() => {
                         setSelectedId(room.id)
+
                         setRoomForm({
                           name: room.name,
                           location: room.location,
@@ -823,6 +985,7 @@ export default function Eventos() {
                           hourlyRate: room.hourlyRate,
                           resources: room.resources,
                         })
+
                         setModal("room-edit")
                       }}
                     >
@@ -833,6 +996,7 @@ export default function Eventos() {
                       variant="danger"
                       onClick={() => {
                         const result = inactivateConferenceRoom(room.id)
+
                         setMessage(
                           result.ok
                             ? `${room.name} inativada.`
@@ -851,12 +1015,17 @@ export default function Eventos() {
       )}
 
       {tab === "servicos" && (
-        <Card>
-          <div className="mb-4 flex justify-end">
+        <Card
+          title="Catálogo de serviços"
+          description="Serviços disponíveis e seus preços de contratação."
+        >
+          <div className="management-section-heading">
             <Btn
               onClick={() => {
                 setSelectedId(null)
+
                 setServiceForm(emptyService())
+
                 setModal("service-new")
               }}
             >
@@ -864,6 +1033,7 @@ export default function Eventos() {
             </Btn>
           </div>
           <Table
+            caption="Catálogo de serviços de eventos"
             headers={[
               "Nome",
               "Categoria",
@@ -886,6 +1056,7 @@ export default function Eventos() {
                   variant="ghost"
                   onClick={() => {
                     setSelectedId(service.id)
+
                     setModal("service-view")
                   }}
                 >
@@ -898,6 +1069,7 @@ export default function Eventos() {
                       variant="ghost"
                       onClick={() => {
                         setSelectedId(service.id)
+
                         setServiceForm({
                           name: service.name,
                           category: service.category,
@@ -905,6 +1077,7 @@ export default function Eventos() {
                           unit: service.unit,
                           price: service.price,
                         })
+
                         setModal("service-edit")
                       }}
                     >
@@ -915,6 +1088,7 @@ export default function Eventos() {
                       variant="danger"
                       onClick={() => {
                         const result = inactivateEventService(service.id)
+
                         setMessage(
                           result.ok
                             ? `${service.name} inativado.`
@@ -958,11 +1132,31 @@ export default function Eventos() {
           )}
           financials={getEventFinancials(selectedEvent.id)}
           message={message}
-          onAdvance={["Planejado", "Confirmado", "Em andamento"].includes(selectedEvent.status) ? () => {
-            const next: Record<string, EventStatus> = { Planejado: "Confirmado", Confirmado: "Em andamento", "Em andamento": "Concluido" }
-            const result = updateEvent(selectedEvent.id, { ...eventToForm(selectedEvent), status: next[selectedEvent.status] })
-            setMessage(result.ok ? "" : result.error ?? "Não foi possível atualizar o evento.")
-          } : undefined}
+          onAdvance={
+            ["Planejado", "Confirmado", "Em andamento"].includes(
+              selectedEvent.status,
+            )
+              ? () => {
+                  const next: Record<string, EventStatus> = {
+                    Planejado: "Confirmado",
+                    Confirmado: "Em andamento",
+                    "Em andamento": "Concluido",
+                  }
+
+                  const result = updateEvent(selectedEvent.id, {
+                    ...eventToForm(selectedEvent),
+                    status: next[selectedEvent.status],
+                  })
+
+                  setMessage(
+                    result.ok
+                      ? ""
+                      : (result.error ??
+                          "Não foi possível atualizar o evento."),
+                  )
+                }
+              : undefined
+          }
           onClose={() => setModal(null)}
           onReceive={
             selectedEvent.billingType === "Separada" &&
@@ -974,6 +1168,7 @@ export default function Eventos() {
                       getEventFinancials(selectedEvent.id)?.balance ?? 0,
                     ),
                   })
+
                   setModal("event-receipt")
                 }
               : undefined
@@ -988,9 +1183,27 @@ export default function Eventos() {
         <Modal
           title={`Cancelar ${selectedEvent.code}`}
           onClose={() => setModal(null)}
+          footer={
+            <>
+              {message && <Alert type="error">{message}</Alert>}
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setModal(null)}>
+                  Voltar
+                </Btn>
+                <Btn
+                  variant="danger"
+                  confirmAction={false}
+                  onClick={confirmCancel}
+                >
+                  Confirmar cancelamento
+                </Btn>
+              </FormActions>
+            </>
+          }
         >
           <Alert type="warning">
-            O cancelamento libera a sala e encerra a cobrança pendente. O contrato e os recebimentos continuam no histórico.
+            O cancelamento libera a sala e encerra a cobrança pendente. O
+            contrato e os recebimentos continuam no histórico.
           </Alert>
           <Textarea
             label="Motivo do cancelamento *"
@@ -999,40 +1212,128 @@ export default function Eventos() {
               setCancelForm({ ...cancelForm, reason: event.target.value })
             }
           />
-          {selectedEvent.billingType === "Vinculada a hospedagem" && <Alert type="info">O valor do evento será retirado da fatura da hospedagem. Os pagamentos da hospedagem serão preservados. Confira na fatura se restou crédito para o hóspede.</Alert>}
-          {(getEventFinancials(selectedEvent.id)?.received ?? 0) > 0 && <div className="mt-4 space-y-4">
-            <Info label="Já recebido" value={formatMoney(getEventFinancials(selectedEvent.id)?.received ?? 0)} />
-            <Select label="O que foi acordado com o contratante?" value={cancelForm.choice} onChange={(event) => setCancelForm({ ...cancelForm, choice: event.target.value })}>
-              <option value="full">Devolver todo o valor recebido</option>
-              <option value="partial">Devolver uma parte e reter o restante</option>
-              <option value="retain">Reter todo o valor como taxa de cancelamento</option>
-            </Select>
-            {cancelForm.choice === "partial" && <Input label="Valor a devolver (R$) *" type="number" min="0.01" step="0.01" max={getEventFinancials(selectedEvent.id)?.received ?? 0} value={cancelForm.refundValue} onChange={(event) => setCancelForm({ ...cancelForm, refundValue: event.target.value })} />}
-            {cancelForm.choice !== "retain" && <Select label="Forma da devolução *" value={cancelForm.refundMethod} onChange={(event) => setCancelForm({ ...cancelForm, refundMethod: event.target.value })}>
-              {paymentMethods.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}
-            </Select>}
-            <FormGrid cols={2}>
-              <Info label="Devolver ao contratante" value={formatMoney(cancelForm.choice === "full" ? getEventFinancials(selectedEvent.id)?.received ?? 0 : cancelForm.choice === "retain" ? 0 : Number(cancelForm.refundValue || 0))} />
-              <Info label="Valor retido" value={formatMoney((getEventFinancials(selectedEvent.id)?.received ?? 0) - (cancelForm.choice === "full" ? getEventFinancials(selectedEvent.id)?.received ?? 0 : cancelForm.choice === "retain" ? 0 : Number(cancelForm.refundValue || 0)))} />
-            </FormGrid>
-            <Textarea label="Justificativa do acordo *" value={cancelForm.treatment} onChange={(event) => setCancelForm({ ...cancelForm, treatment: event.target.value })} />
-            <Alert type="info">Confirme após realizar a devolução ao cliente. O sistema registra a saída financeira; não executa transferências bancárias. Devoluções em dinheiro exigem caixa aberto e saldo suficiente.</Alert>
-          </div>}
-          {message && <Alert type="error">{message}</Alert>}
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setModal(null)}>
-              Voltar
-            </Btn>
-            <Btn variant="danger" confirmAction={false} onClick={confirmCancel}>
-              Confirmar cancelamento
-            </Btn>
-          </FormActions>
+          {selectedEvent.billingType === "Vinculada a hospedagem" && (
+            <Alert type="info">
+              O valor do evento será retirado da fatura da hospedagem. Os
+              pagamentos da hospedagem serão preservados. Confira na fatura se
+              restou crédito para o hóspede.
+            </Alert>
+          )}
+          {(getEventFinancials(selectedEvent.id)?.received ?? 0) > 0 && (
+            <div className="management-stack">
+              <Info
+                label="Já recebido"
+                value={formatMoney(
+                  getEventFinancials(selectedEvent.id)?.received ?? 0,
+                )}
+              />
+              <Select
+                label="O que foi acordado com o contratante?"
+                value={cancelForm.choice}
+                onChange={(event) =>
+                  setCancelForm({ ...cancelForm, choice: event.target.value })
+                }
+              >
+                <option value="full">Devolver todo o valor recebido</option>
+                <option value="partial">
+                  Devolver uma parte e reter o restante
+                </option>
+                <option value="retain">
+                  Reter todo o valor como taxa de cancelamento
+                </option>
+              </Select>
+              {cancelForm.choice === "partial" && (
+                <Input
+                  label="Valor a devolver (R$) *"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  max={getEventFinancials(selectedEvent.id)?.received ?? 0}
+                  value={cancelForm.refundValue}
+                  onChange={(event) =>
+                    setCancelForm({
+                      ...cancelForm,
+                      refundValue: event.target.value,
+                    })
+                  }
+                />
+              )}
+              {cancelForm.choice !== "retain" && (
+                <Select
+                  label="Forma da devolução *"
+                  value={cancelForm.refundMethod}
+                  onChange={(event) =>
+                    setCancelForm({
+                      ...cancelForm,
+                      refundMethod: event.target.value,
+                    })
+                  }
+                >
+                  {paymentMethods.map((method) => (
+                    <option key={method.value} value={method.value}>
+                      {method.label}
+                    </option>
+                  ))}
+                </Select>
+              )}
+              <FormGrid cols={2}>
+                <Info
+                  label="Devolver ao contratante"
+                  value={formatMoney(
+                    cancelForm.choice === "full"
+                      ? (getEventFinancials(selectedEvent.id)?.received ?? 0)
+                      : cancelForm.choice === "retain"
+                        ? 0
+                        : Number(cancelForm.refundValue || 0),
+                  )}
+                />
+                <Info
+                  label="Valor retido"
+                  value={formatMoney(
+                    (getEventFinancials(selectedEvent.id)?.received ?? 0) -
+                      (cancelForm.choice === "full"
+                        ? (getEventFinancials(selectedEvent.id)?.received ?? 0)
+                        : cancelForm.choice === "retain"
+                          ? 0
+                          : Number(cancelForm.refundValue || 0)),
+                  )}
+                />
+              </FormGrid>
+              <Textarea
+                label="Justificativa do acordo *"
+                value={cancelForm.treatment}
+                onChange={(event) =>
+                  setCancelForm({
+                    ...cancelForm,
+                    treatment: event.target.value,
+                  })
+                }
+              />
+              <Alert type="info">
+                Confirme após realizar a devolução ao cliente. O sistema
+                registra a saída financeira; não executa transferências
+                bancárias. Devoluções em dinheiro exigem caixa aberto e saldo
+                suficiente.
+              </Alert>
+            </div>
+          )}
         </Modal>
       )}
       {modal === "event-receipt" && selectedEvent && (
         <Modal
           title={`Receber ${selectedEvent.code}`}
           onClose={() => setModal(null)}
+          footer={
+            <>
+              {message && <Alert type="error">{message}</Alert>}
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setModal(null)}>
+                  Cancelar
+                </Btn>
+                <Btn onClick={saveReceipt}>Confirmar recebimento</Btn>
+              </FormActions>
+            </>
+          }
         >
           <Alert type="info">
             Ao confirmar, este valor será registrado como entrada no Financeiro
@@ -1086,7 +1387,7 @@ export default function Eventos() {
             />
             <FullCol>
               <Textarea
-                label="Observacoes"
+                label="Observações"
                 value={receiptForm.notes}
                 onChange={(event) =>
                   setReceiptForm({ ...receiptForm, notes: event.target.value })
@@ -1094,13 +1395,6 @@ export default function Eventos() {
               />
             </FullCol>
           </FormGrid>
-          {message && <Alert type="error">{message}</Alert>}
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setModal(null)}>
-              Cancelar
-            </Btn>
-            <Btn onClick={saveReceipt}>Confirmar recebimento</Btn>
-          </FormActions>
         </Modal>
       )}
 
@@ -1112,32 +1406,51 @@ export default function Eventos() {
               : "Atualizar sala"
           }
           onClose={() => setModal(null)}
+          footer={
+            <>
+              {message && <Alert type="error">{message}</Alert>}
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setModal(null)}>
+                  Cancelar
+                </Btn>
+                <Btn onClick={saveRoom}>Salvar</Btn>
+              </FormActions>
+            </>
+          }
         >
           <RoomForm form={roomForm} setForm={setRoomForm} />
-          {message && <Alert type="error">{message}</Alert>}
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setModal(null)}>
-              Cancelar
-            </Btn>
-            <Btn onClick={saveRoom}>Salvar</Btn>
-          </FormActions>
         </Modal>
       )}
       {modal === "room-view" && selectedRoom && (
-        <Modal title="Consultar sala" onClose={() => setModal(null)}>
+        <Modal
+          title="Consultar sala"
+          onClose={() => setModal(null)}
+          footer={
+            <>
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setModal(null)}>
+                  Fechar
+                </Btn>
+              </FormActions>
+            </>
+          }
+        >
           <FormGrid cols={2}>
             <Info label="Nome" value={selectedRoom.name} />
-            <Info label="Localizacao" value={selectedRoom.location} />
+            <Info label="Localização" value={selectedRoom.location} />
             <Info
               label="Capacidade"
               value={`${selectedRoom.capacity} pessoas`}
             />
-            <Info label="Area" value={`${selectedRoom.area} m2`} />
+            <Info label="Área" value={`${selectedRoom.area} m2`} />
             <Info
               label="Preco por hora"
               value={formatMoney(selectedRoom.hourlyRate)}
             />
-            <Info label="Situacao" value={selectedRoom.status} />
+            <Info
+              label="Situação"
+              value={<Badge label={selectedRoom.status} />}
+            />
             <FullCol>
               <Info
                 label="Recursos"
@@ -1145,11 +1458,6 @@ export default function Eventos() {
               />
             </FullCol>
           </FormGrid>
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setModal(null)}>
-              Fechar
-            </Btn>
-          </FormActions>
         </Modal>
       )}
 
@@ -1161,37 +1469,51 @@ export default function Eventos() {
               : "Atualizar servico"
           }
           onClose={() => setModal(null)}
+          footer={
+            <>
+              {message && <Alert type="error">{message}</Alert>}
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setModal(null)}>
+                  Cancelar
+                </Btn>
+                <Btn onClick={saveService}>Salvar</Btn>
+              </FormActions>
+            </>
+          }
         >
           <ServiceForm form={serviceForm} setForm={setServiceForm} />
-          {message && <Alert type="error">{message}</Alert>}
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setModal(null)}>
-              Cancelar
-            </Btn>
-            <Btn onClick={saveService}>Salvar</Btn>
-          </FormActions>
         </Modal>
       )}
       {modal === "service-view" && selectedService && (
-        <Modal title="Consultar servico" onClose={() => setModal(null)}>
+        <Modal
+          title="Consultar servico"
+          onClose={() => setModal(null)}
+          footer={
+            <>
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setModal(null)}>
+                  Fechar
+                </Btn>
+              </FormActions>
+            </>
+          }
+        >
           <FormGrid cols={2}>
             <Info label="Nome" value={selectedService.name} />
             <Info label="Categoria" value={selectedService.category} />
             <Info label="Unidade" value={selectedService.unit} />
-            <Info label="Preco" value={formatMoney(selectedService.price)} />
-            <Info label="Situacao" value={selectedService.status} />
+            <Info label="Preço" value={formatMoney(selectedService.price)} />
+            <Info
+              label="Situação"
+              value={<Badge label={selectedService.status} />}
+            />
             <FullCol>
-              <Info label="Descricao" value={selectedService.description} />
+              <Info label="Descrição" value={selectedService.description} />
             </FullCol>
           </FormGrid>
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setModal(null)}>
-              Fechar
-            </Btn>
-          </FormActions>
         </Modal>
       )}
-    </div>
+    </ManagementPage>
   )
 }
 
@@ -1211,47 +1533,72 @@ function EventWizard({
   message,
 }: {
   form: EventInput
+
   setForm: (form: EventInput) => void
+
   step: EventStep
+
   setStep: (step: EventStep) => void
+
   rooms: ConferenceRoom[]
+
   services: EventService[]
+
   clients: {
     id: number
+
     name: string
+
     email: string
+
     phone: string
+
     status: string
   }[]
+
   eligibleStays: {
-    stay: { code: string ;reservationId: number }
-    reservation?: { id: number ;code: string ;guest: string ;status: string }
+    stay: { code: string; reservationId: number }
+
+    reservation?: { id: number; code: string; guest: string; status: string }
   }[]
+
   conflict: EventRecord | null
+
   totals: {
     roomValue: number
+
     servicesValue: number
+
     total: number
+
     duration: number
   }
+
   onClose: () => void
+
   onSave: () => void
+
   message: string
 }) {
   const selectedClient = clients.find(
     (client) => client.id === form.contractorClientId,
   )
+
   const setRoom = (roomId: number) => {
     const room = rooms.find((item) => item.id === roomId)
+
     setForm({
       ...form,
       roomId,
       roomHourlyRateContracted: room?.hourlyRate ?? 0,
     })
   }
+
   const addService = (serviceId: number) => {
     const service = services.find((item) => item.id === serviceId)
+
     if (!service) return
+
     setForm({
       ...form,
       services: [
@@ -1260,28 +1607,64 @@ function EventWizard({
       ],
     })
   }
+
   return (
-    <Modal wide title="Cadastro de evento" onClose={onClose}>
-      <div className="mb-4 flex flex-wrap gap-2">
-        {[1, 2, 3, 4, 5, 6].map((item) => (
+    <Modal
+      wide
+      title="Cadastro de evento"
+      onClose={onClose}
+      footer={
+        <>
+          {message && <Alert type="error">{message}</Alert>}
+          <FormActions>
+            <Btn
+              variant="ghost"
+              onClick={
+                step === 1 ? onClose : () => setStep((step - 1) as EventStep)
+              }
+            >
+              {step === 1 ? "Cancelar" : "Anterior"}
+            </Btn>
+            {step < 6 ? (
+              <Btn
+                onClick={() => setStep((step + 1) as EventStep)}
+                disabled={Boolean(conflict)}
+              >
+                Proximo
+              </Btn>
+            ) : (
+              <Btn onClick={onSave} disabled={Boolean(conflict)}>
+                Confirmar evento
+              </Btn>
+            )}
+          </FormActions>
+        </>
+      }
+    >
+      <nav className="management-wizard" aria-label="Etapas do cadastro">
+        {([
+          "Evento e cliente",
+          "Espaço e período",
+          "Serviços",
+          "Cronograma",
+          "Cobrança",
+          "Revisão",
+        ] as const).map((label, index) => (
           <button
-            key={item}
+            key={label}
             type="button"
-            className={`rounded-md border px-3 py-2 text-sm font-bold ${
-              step === item
-                ? "border-primary bg-primary text-white"
-                : "border-gray-200 bg-white text-gray-700"
-            }`}
-            onClick={() => setStep(item as EventStep)}
+            aria-current={step === index + 1 ? "step" : undefined}
+            onClick={() => setStep((index + 1) as EventStep)}
           >
-            {item}
+            <span>{index + 1}</span>
+            <strong>{label}</strong>
           </button>
         ))}
-      </div>
+      </nav>
       {step === 1 && (
         <FormGrid cols={2}>
           <FullCol>
-            <SectionTitle>Informacoes gerais</SectionTitle>
+            <SectionTitle>Dados do evento e contratante</SectionTitle>
           </FullCol>
           <Input
             label="Nome do evento"
@@ -1305,6 +1688,7 @@ function EventWizard({
               const client = clients.find(
                 (item) => item.id === Number(event.target.value),
               )
+
               setForm({
                 ...form,
                 contractorClientId: client?.id,
@@ -1317,7 +1701,9 @@ function EventWizard({
           >
             <option value="">Contratante externo</option>
             {clients
+
               .filter((client) => client.status === "Ativo")
+
               .map((client) => (
                 <option key={client.id} value={client.id}>
                   {client.name}
@@ -1365,7 +1751,7 @@ function EventWizard({
           />
           <FullCol>
             <Textarea
-              label="Observacoes"
+              label="Observações"
               value={form.notes}
               onChange={(event) =>
                 setForm({ ...form, notes: event.target.value })
@@ -1377,7 +1763,7 @@ function EventWizard({
       {step === 2 && (
         <FormGrid cols={2}>
           <FullCol>
-            <SectionTitle>Espaco e agendamento</SectionTitle>
+            <SectionTitle>Espaço e agendamento</SectionTitle>
           </FullCol>
           <Select
             label="Sala"
@@ -1409,7 +1795,7 @@ function EventWizard({
             }
           />
           <Input
-            label="Inicio"
+            label="Início"
             type="datetime-local"
             value={form.start}
             onChange={(event) =>
@@ -1422,14 +1808,39 @@ function EventWizard({
             value={form.end}
             onChange={(event) => setForm({ ...form, end: event.target.value })}
           />
-          <Input label="Montagem antes do evento (minutos)" type="number" min="0" max="1440" step="1" value={form.setupMinutes ?? 0} onChange={(event) => setForm({ ...form, setupMinutes: Number(event.target.value) })} />
-          <Input label="Desmontagem após o evento (minutos)" type="number" min="0" max="1440" step="1" value={form.teardownMinutes ?? 0} onChange={(event) => setForm({ ...form, teardownMinutes: Number(event.target.value) })} />
-          <FullCol><Alert type="info">A sala ficará bloqueada também durante a montagem e a desmontagem. Esses minutos não alteram o preço contratado do evento.</Alert></FullCol>
+          <Input
+            label="Montagem antes do evento (minutos)"
+            type="number"
+            min="0"
+            max="1440"
+            step="1"
+            value={form.setupMinutes ?? 0}
+            onChange={(event) =>
+              setForm({ ...form, setupMinutes: Number(event.target.value) })
+            }
+          />
+          <Input
+            label="Desmontagem após o evento (minutos)"
+            type="number"
+            min="0"
+            max="1440"
+            step="1"
+            value={form.teardownMinutes ?? 0}
+            onChange={(event) =>
+              setForm({ ...form, teardownMinutes: Number(event.target.value) })
+            }
+          />
+          <FullCol>
+            <Alert type="info">
+              A sala ficará bloqueada também durante a montagem e a desmontagem.
+              Esses minutos não alteram o preço contratado do evento.
+            </Alert>
+          </FullCol>
           <Info
-            label="Duracao calculada"
+            label="Duração calculada"
             value={`${totals.duration.toFixed(1)} horas`}
           />
-          <Info label="Valor do espaco" value={formatMoney(totals.roomValue)} />
+          <Info label="Valor do espaço" value={formatMoney(totals.roomValue)} />
           <FullCol>
             {conflict ? (
               <Alert type="error">
@@ -1446,7 +1857,7 @@ function EventWizard({
       )}
       {step === 3 && (
         <div className="space-y-4">
-          <SectionTitle>Servicos contratados</SectionTitle>
+          <SectionTitle>Serviços contratados</SectionTitle>
           <FormGrid cols={2}>
             <Select
               label="Adicionar servico"
@@ -1457,7 +1868,9 @@ function EventWizard({
             >
               <option value="">Selecione</option>
               {services
+
                 .filter((service) => service.status === "Ativo")
+
                 .map((service) => (
                   <option key={service.id} value={service.id}>
                     {service.name} - {formatMoney(service.price)} {service.unit}
@@ -1470,6 +1883,7 @@ function EventWizard({
             />
           </FormGrid>
           <Table
+            caption="Serviços da contratação"
             headers={[
               "Servico",
               "Unidade",
@@ -1506,7 +1920,8 @@ function EventWizard({
               formatMoney(lineSubtotal(line)),
               <Btn
                 small
-                variant="danger" confirmAction={false}
+                variant="danger"
+                confirmAction={false}
                 onClick={() =>
                   setForm({
                     ...form,
@@ -1526,6 +1941,7 @@ function EventWizard({
         <div className="space-y-4">
           <SectionTitle>Cronograma</SectionTitle>
           <Table
+            caption="Atividades do cronograma"
             headers={[
               "Horario",
               "Atividade",
@@ -1569,7 +1985,8 @@ function EventWizard({
               />,
               <Btn
                 small
-                variant="danger" confirmAction={false}
+                variant="danger"
+                confirmAction={false}
                 onClick={() =>
                   setForm({
                     ...form,
@@ -1655,7 +2072,12 @@ function EventWizard({
               <Select
                 label="Exigir sinal para confirmar"
                 value={form.depositRequired ? "sim" : "nao"}
-                onChange={(event) => setForm({ ...form, depositRequired: event.target.value === "sim" })}
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    depositRequired: event.target.value === "sim",
+                  })
+                }
               >
                 <option value="sim">Sim</option>
                 <option value="nao">Não</option>
@@ -1667,28 +2089,39 @@ function EventWizard({
                   min="1"
                   max="100"
                   value={form.depositPercent ?? 0}
-                  onChange={(event) => setForm({ ...form, depositPercent: Number(event.target.value) })}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      depositPercent: Number(event.target.value),
+                    })
+                  }
                 />
               )}
               <Input
                 label="Vencimento do saldo"
                 type="date"
                 value={form.balanceDueDate ?? ""}
-                onChange={(event) => setForm({ ...form, balanceDueDate: event.target.value })}
+                onChange={(event) =>
+                  setForm({ ...form, balanceDueDate: event.target.value })
+                }
               />
               {form.depositRequired && (
                 <Input
                   label="Vencimento do sinal"
                   type="date"
                   value={form.depositDueDate ?? ""}
-                  onChange={(event) => setForm({ ...form, depositDueDate: event.target.value })}
+                  onChange={(event) =>
+                    setForm({ ...form, depositDueDate: event.target.value })
+                  }
                 />
               )}
               <FullCol>
                 <Textarea
                   label="Política de cancelamento e reembolso"
                   value={form.cancellationPolicy ?? ""}
-                  onChange={(event) => setForm({ ...form, cancellationPolicy: event.target.value })}
+                  onChange={(event) =>
+                    setForm({ ...form, cancellationPolicy: event.target.value })
+                  }
                 />
               </FullCol>
             </>
@@ -1699,7 +2132,7 @@ function EventWizard({
       )}
       {step === 6 && (
         <div className="space-y-4">
-          <SectionTitle>Revisao e confirmacao</SectionTitle>
+          <SectionTitle>Revisão e confirmação</SectionTitle>
           <FormGrid cols={2}>
             <Info
               label="Contratante"
@@ -1713,7 +2146,7 @@ function EventWizard({
               }
             />
             <Info
-              label="Periodo"
+              label="Período"
               value={`${formatDisplayDate(form.start)} ate ${formatDisplayDate(form.end)}`}
             />
             <Info label="Participantes" value={String(form.guests)} />
@@ -1721,50 +2154,35 @@ function EventWizard({
               label="Servicos"
               value={
                 form.services
+
                   .map(
                     (line) =>
                       `${line.serviceName} (${line.quantity} x ${formatMoney(line.contractedUnitPrice)})`,
                   )
+
                   .join(", ") || "Nenhum"
               }
             />
             <Info label="Total" value={formatMoney(totals.total)} />
             <FullCol>
-              <Info label="Cobranca" value={form.billingType} />
+              <Info label="Cobrança" value={form.billingType} />
             </FullCol>
             {form.billingType === "Separada" && form.depositRequired && (
               <>
-                <Info label="Sinal para confirmação" value={`${form.depositPercent ?? 0}% (${formatMoney(totals.total * (form.depositPercent ?? 0) / 100)})`} />
-                <Info label="Vencimentos" value={`Sinal: ${formatDisplayDate(form.depositDueDate ?? "")} | Saldo: ${formatDisplayDate(form.balanceDueDate ?? "")}`} />
+                <Info
+                  label="Sinal para confirmação"
+                  value={`${form.depositPercent ?? 0}% (${formatMoney((totals.total * (form.depositPercent ?? 0)) / 100)})`}
+                />
+                <Info
+                  label="Vencimentos"
+                  value={`Sinal: ${formatDisplayDate(form.depositDueDate ?? "")} | Saldo: ${formatDisplayDate(form.balanceDueDate ?? "")}`}
+                />
               </>
             )}
           </FormGrid>
           <Timeline items={form.timeline} />
         </div>
       )}
-      {message && <Alert type="error">{message}</Alert>}
-      <FormActions>
-        <Btn
-          variant="ghost"
-          onClick={
-            step === 1 ? onClose : () => setStep((step - 1) as EventStep)
-          }
-        >
-          {step === 1 ? "Cancelar" : "Anterior"}
-        </Btn>
-        {step < 6 ? (
-          <Btn
-            onClick={() => setStep((step + 1) as EventStep)}
-            disabled={Boolean(conflict)}
-          >
-            Proximo
-          </Btn>
-        ) : (
-          <Btn onClick={onSave} disabled={Boolean(conflict)}>
-            Confirmar evento
-          </Btn>
-        )}
-      </FormActions>
     </Modal>
   )
 }
@@ -1782,14 +2200,23 @@ function AgendaView({
   startEvent,
 }: {
   events: EventRecord[]
+
   rooms: ConferenceRoom[]
+
   date: string
+
   setDate: (date: string) => void
+
   view: "dia" | "semana"
+
   setView: (view: "dia" | "semana") => void
+
   roomId: string
+
   setRoomId: (roomId: string) => void
+
   openEvent: (event: EventRecord) => void
+
   startEvent: (roomId: number, start: string, end: string) => void
 }) {
   const days = useMemo(
@@ -1798,93 +2225,133 @@ function AgendaView({
         ? [date]
         : Array.from({ length: 7 }, (_, index) => {
             const item = new Date(`${date}T12:00`)
+
             item.setDate(item.getDate() + index)
+
             return item.toISOString().slice(0, 10)
           }),
     [date, view],
   )
+
   const displayRooms = rooms.filter(
     (room) => !roomId || room.id === Number(roomId),
   )
+
   const [fullDay, setFullDay] = useState(false)
-  const hours = Array.from({ length: fullDay ? 24 : 16 }, (_, index) => index + (fullDay ? 0 : 7))
+
+  const hours = Array.from(
+    { length: fullDay ? 24 : 16 },
+    (_, index) => index + (fullDay ? 0 : 7),
+  )
+
   return (
-    <Card>
-      <Alert type="info">A agenda inclui montagem e desmontagem. Selecione um horário livre para cadastrar um evento ou um bloco ocupado para consultar os detalhes.</Alert>
-      <div className="my-3"><Btn small variant="secondary" onClick={() => setFullDay(!fullDay)}>{fullDay ? "Mostrar horário comercial" : "Mostrar as 24 horas"}</Btn></div>
-      <FormGrid cols={3}>
-        <Input
-          label="Data inicial"
-          type="date"
-          value={date}
-          onChange={(event) => setDate(event.target.value)}
-        />
-        <Select
-          label="Visualizacao"
-          value={view}
-          onChange={(event) => setView(event.target.value as "dia" | "semana")}
-        >
-          <option value="dia">Diaria</option>
-          <option value="semana">Semanal</option>
-        </Select>
-        <Select
-          label="Sala"
-          value={roomId}
-          onChange={(event) => setRoomId(event.target.value)}
-        >
-          <option value="">Todas</option>
-          {rooms.map((room) => (
-            <option key={room.id} value={room.id}>
-              {room.name}
-            </option>
-          ))}
-        </Select>
-      </FormGrid>
-      <div className="mt-4 space-y-4">
-        {displayRooms.map((room) => (
-          <div
-            key={room.id}
-            className="rounded-lg border border-gray-200 bg-white p-3"
+    <Card
+      title="Agenda de espaços"
+      description="Disponibilidade de salas, incluindo os períodos de montagem e desmontagem."
+    >
+      <div className="management-agenda-toolbar">
+        <div className="management-agenda-legend">
+          <span>
+            <i />
+            Disponível
+          </span>
+          <span>
+            <i />
+            Evento ou preparação
+          </span>
+        </div>
+        <Btn small variant="secondary" onClick={() => setFullDay(!fullDay)}>
+          {fullDay ? "Mostrar horário comercial" : "Mostrar as 24 horas"}
+        </Btn>
+      </div>
+      <div className="management-filters management-filters--agenda">
+        <FormGrid cols={3}>
+          <Input
+            label="Data inicial"
+            type="date"
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
+          />
+          <Select
+            label="Visualização"
+            value={view}
+            onChange={(event) =>
+              setView(event.target.value as "dia" | "semana")
+            }
           >
-            <div className="mb-3 flex items-center justify-between">
+            <option value="dia">Diaria</option>
+            <option value="semana">Semanal</option>
+          </Select>
+          <Select
+            label="Sala"
+            value={roomId}
+            onChange={(event) => setRoomId(event.target.value)}
+          >
+            <option value="">Todas</option>
+            {rooms.map((room) => (
+              <option key={room.id} value={room.id}>
+                {room.name}
+              </option>
+            ))}
+          </Select>
+        </FormGrid>
+      </div>
+      <div className="management-stack">
+        {displayRooms.map((room) => (
+          <div key={room.id} className="management-agenda-room">
+            <div className="management-agenda-room__heading">
               <strong>{room.name}</strong>
               <Badge label={room.status} />
             </div>
             <div
-              className="grid gap-2"
+              className="management-agenda-grid"
               style={{
-                gridTemplateColumns: `repeat(${days.length}, minmax(150px, 1fr))`, overflowX: "auto",
+                gridTemplateColumns: `repeat(${days.length}, minmax(150px, 1fr))`,
+                overflowX: "auto",
               }}
             >
               {days.map((day) => (
-                <div key={day} className="space-y-2">
-                  <p className="text-xs font-bold uppercase text-primary">
+                <div key={day} className="management-agenda-day">
+                  <p className="management-agenda-day__label">
                     {formatDisplayDate(day)}
                   </p>
                   {hours.map((hour) => {
                     const start = `${day}T${String(hour).padStart(2, "0")}:00`
+
                     const nextDay = new Date(`${day}T12:00`)
+
                     nextDay.setDate(nextDay.getDate() + 1)
-                    const end = hour === 23 ? `${nextDay.toISOString().slice(0, 10)}T00:00` : `${day}T${String(hour + 1).padStart(2, "0")}:00`
+
+                    const end =
+                      hour === 23
+                        ? `${nextDay.toISOString().slice(0, 10)}T00:00`
+                        : `${day}T${String(hour + 1).padStart(2, "0")}:00`
+
                     const event = events.find(
                       (item) =>
                         item.roomId === room.id &&
                         item.status !== "Cancelado" &&
-                        new Date(item.start).getTime() - (item.setupMinutes ?? 0) * 60000 < new Date(end).getTime() &&
-                        new Date(item.end).getTime() + (item.teardownMinutes ?? 0) * 60000 > new Date(start).getTime(),
+                        new Date(item.start).getTime() -
+                          (item.setupMinutes ?? 0) * 60000 <
+                          new Date(end).getTime() &&
+                        new Date(item.end).getTime() +
+                          (item.teardownMinutes ?? 0) * 60000 >
+                          new Date(start).getTime(),
                     )
+
                     return (
                       <button
                         key={start}
                         type="button"
                         disabled={!event && room.status !== "Ativo"}
-                        className={`w-full rounded-md border px-3 py-2 text-left text-sm ${
-                          event
-                            ? event.status === "Cancelado"
-                              ? "border-gray-200 bg-gray-100 text-gray-500"
-                              : "border-primary/30 bg-primary/10 text-primary"
-                            : "border-emerald-200 bg-emerald-50 text-emerald-800"
+                        className={`management-agenda-slot ${
+                          event ? "management-agenda-slot--booked" : ""
                         }`}
+                        title={
+                          event
+                            ? `${event.name} · ${formatDisplayDate(event.start).replace("T", " ")} até ${formatDisplayDate(event.end).replace("T", " ")}`
+                            : undefined
+                        }
                         onClick={() =>
                           event
                             ? openEvent(event)
@@ -1892,9 +2359,25 @@ function AgendaView({
                         }
                       >
                         <strong>{String(hour).padStart(2, "0")}:00</strong>{" "}
-                        {event
-                          ? `${event.code} · ${event.end <= start ? "Desmontagem" : event.start >= end ? "Montagem" : event.status}`
-                          : room.status === "Ativo" ? "Disponível" : "Sala inativa"}
+                        <span>
+                          {event ? (
+                            <>
+                              <strong>{event.name}</strong>
+                              <small>
+                                {event.code} ·{" "}
+                                {event.end <= start
+                                  ? "Desmontagem"
+                                  : event.start >= end
+                                    ? "Montagem"
+                                    : event.status}
+                              </small>
+                            </>
+                          ) : room.status === "Ativo" ? (
+                            "Disponível"
+                          ) : (
+                            "Sala inativa"
+                          )}
+                        </span>
                       </button>
                     )
                   })}
@@ -1913,6 +2396,7 @@ function RoomForm({
   setForm,
 }: {
   form: ConferenceRoomInput
+
   setForm: (form: ConferenceRoomInput) => void
 }) {
   return (
@@ -1923,7 +2407,7 @@ function RoomForm({
         onChange={(event) => setForm({ ...form, name: event.target.value })}
       />
       <Input
-        label="Localizacao"
+        label="Localização"
         value={form.location}
         onChange={(event) => setForm({ ...form, location: event.target.value })}
       />
@@ -1937,7 +2421,7 @@ function RoomForm({
         }
       />
       <Input
-        label="Area"
+        label="Área"
         type="number"
         min="0"
         value={form.area}
@@ -1973,6 +2457,7 @@ function ServiceForm({
   setForm,
 }: {
   form: EventServiceInput
+
   setForm: (form: EventServiceInput) => void
 }) {
   return (
@@ -2004,7 +2489,7 @@ function ServiceForm({
         <option>por diaria</option>
       </Select>
       <Input
-        label="Preco"
+        label="Preço"
         type="number"
         min="0"
         step="0.01"
@@ -2015,7 +2500,7 @@ function ServiceForm({
       />
       <FullCol>
         <Textarea
-          label="Descricao"
+          label="Descrição"
           value={form.description}
           onChange={(event) =>
             setForm({ ...form, description: event.target.value })
@@ -2037,29 +2522,162 @@ function EventDetails({
   message,
 }: {
   event: EventRecord
+
   receipts: {
     code: string
+
     date: string
+
     value: number
+
     method: string
+
     status: string
   }[]
+
   financials: EventFinancials | null
+
   reservationLabel: string
+
   onClose: () => void
+
   onReceive?: () => void
+
   onAdvance?: () => void
+
   message?: string
 }) {
   const depositValue = event.depositRequired
-    ? event.totalContracted * (event.depositPercent ?? 0) / 100
+    ? (event.totalContracted * (event.depositPercent ?? 0)) / 100
     : 0
+
   const depositReceived = financials?.received ?? 0
+
   return (
-    <Modal wide title={`${event.code} - ${event.name}`} onClose={onClose}>
-      <div className="space-y-5">
+    <Modal
+      wide
+      title={`${event.code} - ${event.name}`}
+      onClose={onClose}
+      footer={
+        <>
+          {message && <Alert type="error">{message}</Alert>}
+          <FormActions>
+            <Btn variant="ghost" onClick={onClose}>
+              Fechar
+            </Btn>
+            {onReceive && <Btn onClick={onReceive}>Receber saldo</Btn>}
+            {onAdvance && (
+              <Btn onClick={onAdvance}>
+                {event.status === "Planejado"
+                  ? "Confirmar evento"
+                  : event.status === "Confirmado"
+                    ? "Iniciar evento"
+                    : "Concluir evento"}
+              </Btn>
+            )}
+            <Btn
+              variant="secondary"
+              onClick={() =>
+                printDocument(`Ordem de serviço · ${event.code}`, [
+                  {
+                    title: event.name,
+                    headers: ["Informação", "Detalhe"],
+                    rows: [
+                      ["Situação", event.status],
+                      ["Contratante", event.contractorName],
+                      [
+                        "Contato",
+                        `${event.contact} · ${event.phone || event.email}`,
+                      ],
+                      ["Sala", event.roomName],
+                      ["Início", formatDisplayDate(event.start)],
+                      ["Fim", formatDisplayDate(event.end)],
+                      [
+                        "Montagem / desmontagem",
+                        `${event.setupMinutes ?? 0} min antes / ${event.teardownMinutes ?? 0} min depois`,
+                      ],
+                      ["Participantes", String(event.guests)],
+                      ["Observações", event.notes || "—"],
+                    ],
+                  },
+                  {
+                    title: "Serviços contratados",
+                    headers: ["Serviço", "Quantidade", "Unidade"],
+                    rows: event.services.map((line) => [
+                      line.serviceName,
+                      String(line.quantity),
+                      line.unit,
+                    ]),
+                  },
+                  {
+                    title: "Cronograma e responsáveis",
+                    headers: [
+                      "Horário",
+                      "Atividade",
+                      "Responsável",
+                      "Observações",
+                    ],
+                    rows: event.timeline.map((item) => [
+                      item.time,
+                      item.activity,
+                      item.responsible,
+                      item.notes,
+                    ]),
+                  },
+                ])
+              }
+            >
+              Imprimir ordem de serviço
+            </Btn>
+          </FormActions>
+        </>
+      }
+    >
+      <div className="management-stack">
+        <SectionTitle>Resumo financeiro</SectionTitle>
+        <div className="management-financial-summary">
+          <Info
+            label="Valor da sala"
+            value={formatMoney(event.roomValueContracted)}
+          />
+          <Info
+            label="Valor dos servicos"
+            value={formatMoney(event.servicesValueContracted)}
+          />
+          <Info
+            label="Total contratado"
+            value={formatMoney(event.totalContracted)}
+          />
+          <Info
+            label="Recebido"
+            value={
+              event.billingType === "Vinculada a hospedagem"
+                ? "Pagamento na fatura conjunta"
+                : formatMoney(financials?.received ?? 0)
+            }
+          />
+          <Info
+            label={
+              event.billingType === "Vinculada a hospedagem"
+                ? "Saldo total da hospedagem"
+                : "Saldo pendente do evento"
+            }
+            value={
+              event.billingType === "Vinculada a hospedagem"
+                ? financials?.linkedBalance === undefined
+                  ? "Consultar fatura da hospedagem"
+                  : formatMoney(financials.linkedBalance)
+                : formatMoney(financials?.balance ?? event.totalContracted)
+            }
+          />
+          <Info
+            label="Situacao financeira"
+            value={financials?.status ?? "Pendente"}
+          />
+        </div>
+        <SectionTitle>Dados do evento e contratação</SectionTitle>
         <FormGrid cols={2}>
-          <Info label="Situacao" value={event.status} />
+          <Info label="Situação" value={<Badge label={event.status} />} />
           <Info label="Tipo" value={event.type} />
           <Info label="Contratante" value={event.contractorName} />
           <Info
@@ -2068,13 +2686,16 @@ function EventDetails({
           />
           <Info label="Sala" value={event.roomName} />
           <Info
-            label="Periodo"
+            label="Período"
             value={`${formatDisplayDate(event.start)} ate ${formatDisplayDate(event.end)}`}
           />
-          <Info label="Montagem / desmontagem" value={`${event.setupMinutes ?? 0} min antes / ${event.teardownMinutes ?? 0} min depois`} />
+          <Info
+            label="Montagem / desmontagem"
+            value={`${event.setupMinutes ?? 0} min antes / ${event.teardownMinutes ?? 0} min depois`}
+          />
           <Info label="Participantes" value={String(event.guests)} />
           <Info
-            label="Cobranca"
+            label="Cobrança"
             value={
               event.billingType === "Vinculada a hospedagem"
                 ? `${event.billingType}: ${reservationLabel}`
@@ -2089,18 +2710,31 @@ function EventDetails({
               />
               <Info
                 label="Situação do sinal"
-                value={depositReceived + 0.009 >= depositValue ? "Sinal recebido" : `Pendente — recebido ${formatMoney(depositReceived)}`}
+                value={
+                  depositReceived + 0.009 >= depositValue
+                    ? "Sinal recebido"
+                    : `Pendente — recebido ${formatMoney(depositReceived)}`
+                }
               />
-              <Info label="Vencimento do sinal" value={formatDisplayDate(event.depositDueDate ?? "")} />
-              <Info label="Vencimento do saldo" value={formatDisplayDate(event.balanceDueDate ?? "")} />
+              <Info
+                label="Vencimento do sinal"
+                value={formatDisplayDate(event.depositDueDate ?? "")}
+              />
+              <Info
+                label="Vencimento do saldo"
+                value={formatDisplayDate(event.balanceDueDate ?? "")}
+              />
             </>
           )}
         </FormGrid>
         {event.billingType === "Separada" && event.cancellationPolicy && (
-          <Alert type="info">Política de cancelamento: {event.cancellationPolicy}</Alert>
+          <Alert type="info">
+            Política de cancelamento: {event.cancellationPolicy}
+          </Alert>
         )}
-        <SectionTitle>Servicos contratados</SectionTitle>
+        <SectionTitle>Serviços contratados</SectionTitle>
         <Table
+          caption="Serviços contratados do evento"
           headers={[
             "Servico",
             "Categoria",
@@ -2120,34 +2754,13 @@ function EventDetails({
         />
         <SectionTitle>Cronograma</SectionTitle>
         <Timeline items={event.timeline} />
-        <SectionTitle>Resumo financeiro</SectionTitle>
-        <FormGrid cols={3}>
-          <Info
-            label="Valor da sala"
-            value={formatMoney(event.roomValueContracted)}
-          />
-          <Info
-            label="Valor dos servicos"
-            value={formatMoney(event.servicesValueContracted)}
-          />
-          <Info
-            label="Total contratado"
-            value={formatMoney(event.totalContracted)}
-          />
-          <Info
-            label="Recebido"
-            value={event.billingType === "Vinculada a hospedagem" ? "Pagamento na fatura conjunta" : formatMoney(financials?.received ?? 0)}
-          />
-          <Info
-            label={event.billingType === "Vinculada a hospedagem" ? "Saldo total da hospedagem" : "Saldo pendente do evento"}
-            value={event.billingType === "Vinculada a hospedagem" ? financials?.linkedBalance === undefined ? "Consultar fatura da hospedagem" : formatMoney(financials.linkedBalance) : formatMoney(financials?.balance ?? event.totalContracted)}
-          />
-          <Info
-            label="Situacao financeira"
-            value={financials?.status ?? "Pendente"}
-          />
-        </FormGrid>
-        {event.status === "Cancelado" ? <Alert type="info">Evento cancelado. A cobrança pendente foi encerrada e o histórico foi preservado.</Alert> : event.billingType === "Separada" ? (
+
+        {event.status === "Cancelado" ? (
+          <Alert type="info">
+            Evento cancelado. A cobrança pendente foi encerrada e o histórico
+            foi preservado.
+          </Alert>
+        ) : event.billingType === "Separada" ? (
           <Alert type="info">
             Use Receber para registrar o pagamento. A confirmação gera uma
             entrada no Caixa.
@@ -2155,11 +2768,13 @@ function EventDetails({
         ) : (
           <Alert type="info">
             Este evento está vinculado à hospedagem {reservationLabel}; o
-            pagamento é registrado na fatura conjunta. Recebimentos da hospedagem não são atribuídos individualmente a este evento.
+            pagamento é registrado na fatura conjunta. Recebimentos da
+            hospedagem não são atribuídos individualmente a este evento.
           </Alert>
         )}
         {receipts.length > 0 && (
           <Table
+            caption="Recebimentos do evento"
             headers={["Codigo", "Data", "Valor", "Forma", "Status"]}
             rows={receipts.map((receipt) => [
               receipt.code,
@@ -2173,24 +2788,22 @@ function EventDetails({
         {event.financialNotes && (
           <Alert type="info">Historico: {event.financialNotes}</Alert>
         )}
-        {event.cancellation && <FormGrid cols={3}>
-          <Info label="Recebido antes do cancelamento" value={formatMoney(event.cancellation.received)} />
-          <Info label="Devolvido" value={formatMoney(event.cancellation.refunded)} />
-          <Info label="Retido como taxa" value={formatMoney(event.cancellation.retained)} />
-        </FormGrid>}
-        {message && <Alert type="error">{message}</Alert>}
-        <FormActions>
-          <Btn variant="ghost" onClick={onClose}>
-            Fechar
-          </Btn>
-          {onReceive && <Btn onClick={onReceive}>Receber saldo</Btn>}
-          {onAdvance && <Btn onClick={onAdvance}>{event.status === "Planejado" ? "Confirmar evento" : event.status === "Confirmado" ? "Iniciar evento" : "Concluir evento"}</Btn>}
-          <Btn variant="secondary" onClick={() => printDocument(`Ordem de serviço · ${event.code}`, [
-            { title: event.name, headers: ["Informação", "Detalhe"], rows: [["Situação", event.status], ["Contratante", event.contractorName], ["Contato", `${event.contact} · ${event.phone || event.email}`], ["Sala", event.roomName], ["Início", formatDisplayDate(event.start)], ["Fim", formatDisplayDate(event.end)], ["Montagem / desmontagem", `${event.setupMinutes ?? 0} min antes / ${event.teardownMinutes ?? 0} min depois`], ["Participantes", String(event.guests)], ["Observações", event.notes || "—"]] },
-            { title: "Serviços contratados", headers: ["Serviço", "Quantidade", "Unidade"], rows: event.services.map((line) => [line.serviceName, String(line.quantity), line.unit]) },
-            { title: "Cronograma e responsáveis", headers: ["Horário", "Atividade", "Responsável", "Observações"], rows: event.timeline.map((item) => [item.time, item.activity, item.responsible, item.notes]) },
-          ])}>Imprimir ordem de serviço</Btn>
-        </FormActions>
+        {event.cancellation && (
+          <FormGrid cols={3}>
+            <Info
+              label="Recebido antes do cancelamento"
+              value={formatMoney(event.cancellation.received)}
+            />
+            <Info
+              label="Devolvido"
+              value={formatMoney(event.cancellation.refunded)}
+            />
+            <Info
+              label="Retido como taxa"
+              value={formatMoney(event.cancellation.retained)}
+            />
+          </FormGrid>
+        )}
       </div>
     </Modal>
   )
@@ -2198,40 +2811,21 @@ function EventDetails({
 
 function Timeline({ items }: { items: EventTimelineItem[] }) {
   return (
-    <div className="relative ml-3 border-l-2 border-primary/20 pl-6">
+    <div className="management-timeline">
       {[...items]
         .sort((first, second) => first.time.localeCompare(second.time))
         .map((item) => (
-          <div key={item.id} className="relative pb-5 last:pb-0">
-            <span className="absolute -left-[31px] top-1 h-3 w-3 rounded-full bg-primary ring-4 ring-white" />
-            <p className="text-xs font-bold uppercase text-primary">
-              {item.time}
-            </p>
-            <p className="font-bold text-gray-800">{item.activity}</p>
-            <p className="text-sm text-gray-500">
-              {item.responsible}
-              {item.notes ? ` - ${item.notes}` : ""}
-            </p>
+          <div key={item.id} className="management-timeline__item">
+            <time>{item.time}</time>
+            <div>
+              <strong>{item.activity}</strong>
+              <p>
+                {item.responsible}
+                {item.notes ? ` — ${item.notes}` : ""}
+              </p>
+            </div>
           </div>
         ))}
-    </div>
-  )
-}
-
-function Metric({ label, value }: { label: string ;value: string }) {
-  return (
-    <Card className="min-h-24">
-      <p className="text-xs font-bold uppercase text-primary/70">{label}</p>
-      <p className="mt-2 text-2xl font-bold text-primary">{value}</p>
-    </Card>
-  )
-}
-
-function Info({ label, value }: { label: string ;value: string }) {
-  return (
-    <div className="rounded-lg bg-surface p-3">
-      <p className="text-xs font-bold uppercase text-primary/70">{label}</p>
-      <p className="mt-1 text-sm text-gray-700">{value}</p>
     </div>
   )
 }
@@ -2265,10 +2859,11 @@ function updateTimeline(
 }
 
 function reservationLabel(
-  reservations: { id: number ;code: string ;guest: string }[],
+  reservations: { id: number; code: string; guest: string }[],
   reservationId?: number,
 ) {
   const reservation = reservations.find((item) => item.id === reservationId)
+
   return reservation
     ? `${reservation.code} - ${reservation.guest}`
     : "Nao vinculada"

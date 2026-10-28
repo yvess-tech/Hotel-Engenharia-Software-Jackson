@@ -4,27 +4,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d066661a-c5ce-4082-b4d7-22267333271e" name="Changes" comment="alteração 19/10/2026">
+    <list default="true" id="d066661a-c5ce-4082-b4d7-22267333271e" name="Changes" comment="alteração 27/10/2026">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/HotelOperationsContext.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/HotelOperationsContext.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/AppShell.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/AppShell.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/Sidebar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/Sidebar.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/TopBar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/TopBar.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/demo/OperationalDemoPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/demo/OperationalDemoPanel.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/CheckInOut.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/CheckInOut.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/Consumos.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Consumos.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/Estoque.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Estoque.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/CashFlowPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/CashFlowPanel.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/pages/Eventos.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Eventos.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/pages/Financeiro.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Financeiro.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/Fiscal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Fiscal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/Hospedagens.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Hospedagens.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/Pacotes.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Pacotes.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/Reservas.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Reservas.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/tour/PresentationTour.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/tour/PresentationTour.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/ui.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/ui.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/domain/consumption-stock-rules.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/domain/consumption-stock-rules.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/domain/event-rules.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/domain/event-rules.test.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/domain/event-rules.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/domain/event-rules.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/domain/financial-rules.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/domain/financial-rules.test.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/domain/financial-rules.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/domain/financial-rules.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -60,23 +48,23 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.5459525675895431" />
-      <entry key="MS500" value="6.46006570590038" />
-      <entry key="S2" value="23.426729261108072" />
-      <entry key="S5" value="46.73593627917541" />
-      <entry key="S10" value="64.63777575399416" />
-      <entry key="S30" value="83.1622220755927" />
-      <entry key="S60" value="95.63219190621983" />
-      <entry key="M2" value="139.8676151713132" />
-      <entry key="M5" value="273.25830047320557" />
-      <entry key="M10" value="395.38829509600873" />
-      <entry key="M15" value="488.0421701499445" />
-      <entry key="M30" value="778.2642167796006" />
-      <entry key="H1" value="1224.199517044907" />
-      <entry key="H2" value="1676.981380992213" />
-      <entry key="H4" value="2026.2670858550148" />
-      <entry key="D1" value="2425.0443737914075" />
-      <entry key="W1" value="2506.9019620043355" />
+      <entry key="MS100" value="1.0" />
+      <entry key="MS500" value="1.0" />
+      <entry key="S2" value="1.0000000000000504" />
+      <entry key="S5" value="1.0000178942393405" />
+      <entry key="S10" value="1.0126872120925468" />
+      <entry key="S30" value="2.009079887579906" />
+      <entry key="S60" value="4.013568652432511" />
+      <entry key="M2" value="6.223370294751127" />
+      <entry key="M5" value="15.381328785042049" />
+      <entry key="M10" value="73.02519079384979" />
+      <entry key="M15" value="154.2566833156999" />
+      <entry key="M30" value="433.72786992616204" />
+      <entry key="H1" value="913.4812329391357" />
+      <entry key="H2" value="1450.7086624817766" />
+      <entry key="H4" value="1888.1206979018375" />
+      <entry key="D1" value="2404.553230813025" />
+      <entry key="W1" value="2512.374640020329" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -98,23 +86,23 @@
       <entry key="W1" value="0.0" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.4809182833674972" />
-      <entry key="MS500" value="6.406814873795586" />
-      <entry key="S2" value="23.378017533486123" />
-      <entry key="S5" value="46.69668087434467" />
-      <entry key="S10" value="64.6105645593201" />
-      <entry key="S30" value="83.15052741728256" />
-      <entry key="S60" value="95.62529362075175" />
-      <entry key="M2" value="139.86222340324986" />
-      <entry key="M5" value="273.254018233915" />
-      <entry key="M10" value="395.38526374837636" />
-      <entry key="M15" value="488.0397373566993" />
-      <entry key="M30" value="778.2623896392687" />
-      <entry key="H1" value="1224.198122783899" />
-      <entry key="H2" value="1676.9804162729629" />
-      <entry key="H4" value="2026.2664892872533" />
-      <entry key="D1" value="2425.044250574138" />
-      <entry key="W1" value="2506.9019436666267" />
+      <entry key="MS100" value="1.1052296587654258E-23" />
+      <entry key="MS500" value="2.5626571439945674E-5" />
+      <entry key="S2" value="0.07114962681723008" />
+      <entry key="S5" value="0.34744926385788805" />
+      <entry key="S10" value="0.6021139905369837" />
+      <entry key="S30" value="1.8473636480355133" />
+      <entry key="S60" value="3.9289875827911787" />
+      <entry key="M2" value="6.1800590908560125" />
+      <entry key="M5" value="15.363630603158894" />
+      <entry key="M10" value="73.01586193181467" />
+      <entry key="M15" value="154.25005847843912" />
+      <entry key="M30" value="433.7239179191145" />
+      <entry key="H1" value="913.4787242360316" />
+      <entry key="H2" value="1450.707093546734" />
+      <entry key="H4" value="1888.1197748124805" />
+      <entry key="D1" value="2404.5530474456095" />
+      <entry key="W1" value="2512.3746129013" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">
@@ -193,7 +181,7 @@
       <workItem from="1792449929809" duration="4639000" />
       <workItem from="1792461993583" duration="126000" />
       <workItem from="1792951996099" duration="6128000" />
-      <workItem from="1793152683969" duration="2014000" />
+      <workItem from="1793152683969" duration="3388000" />
     </task>
     <task id="LOCAL-00001" summary="Versão 1  projeto de hotel">
       <option name="closed" value="true" />
@@ -291,7 +279,23 @@
       <option name="project" value="LOCAL" />
       <updated>1792455300205</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="alteração 19/10/2026">
+      <option name="closed" value="true" />
+      <created>1793154819902</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1793154819902</updated>
+    </task>
+    <task id="LOCAL-00014" summary="alteração 27/10/2026">
+      <option name="closed" value="true" />
+      <created>1793154833809</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1793154833809</updated>
+    </task>
+    <option name="localTasksCounter" value="15" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -314,6 +318,7 @@
     <MESSAGE value="teste de segurança" />
     <MESSAGE value="alteração 12/10/2026" />
     <MESSAGE value="alteração 19/10/2026" />
-    <option name="LAST_COMMIT_MESSAGE" value="alteração 19/10/2026" />
+    <MESSAGE value="alteração 27/10/2026" />
+    <option name="LAST_COMMIT_MESSAGE" value="alteração 27/10/2026" />
   </component>
 </project>

@@ -10,7 +10,7 @@ import { useAccessControl } from "../access-control"
 
 export type IconName = "hotel" | "banknote" | "trending-up" | "calendar-range" | "package" | "octagon-alert" | "triangle-alert" | "arrow-left-right" | "gift" | "badge-check" | "percent" | "circle-pause" | "paperclip" | "file-text" | "x" | "chevron-down" | "eye" | "pencil" | "history" | "trash" | "download" | "printer" | "send" | "rotate-ccw" | "log-in" | "log-out" | "users" | "key-round" | "link" | "unlink" | "presentation"
 
-export function Icon({ name, size = 20 }: { name: IconName ;size?: number }) {
+export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   const paths: Record<IconName, ReactNode> = {
     hotel: (
       <>
@@ -352,6 +352,7 @@ export function Btn({
   fullWidth,
   disabled,
   confirmAction = true,
+  ariaLabel,
 }: {
   children: ReactNode
   onClick?: () => void
@@ -361,6 +362,7 @@ export function Btn({
   fullWidth?: boolean
   disabled?: boolean
   confirmAction?: boolean
+  ariaLabel?: string
 }) {
   const [confirming, setConfirming] = useState(false)
   const actionLabel =
@@ -368,7 +370,9 @@ export function Btn({
   const actionIcon = actionLabel ? recordActionIcon(actionLabel) : null
   const activate = () => {
     if (disabled) return
-    variant === "danger" && confirmAction && onClick ? setConfirming(true) : onClick?.()
+    variant === "danger" && confirmAction && onClick
+      ? setConfirming(true)
+      : onClick?.()
   }
   return (
     <>
@@ -376,7 +380,7 @@ export function Btn({
         type={type}
         disabled={disabled}
         onClick={activate}
-        aria-label={actionIcon ? actionLabel : undefined}
+        aria-label={ariaLabel ?? (actionIcon ? actionLabel : undefined)}
         title={actionIcon ? actionLabel : undefined}
         data-tooltip={actionIcon ? actionLabel : undefined}
         className={`ds-button ds-button--${variant}${
@@ -402,8 +406,18 @@ export function Btn({
   )
 }
 
-function FieldLabel({ children, htmlFor }: { children: ReactNode; htmlFor?: string }) {
-  return <label htmlFor={htmlFor} className="field-label">{children}</label>
+function FieldLabel({
+  children,
+  htmlFor,
+}: {
+  children: ReactNode
+  htmlFor?: string
+}) {
+  return (
+    <label htmlFor={htmlFor} className="field-label">
+      {children}
+    </label>
+  )
 }
 export function Input({
   label,
@@ -418,7 +432,11 @@ export function Input({
   return (
     <div className="field">
       {label && <FieldLabel htmlFor={id}>{label}</FieldLabel>}
-      <input {...props} id={id} className={`ds-input ${props.className ?? ""}`} />
+      <input
+        {...props}
+        id={id}
+        className={`ds-input ${props.className ?? ""}`}
+      />
       {helpText && <p className="field-help">{helpText}</p>}
     </div>
   )
@@ -452,7 +470,11 @@ export function Select({
     <div className="field">
       {label && <FieldLabel htmlFor={id}>{label}</FieldLabel>}
       <div className="select-wrap">
-        <select {...props} id={id} className={`ds-select ${props.className ?? ""}`}>
+        <select
+          {...props}
+          id={id}
+          className={`ds-select ${props.className ?? ""}`}
+        >
           {children}
         </select>
         <span className="select-chevron">
@@ -580,23 +602,40 @@ export function formatDisplayDate(value: string) {
 export function Table({
   headers,
   rows,
+  columnAlignments,
+  columnClasses,
+  emptyMessage,
+  caption,
 }: {
   headers: string[]
   rows: ReactNode[][]
+  columnAlignments?: ("left" | "right" | "center")[]
+  columnClasses?: string[]
+  emptyMessage?: ReactNode
+  caption?: string
 }) {
   return (
     <div className="table-wrap">
       <table className="ds-table">
+        {caption && <caption className="sr-only">{caption}</caption>}
         <thead>
           <tr>
-            {headers.map((h) => (
+            {headers.map((h, ci) => (
               <th
                 key={h}
-                className={
-                  /(valor|total|saldo|quantidade|preço|r\$)/i.test(h)
+                scope="col"
+                style={
+                  columnAlignments?.[ci]
+                    ? { textAlign: columnAlignments[ci] }
+                    : undefined
+                }
+                className={`${columnClasses?.[ci] ?? ""} ${
+                  columnAlignments?.[ci] === "right" ||
+                  (!columnAlignments?.[ci] &&
+                    /(valor|total|saldo|quantidade|preço|r\$)/i.test(h))
                     ? "numeric"
                     : ""
-                }
+                }`}
               >
                 {h}
               </th>
@@ -607,14 +646,27 @@ export function Table({
           {rows.length === 0 ? (
             <tr>
               <td colSpan={headers.length} className="table-empty">
-                Nenhum registro encontrado.
+                {emptyMessage ?? "Nenhum registro encontrado."}
               </td>
             </tr>
           ) : (
             rows.map((row, ri) => (
               <tr key={ri}>
                 {row.map((cell, ci) => (
-                  <td key={ci} className={isNumericCell(cell) ? "numeric" : ""}>
+                  <td
+                    key={ci}
+                    style={
+                      columnAlignments?.[ci]
+                        ? { textAlign: columnAlignments[ci] }
+                        : undefined
+                    }
+                    className={`${columnClasses?.[ci] ?? ""} ${
+                      columnAlignments?.[ci] === "right" ||
+                      (!columnAlignments?.[ci] && isNumericCell(cell))
+                        ? "numeric"
+                        : ""
+                    }`}
+                  >
                     {typeof cell === "string" ? formatDisplayDate(cell) : cell}
                   </td>
                 ))}
@@ -632,27 +684,38 @@ export function Modal({
   onClose,
   children,
   wide,
+  className = "",
+  description,
+  footer,
 }: {
   title: string
   onClose: () => void
   children: ReactNode
   wide?: boolean
+  className?: string
+  description?: string
+  footer?: ReactNode
 }) {
   return (
-    <div className="modal-overlay">
+    <div className={`modal-overlay ${className}`}>
       <div
         className={`modal-panel${wide ? " modal-panel--wide" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}
+        tabIndex={-1}
       >
         <div className="modal-header">
-          <h2>{title}</h2>
+          <div>
+            <h2>{title}</h2>
+            {description && <p className="modal-description">{description}</p>}
+          </div>
           <button className="modal-close" onClick={onClose} aria-label="Fechar">
             <Icon name="x" size={18} />
           </button>
         </div>
         <div className="modal-content">{children}</div>
+        {footer && <div className="modal-footer">{footer}</div>}
       </div>
     </div>
   )
@@ -707,10 +770,12 @@ export function Tabs<T extends string>({
   tabs,
   active,
   onChange,
+  rovingFocus = false,
 }: {
-  tabs: { id: T ;label: string }[]
+  tabs: { id: T; label: string }[]
   active: T
   onChange: (id: T) => void
+  rovingFocus?: boolean
 }) {
   return (
     <div className="ds-tabs" role="tablist">
@@ -719,6 +784,7 @@ export function Tabs<T extends string>({
           key={tab.id}
           role="tab"
           aria-selected={active === tab.id}
+          tabIndex={rovingFocus ? (active === tab.id ? 0 : -1) : undefined}
           className={active === tab.id ? "active" : ""}
           onClick={() => onChange(tab.id)}
         >
@@ -743,7 +809,14 @@ export function Alert({
         : type === "success"
           ? "ok"
           : "info"
-  return <div role={type === "error" ? "alert" : "status"} className={`ds-alert ds-alert--${tone}`}>{children}</div>
+  return (
+    <div
+      role={type === "error" ? "alert" : "status"}
+      className={`ds-alert ds-alert--${tone}`}
+    >
+      {children}
+    </div>
+  )
 }
 export function FormGrid({
   children,

@@ -78,6 +78,7 @@ export default function AppShell({ user, onLogout }: Props) {
 
   return (
     <div
+      className={currentPage === "financeiro" || currentPage === "eventos" ? "management-shell" : undefined}
       style={{
         display: "flex",
         height: "100vh",
