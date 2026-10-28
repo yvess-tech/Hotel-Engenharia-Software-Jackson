@@ -33,6 +33,8 @@ export default function Consumos() {
   const {
     reservations,
 
+    clients,
+
     rooms,
 
     stays,
@@ -51,6 +53,14 @@ export default function Consumos() {
   const [search, setSearch] = useState("")
 
   const [stayFilter, setStayFilter] = useState("all")
+
+  const [clientFilter, setClientFilter] = useState("all")
+
+  const [statusFilter, setStatusFilter] = useState("all")
+
+  const [dateFrom, setDateFrom] = useState("")
+
+  const [dateTo, setDateTo] = useState("")
 
   const [feedback, setFeedback] = useState("")
 
@@ -82,6 +92,17 @@ export default function Consumos() {
 
   const activeStays = stays.filter((stay) => stay.status === "Ativa")
 
+  const staysForFilter = useMemo(
+    () =>
+      [...stays].sort((first, second) => {
+        if (first.status !== second.status)
+          return first.status === "Ativa" ? -1 : 1
+
+        return second.checkedInAt.localeCompare(first.checkedInAt)
+      }),
+    [stays],
+  )
+
   const selectedStay = activeStays.find(
     (stay) => stay.reservationId === Number(form.reservationId),
   )
@@ -107,8 +128,24 @@ export default function Consumos() {
 
         const room = rooms.find((item) => item.id === reservation?.roomId)
 
+        const stay = stays.find((item) => item.id === consumption.stayId)
+
         const matchesStay =
           stayFilter === "all" || consumption.stayId === Number(stayFilter)
+
+        const matchesClient =
+          clientFilter === "all" || reservation?.clientId === Number(clientFilter)
+
+        const matchesStatus =
+          statusFilter === "all" ||
+          (statusFilter === "active" && stay?.status === "Ativa") ||
+          (statusFilter === "closed" && stay?.status === "Encerrada") ||
+          (statusFilter === "reversed" && consumption.status === "Estornado")
+
+        const consumptionDate = consumption.createdAt.slice(0, 10)
+        const matchesDate =
+          (!dateFrom || consumptionDate >= dateFrom) &&
+          (!dateTo || consumptionDate <= dateTo)
 
         const matchesSearch =
           !search ||
@@ -118,10 +155,31 @@ export default function Consumos() {
 
             .includes(search.toLowerCase())
 
-        return matchesStay && matchesSearch
+        const matchesStayCode =
+          !search ||
+          stay?.code.toLowerCase().includes(search.toLowerCase())
+
+        return (
+          matchesStay &&
+          matchesClient &&
+          matchesStatus &&
+          matchesDate &&
+          (matchesSearch || matchesStayCode)
+        )
       }),
 
-    [consumptions, reservations, rooms, search, stayFilter],
+    [
+      consumptions,
+      reservations,
+      rooms,
+      stays,
+      search,
+      stayFilter,
+      clientFilter,
+      statusFilter,
+      dateFrom,
+      dateTo,
+    ],
   )
 
   const total = Number(form.quantity) * Number(form.unitPrice)
@@ -139,6 +197,19 @@ export default function Consumos() {
   const serviceCount = filtered.filter(
     (item) => item.category !== "Produto",
   ).length
+
+  const reversedTotal = filtered
+    .filter((item) => item.status === "Estornado")
+    .reduce((sum, item) => sum + item.value, 0)
+
+  const closedStayCount = new Set(
+    filtered
+      .filter(
+        (item) =>
+          stays.find((stay) => stay.id === item.stayId)?.status === "Encerrada",
+      )
+      .map((item) => item.stayId),
+  ).size
 
   const openNew = () => {
     setFeedback("")
@@ -272,18 +343,14 @@ export default function Consumos() {
       )}
       <Card>
         <SectionTitle>Lançamentos da hospedagem</SectionTitle>
-        <p className="text-body">
-          Consulte os produtos do frigobar ou estoque e os serviços já
-          registrados antes de fazer um novo lançamento.
-        </p>
-        <FormGrid cols={2}>
+        <FormGrid cols={2} className="consumption-history-filters">
           <Select
             label="Hospedagem"
             value={stayFilter}
             onChange={(event) => setStayFilter(event.target.value)}
           >
-            <option value="all">Todas as hospedagens ativas</option>
-            {activeStays.map((stay) => (
+            <option value="all">Todas as hospedagens</option>
+            {staysForFilter.map((stay) => (
               <option key={stay.id} value={stay.id}>
                 {stay.code} — {stay.guest} · quarto{" "}
                 {rooms.find((room) => room.id === stay.roomId)?.number}
@@ -296,6 +363,50 @@ export default function Consumos() {
             onChange={(event) => setSearch(event.target.value)}
           />
         </FormGrid>
+        <FormGrid cols={2} className="consumption-history-filters">
+          <Select
+            label="Cliente"
+            value={clientFilter}
+            onChange={(event) => setClientFilter(event.target.value)}
+          >
+            <option value="all">Todos os clientes</option>
+            {clients.map((client) => (
+              <option key={client.id} value={client.id}>
+                {client.name}
+              </option>
+            ))}
+          </Select>
+          <Select
+            label="Exibir"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+          >
+            <option value="all">Todos os lançamentos</option>
+            <option value="active">Hospedagens ativas</option>
+            <option value="closed">Hospedagens encerradas</option>
+            <option value="reversed">Consumos estornados</option>
+          </Select>
+          <Input
+            label="Lançado a partir de"
+            type="date"
+            value={dateFrom}
+            onChange={(event) => setDateFrom(event.target.value)}
+          />
+          <Input
+            label="Lançado até"
+            type="date"
+            value={dateTo}
+            onChange={(event) => setDateTo(event.target.value)}
+          />
+        </FormGrid>
+        {(closedStayCount > 0 || reversedTotal > 0) && (
+          <Alert type="info">
+            Histórico: {closedStayCount} hospedagem(ns) encerrada(s)
+            {reversedTotal > 0
+              ? ` · ${formatMoney(reversedTotal)} em consumos estornados.`
+              : "."}
+          </Alert>
+        )}
         <Alert type="info">
           {filtered.length} lançamento(s): {productCount} produto(s) de
           frigobar/estoque, {serviceCount} serviço(s) · total extra{" "}
@@ -304,6 +415,12 @@ export default function Consumos() {
         <Table
           headers={[
             "Hospedagem",
+
+            "Data",
+
+            "Situação da hospedagem",
+
+            "Reserva",
 
             "Hóspede",
 
@@ -330,7 +447,14 @@ export default function Consumos() {
 
             const room = rooms.find((item) => item.id === reservation?.roomId)
 
+            const stay = stays.find((item) => item.id === consumption.stayId)
+
             return [
+              stay?.code ?? reservation?.code.replace("RES", "HOS") ?? "—",
+
+              new Date(consumption.createdAt).toLocaleString("pt-BR"),
+
+              <Badge label={stay?.status ?? "Sem hospedagem"} />,
               reservation?.code.replace("RES", "HOS") ?? "—",
 
               reservation?.guest ?? "—",
@@ -351,7 +475,7 @@ export default function Consumos() {
 
               <Badge label={consumption.status ?? "Lançado"} />,
 
-              consumption.status !== "Estornado" ? (
+              consumption.status !== "Estornado" && stay?.status === "Ativa" ? (
                 <Btn
                   small
                   variant="danger"

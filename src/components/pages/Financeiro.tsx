@@ -55,6 +55,9 @@ import { useDemoEngine } from "../demo/DemoEngineContext"
 
 type Tab = "fluxo" | "receber" | "pagar" | "caixa" | "centros" | "conciliacao"
 
+// Mantém a funcionalidade pronta para reativação sem expô-la na navegação atual.
+const SHOW_BANK_RECONCILIATION = false
+
 type ModalType = "receber" | "receberEvento" | "newPagar" | "editPagar" | "payPagar" | "abrirCaixa" | "fecharCaixa" | "movCaixa" | "newCentro" | "editCentro" | "concilia" | null
 
 const methodOptions = PAYMENT_METHODS.map((method) => ({
@@ -640,7 +643,9 @@ export default function Financeiro() {
 
           { id: "centros", label: "Centros de Custo" },
 
-          { id: "conciliacao", label: "Conciliação Bancária" },
+          ...(SHOW_BANK_RECONCILIATION
+            ? [{ id: "conciliacao" as const, label: "Conciliação Bancária" }]
+            : []),
         ]}
         active={tab}
         onChange={setTab}

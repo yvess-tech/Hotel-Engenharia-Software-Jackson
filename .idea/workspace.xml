@@ -4,30 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d066661a-c5ce-4082-b4d7-22267333271e" name="Changes" comment="alteração 27/10/2026">
+    <list default="true" id="d066661a-c5ce-4082-b4d7-22267333271e" name="Changes" comment="alteração 28/10/2026">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/demo/OperationalDemoPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/demo/OperationalDemoPanel.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/management-ui.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/management-ui.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/CheckInOut.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/CheckInOut.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/Comunicacoes.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Comunicacoes.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/pages/Consumos.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Consumos.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/Estoque.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Estoque.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/Eventos.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Eventos.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/Financeiro.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Financeiro.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/Fiscal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Fiscal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/Funcionarios.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Funcionarios.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/Hospedagens.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Hospedagens.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/Hospedes.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Hospedes.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/LimpezaManutencao.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/LimpezaManutencao.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/Pacotes.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Pacotes.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/Quartos.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Quartos.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/Relatorios.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Relatorios.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/Reservas.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Reservas.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/pages/Usuarios.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Usuarios.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/tour/PresentationTour.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/tour/PresentationTour.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/ui.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/ui.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/styles/management.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/styles/management.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/index.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/index.css" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -63,23 +43,23 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.3073608770197764" />
-      <entry key="MS500" value="4.9258460273488724" />
-      <entry key="S2" value="13.642970950743667" />
-      <entry key="S5" value="19.176723586779968" />
-      <entry key="S10" value="21.80761509544616" />
-      <entry key="S30" value="23.86533624573889" />
-      <entry key="S60" value="24.42328258161438" />
-      <entry key="M2" value="24.709249804351636" />
-      <entry key="M5" value="24.88312008393841" />
-      <entry key="M10" value="24.941462907668527" />
-      <entry key="M15" value="24.96095365278437" />
-      <entry key="M30" value="24.980786614292054" />
-      <entry key="H1" value="25.092368732932513" />
-      <entry key="H2" value="28.19423148933758" />
-      <entry key="H4" value="91.21677284515017" />
-      <entry key="D1" value="1398.2539227437576" />
-      <entry key="W1" value="2368.9540627764304" />
+      <entry key="MS100" value="2.3145415923793182" />
+      <entry key="MS500" value="7.095891598713819" />
+      <entry key="S2" value="19.158400801995846" />
+      <entry key="S5" value="40.95242446411355" />
+      <entry key="S10" value="62.09792228376896" />
+      <entry key="S30" value="87.04943146426125" />
+      <entry key="S60" value="96.48367011982556" />
+      <entry key="M2" value="115.08260538645979" />
+      <entry key="M5" value="195.00882178224353" />
+      <entry key="M10" value="290.9155973836688" />
+      <entry key="M15" value="346.29808466449333" />
+      <entry key="M30" value="422.82474475223074" />
+      <entry key="H1" value="472.40043678571186" />
+      <entry key="H2" value="503.33176437405115" />
+      <entry key="H4" value="575.6194462661834" />
+      <entry key="D1" value="1878.752629476557" />
+      <entry key="W1" value="2869.722160015841" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -101,23 +81,23 @@
       <entry key="W1" value="0.0" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.250017000158236" />
-      <entry key="MS500" value="4.874771902576248" />
-      <entry key="S2" value="13.603934783299179" />
-      <entry key="S5" value="19.153759055203597" />
-      <entry key="S10" value="21.794324550956414" />
-      <entry key="S30" value="23.860427254391066" />
-      <entry key="S60" value="24.42076266658838" />
-      <entry key="M2" value="24.707973042284284" />
-      <entry key="M5" value="24.882605287022894" />
-      <entry key="M10" value="24.94120482221879" />
-      <entry key="M15" value="24.960781442782107" />
-      <entry key="M30" value="24.980700431923935" />
-      <entry key="H1" value="25.09232550117398" />
-      <entry key="H2" value="28.194207355212377" />
-      <entry key="H4" value="91.21673116293509" />
-      <entry key="D1" value="1398.2538169073507" />
-      <entry key="W1" value="2368.954037335359" />
+      <entry key="MS100" value="2.2304953867740527" />
+      <entry key="MS500" value="7.045259979543833" />
+      <entry key="S2" value="19.125965483136696" />
+      <entry key="S5" value="40.92502161184448" />
+      <entry key="S10" value="62.077042845434754" />
+      <entry key="S30" value="87.03960879671092" />
+      <entry key="S60" value="96.4782095302146" />
+      <entry key="M2" value="115.07930558427563" />
+      <entry key="M5" value="195.00649741103516" />
+      <entry key="M10" value="290.9138202857756" />
+      <entry key="M15" value="346.2966582526224" />
+      <entry key="M30" value="422.82386104704" />
+      <entry key="H1" value="472.3999385497419" />
+      <entry key="H2" value="503.3314968505916" />
+      <entry key="H4" value="575.6192812991777" />
+      <entry key="D1" value="1878.752503736792" />
+      <entry key="W1" value="2869.7221315206193" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">
@@ -196,7 +176,7 @@
       <workItem from="1792449929809" duration="4639000" />
       <workItem from="1792461993583" duration="126000" />
       <workItem from="1792951996099" duration="6128000" />
-      <workItem from="1793152683969" duration="5957000" />
+      <workItem from="1793152683969" duration="8007000" />
     </task>
     <task id="LOCAL-00001" summary="Versão 1  projeto de hotel">
       <option name="closed" value="true" />
@@ -318,7 +298,23 @@
       <option name="project" value="LOCAL" />
       <updated>1793156141503</updated>
     </task>
-    <option name="localTasksCounter" value="16" />
+    <task id="LOCAL-00016" summary="alteração 28/10/2026">
+      <option name="closed" value="true" />
+      <created>1793227257579</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1793227257579</updated>
+    </task>
+    <task id="LOCAL-00017" summary="alteração 28/10/2026">
+      <option name="closed" value="true" />
+      <created>1793227263107</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1793227263107</updated>
+    </task>
+    <option name="localTasksCounter" value="18" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -342,6 +338,7 @@
     <MESSAGE value="alteração 12/10/2026" />
     <MESSAGE value="alteração 19/10/2026" />
     <MESSAGE value="alteração 27/10/2026" />
-    <option name="LAST_COMMIT_MESSAGE" value="alteração 27/10/2026" />
+    <MESSAGE value="alteração 28/10/2026" />
+    <option name="LAST_COMMIT_MESSAGE" value="alteração 28/10/2026" />
   </component>
 </project>
