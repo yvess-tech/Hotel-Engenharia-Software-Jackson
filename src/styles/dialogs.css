@@ -1,0 +1,141 @@
+/* The single dialog/form language used by all modules. No page layouts are overridden. */
+.field-control { width: 100%; min-width: 0; }
+.dialog-assistant { position: relative; }
+.field-control--currency { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-card); }
+.field-currency { flex-shrink: 0; padding-left: 12px; color: var(--text-muted); font-size: 13px; font-weight: 500; }
+.field-control--currency .ds-input { min-width: 0; border: 0; border-radius: inherit; background: transparent; text-align: right; }
+.field-control--currency:focus-within { border-color: var(--brand-700); outline: 2px solid color-mix(in srgb, var(--brand-700) 20%, transparent); outline-offset: 1px; }
+.field-control--currency .ds-input:focus { outline: 0; }
+.field-error { margin: 0; color: var(--danger-fg); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.field--invalid :is(.ds-input, .ds-select, .ds-textarea), .field--invalid .field-control--currency { border-color: var(--danger-fg); }
+
+.app-dialog {
+  --dialog-border: #e0e5d9;
+  --dialog-muted: #626c5e;
+  --dialog-soft: #f6f8f3;
+  --dialog-gap: 20px;
+  --dialog-padding: 24px;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background: var(--overlay);
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+}
+.app-dialog *, .app-dialog *::before, .app-dialog *::after { box-sizing: border-box; }
+.app-dialog .modal-panel {
+  container: dialog / inline-size;
+  display: flex;
+  width: min(var(--dialog-width, 640px), 100%);
+  min-width: 0;
+  max-width: 100%;
+  max-height: min(960px, calc(100dvh - 48px));
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--dialog-border);
+  border-radius: 16px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-modal);
+}
+.app-dialog .modal-panel--sm { --dialog-width: 420px; }
+.app-dialog .modal-panel--md { --dialog-width: 640px; }
+.app-dialog .modal-panel--lg { --dialog-width: 840px; }
+.app-dialog .modal-panel--xl { --dialog-width: 1040px; }
+.app-dialog .modal-panel:focus { outline: none; }
+.app-dialog .modal-header { display: flex; align-items: flex-start; justify-content: space-between; flex-shrink: 0; gap: 16px; padding: var(--dialog-padding); border-bottom: 1px solid var(--dialog-border); }
+.app-dialog .modal-header > div { min-width: 0; }
+.app-dialog .modal-header h2 { margin: 0; color: var(--text-strong); font-family: var(--font-sans); font-size: 20px; font-weight: 600; letter-spacing: -.025em; line-height: 1.35; overflow-wrap: anywhere; }
+.app-dialog .modal-description { max-width: 75ch; margin: 8px 0 0; color: var(--dialog-muted); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.app-dialog .dialog-required-note { margin: 8px 0 0; color: var(--dialog-muted); font-size: 11px; line-height: 1.5; }
+.app-dialog .dialog-required-note span { color: var(--danger-fg); font-weight: 700; }
+.app-dialog .modal-close { display: grid; width: 36px; height: 36px; min-height: 36px; flex-shrink: 0; place-items: center; padding: 0; border: 1px solid var(--dialog-border); border-radius: 8px; color: var(--dialog-muted); background: var(--dialog-soft); cursor: pointer; }
+.app-dialog .modal-close:hover { color: var(--brand-900); background: var(--brand-100); }
+.app-dialog .modal-content { display: flex; min-width: 0; min-height: 0; flex: 1 1 auto; flex-direction: column; gap: var(--dialog-gap); padding: var(--dialog-padding); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.app-dialog .modal-content > * { min-width: 0; }
+.app-dialog .modal-footer { display: flex; max-height: 44dvh; flex-shrink: 0; flex-direction: column; gap: 12px; padding: 16px var(--dialog-padding); overflow-y: auto; border-top: 1px solid var(--dialog-border); background: var(--dialog-soft); scrollbar-width: thin; }
+.app-dialog .form-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; grid-column: 1 / -1; gap: 8px; margin: 0; }
+.app-dialog .form-actions .ds-button { min-width: 112px; }
+.app-dialog .ds-button { min-height: 44px; max-width: 100%; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; line-height: 1.4; white-space: normal; }
+.app-dialog .ds-button--small { min-height: 36px; padding: 8px 12px; font-size: 12px; }
+.app-dialog .ds-button--record-action { width: 36px; min-width: 36px; padding: 0; }
+.app-dialog .ds-button--secondary:hover { border-color: #aebba4; background: var(--brand-100); }
+.app-dialog .ds-button--danger { border: 1px solid #e9c9c2; color: var(--danger-fg); background: #fff6f3; }
+.app-dialog .ds-button--danger:hover { background: var(--danger-bg); }
+.app-dialog [aria-busy=true] { cursor: progress; }
+.app-dialog .form-grid { min-width: 0; gap: var(--dialog-gap); align-items: start; }
+.app-dialog .form-grid > *, .app-dialog .full-col { min-width: 0; }
+.app-dialog .field { min-width: 0; gap: 8px; }
+.app-dialog .field-label { display: block; color: #53614c; font-size: 12px; font-weight: 600; letter-spacing: 0; line-height: 1.5; text-transform: none; }
+.app-dialog :is(.ds-input, .ds-select, .ds-textarea) { width: 100%; min-width: 0; max-width: 100%; border-color: #d9dfd3; border-radius: 8px; color: var(--text-body); font-family: var(--font-sans); font-size: 14px; }
+.app-dialog :is(.ds-input, .ds-select) { height: 44px; padding-block: 0; }
+.app-dialog .ds-textarea { min-height: 96px; padding: 12px; line-height: 1.6; }
+.app-dialog :is(input[type=number], input[type=date], input[type=datetime-local], input[type=time]) { font-variant-numeric: tabular-nums; }
+.app-dialog input[type=number] { text-align: right; }
+.app-dialog :is(input[type=date], input[type=datetime-local], input[type=time]) { appearance: auto; }
+.app-dialog input::-webkit-datetime-edit { min-width: 0; padding: 0; }
+.app-dialog :is(.ds-input, .ds-select, .ds-textarea)::placeholder { color: #7b8474; opacity: 1; }
+.app-dialog :is(.ds-input, .ds-select, .ds-textarea):disabled { color: var(--dialog-muted); background: #f0f2ed; cursor: not-allowed; opacity: 1; }
+.app-dialog input[readonly] { color: #4a5642; background: var(--dialog-soft); }
+.app-dialog :is(.ds-input, .ds-select, .ds-textarea)[aria-invalid=true] { border-color: var(--danger-fg); background: #fffaf8; }
+.app-dialog :is(.ds-input, .ds-select, .ds-textarea):focus-visible, .app-dialog button:focus-visible, .app-dialog summary:focus-visible, .app-dialog [tabindex="0"]:focus-visible { outline: 2px solid var(--brand-700); outline-offset: 2px; }
+.app-dialog .field-control--currency { border-color: #d9dfd3; }
+.app-dialog .field-control--currency { height: 44px; }
+.app-dialog .field-control--currency .ds-input { height: 42px; border: 0; }
+.app-dialog .field-control--currency .ds-input:focus-visible { outline: 0; }
+.app-dialog .field-help { margin: 0; color: var(--dialog-muted); font-size: 12px; line-height: 1.5; }
+.app-dialog .ds-alert { margin: 0; padding: 12px 16px; border-left-width: 3px; border-radius: 8px; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.app-dialog .section-title { margin: 0 0 4px; padding-bottom: 12px; color: var(--text-strong); font-size: 14px; font-weight: 600; }
+.app-dialog .form-section { display: flex; min-inline-size: 0; flex-direction: column; gap: 20px; margin: 0; padding: 16px 0 0; border: 0; border-top: 1px solid var(--dialog-border); }
+.app-dialog .form-section legend { max-width: 100%; padding: 0 12px 0 0; color: var(--text-strong); font-size: 14px; font-weight: 600; line-height: 1.5; }
+.app-dialog .form-section-description { margin: -8px 0 0; color: var(--dialog-muted); font-size: 12px; line-height: 1.6; }
+.app-dialog .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.app-dialog .reservation-summary { margin: 0; padding: 20px; border-color: var(--dialog-border); background: var(--dialog-soft); }
+.app-dialog .summary-item { min-width: 0; padding: 8px; }
+.app-dialog .summary-item strong { overflow-wrap: anywhere; }
+.app-dialog .ds-tabs { flex-wrap: nowrap; gap: 12px; overflow-x: auto; scrollbar-width: thin; }
+.app-dialog .ds-tabs button { flex-shrink: 0; min-height: 40px; padding-inline: 8px; font-size: 12px; }
+.app-dialog .check-field, .app-dialog label:has(> input[type=checkbox]) { display: flex; align-items: center; gap: 8px; color: var(--text-body); font-size: 13px; line-height: 1.5; }
+.app-dialog input[type=checkbox] { width: 16px; height: 16px; min-width: 16px; accent-color: var(--brand-700); }
+.app-dialog .table-wrap, .app-dialog .management-table { max-width: 100%; overflow-x: auto; scrollbar-width: thin; }
+.app-dialog .ds-table { min-width: 560px; }
+.app-dialog .ds-table td { font-size: 12px; }
+.app-dialog .dialog-inline-card { padding: 16px; border: 1px solid var(--dialog-border); border-radius: 10px; background: var(--dialog-soft); }
+.app-dialog .dialog-confirm-note { margin: 0; color: var(--dialog-muted); font-size: 12px; line-height: 1.6; }
+.app-dialog .dialog-choice-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.create-form-inline { display: grid; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)) auto; align-items: end; gap: 16px; }
+.create-form-inline > *, .create-form-inline .field { min-width: 0; }
+.create-form-inline :is(.ds-input, .ds-select, .ds-button) { min-width: 0; min-height: 44px; }
+.create-form-inline .field-label { color: #53614c; font-size: 12px; letter-spacing: 0; text-transform: none; }
+@media (max-width: 1199px) { .create-form-inline { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 599px) { .create-form-inline { grid-template-columns: minmax(0, 1fr); } }
+
+@container dialog (max-width: 640px) {
+  .app-dialog .form-grid--3, .app-dialog .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+@container dialog (max-width: 560px) {
+  .app-dialog .form-grid, .app-dialog .summary-grid, .app-dialog .dialog-choice-list { grid-template-columns: minmax(0, 1fr) !important; }
+  .app-dialog .management-financial-summary { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 767px) {
+  .app-dialog { --dialog-padding: 20px; --dialog-gap: 16px; padding: 16px; }
+  .app-dialog .modal-panel { max-height: calc(100dvh - 32px); }
+}
+@media (max-width: 479px) {
+  .app-dialog { --dialog-padding: 16px; padding: 8px; }
+  .app-dialog .modal-panel { max-height: calc(100dvh - 16px); border-radius: 12px; }
+  .app-dialog .modal-header h2 { font-size: 18px; }
+  .app-dialog .modal-description { font-size: 12px; }
+  .app-dialog .modal-footer { padding-block: 12px; }
+  .app-dialog .form-actions > .ds-button, .app-dialog .form-actions > span:has(.ds-button) { min-width: 0; flex: 1 1 128px; }
+  .app-dialog .form-actions > span > .ds-button { width: 100%; }
+  .app-dialog .wizard-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-dialog * { transition: none !important; scroll-behavior: auto !important; }
+}

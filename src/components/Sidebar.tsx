@@ -161,7 +161,8 @@ export default function Sidebar({ currentPage, onNavigate, isOpen, allowedPages 
                     key={item.id}
                     className={`nav-item${active ? " active" : ""}${isOpen ? "" : " nav-item--collapsed"}`}
                     onClick={() => onNavigate(item.id)}
-                    title={!isOpen ? item.label : undefined}
+                    title={item.label}
+                    aria-label={item.label}
                     aria-current={active ? "page" : undefined}
                   >
                     <span

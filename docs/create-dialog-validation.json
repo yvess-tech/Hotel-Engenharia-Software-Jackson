@@ -1,0 +1,116 @@
+{
+  "method": "TypeScript AST comparison; presentation classes/text, line endings and redundant parentheses excluded; values, limits, callbacks and operational statements preserved",
+  "results": [
+    {
+      "file": "src/components/pages/CashFlowPanel.tsx",
+      "controlsPreserved": true,
+      "operationalCodePreserved": true,
+      "controls": 2
+    },
+    {
+      "file": "src/components/pages/CheckInOut.tsx",
+      "controlsPreserved": true,
+      "operationalCodePreserved": true,
+      "controls": 34
+    },
+    {
+      "file": "src/components/pages/Comunicacoes.tsx",
+      "controlsPreserved": true,
+      "operationalCodePreserved": true,
+      "controls": 12
+    },
+    {
+      "file": "src/components/pages/Consumos.tsx",
+      "controlsPreserved": true,
+      "operationalCodePreserved": true,
+      "controls": 12
+    },
+    {
+      "file": "src/components/pages/Dashboard.tsx",
+      "controlsPreserved": true,
+      "operationalCodePreserved": true,
+      "controls": 0
+    },
+    {
+      "file": "src/components/pages/Estoque.tsx",
+      "controlsPreserved": true,
+      "operationalCodePreserved": true,
+      "controls": 19
+    },
+    {
+      "file": "src/components/pages/Eventos.tsx",
+      "controlsPreserved": true,
+      "operationalCodePreserved": true,
+      "controls": 62
+    },
+    {
+      "file": "src/components/pages/Financeiro.tsx",
+      "controlsPreserved": true,
+      "operationalCodePreserved": true,
+      "controls": 57
+    },
+    {
+      "file": "src/components/pages/Fiscal.tsx",
+      "controlsPreserved": true,
+      "operationalCodePreserved": true,
+      "controls": 18
+    },
+    {
+      "file": "src/components/pages/Funcionarios.tsx",
+      "controlsPreserved": true,
+      "operationalCodePreserved": true,
+      "controls": 37
+    },
+    {
+      "file": "src/components/pages/Hospedagens.tsx",
+      "controlsPreserved": true,
+      "operationalCodePreserved": true,
+      "controls": 14
+    },
+    {
+      "file": "src/components/pages/Hospedes.tsx",
+      "controlsPreserved": true,
+      "operationalCodePreserved": true,
+      "controls": 24
+    },
+    {
+      "file": "src/components/pages/LimpezaManutencao.tsx",
+      "controlsPreserved": true,
+      "operationalCodePreserved": true,
+      "controls": 24
+    },
+    {
+      "file": "src/components/pages/Pacotes.tsx",
+      "controlsPreserved": true,
+      "operationalCodePreserved": true,
+      "controls": 24
+    },
+    {
+      "file": "src/components/pages/Quartos.tsx",
+      "controlsPreserved": true,
+      "operationalCodePreserved": true,
+      "controls": 23
+    },
+    {
+      "file": "src/components/pages/Relatorios.tsx",
+      "controlsPreserved": true,
+      "operationalCodePreserved": true,
+      "controls": 4
+    },
+    {
+      "file": "src/components/pages/Reservas.tsx",
+      "controlsPreserved": true,
+      "operationalCodePreserved": true,
+      "controls": 24
+    },
+    {
+      "file": "src/components/pages/Usuarios.tsx",
+      "controlsPreserved": true,
+      "operationalCodePreserved": true,
+      "controls": 17
+    }
+  ],
+  "creations": 40,
+  "fixedFooters": 40,
+  "valid": true
+}

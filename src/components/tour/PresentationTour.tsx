@@ -1,3 +1,4 @@
+import { DialogAssistant } from "../use-dialog-layer";
 import { useEffect, useMemo, useState } from "react";
 import type { Page } from "../AppShell";
 import { useHotelOperations } from "../HotelOperationsContext";
@@ -142,7 +143,7 @@ export default function PresentationTour({ currentPage, allowedPages, launcherOp
     start(restored, storedProgress.stepIndex);
   };
 
-  return <>
+  return <DialogAssistant>
     {launcherOpen && <Modal title="Tour do Sistema de Hotel" onClose={onCloseLauncher} wide>
       {storedProgress && <Alert type="info">Existe um tour salvo em {new Date(storedProgress.savedAt).toLocaleString("pt-BR")}.</Alert>}
       {storedProgress && <FormActions><Btn onClick={continueStored}>Continuar tour</Btn><Btn variant="secondary" onClick={() => { window.localStorage.removeItem(PROGRESS_KEY); setStoredProgress(null); }}>Descartar progresso</Btn></FormActions>}
@@ -179,7 +180,7 @@ export default function PresentationTour({ currentPage, allowedPages, launcherOp
       </aside>}
       {paused && <div className="tour-paused"><strong>Tour pausado</strong><span>O progresso foi salvo localmente.</span><Btn onClick={() => setPaused(false)}>Retomar</Btn><Btn variant="ghost" onClick={() => setScript(null)}>Encerrar</Btn></div>}
     </>}
-  </>;
+  </DialogAssistant>;
 }
 
 function PresentationOption({ title, description, action, onClick }: { title: string; description: string; action: string; onClick: () => void }) {
@@ -205,15 +206,15 @@ function evaluateCondition(condition: TourCondition, operations: ReturnType<type
   const received = reservation ? operations.activeReceiptsTotal(reservation.id) : 0;
   const conditions: Record<TourCondition, boolean> = {
     "demo-client": operations.clients.some((client) => client.name === "Maria Costa"),
-    "demo-reservation": Boolean(reservation && ["Confirmada", "Hospedado", "Concluida"].includes(reservation.status)),
-    "demo-room-ready": Boolean(room && room.cleaningStatus === "Limpo" && room.maintenanceStatus === "Disponivel"),
+    "demo-reservation": Boolean(reservation && ["Confirmada", "Hospedado", "Concluída"].includes(reservation.status)),
+    "demo-room-ready": Boolean(room && room.cleaningStatus === "Limpo" && room.maintenanceStatus === "Disponível"),
     "demo-active-stay": Boolean(stay?.status === "Ativa"),
     "demo-consumption": Boolean(stay && operations.consumptions.some((item) => item.stayId === stay.id)),
     "demo-invoice": Boolean(invoice),
     "demo-paid": Boolean(invoice && received + 0.009 >= invoice.total),
     "demo-checkout": Boolean(stay?.status === "Encerrada"),
     "demo-cleaning-created": Boolean(stay && operations.housekeepingTasks.some((item) => item.stayId === stay.id)),
-    "demo-cleaning-complete": Boolean(stay && operations.housekeepingTasks.some((item) => item.stayId === stay.id && item.status === "Concluida")),
+    "demo-cleaning-complete": Boolean(stay && operations.housekeepingTasks.some((item) => item.stayId === stay.id && item.status === "Concluída")),
   };
   return { satisfied: conditions[condition], message: conditions[condition] ? "" : "Use os controles da tela antes de avancar." };
 }

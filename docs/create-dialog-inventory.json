@@ -1,0 +1,703 @@
+[
+  {
+    "module": "Reservas",
+    "label": "Reserva",
+    "size": "xl",
+    "description": "Identifique o hóspede, defina o período e confira a acomodação e as condições comerciais.",
+    "fields": [
+      "Cliente responsável *",
+      "Entrada *",
+      "Saída *",
+      "Quantidade de hóspedes *",
+      "Categoria *",
+      "Quarto *",
+      "Modalidade *",
+      "Status *",
+      "Pacote comercial *",
+      "Acompanhantes",
+      "Observações"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Reservas.tsx"
+  },
+  {
+    "module": "Reservas",
+    "label": "Recebimento de reserva",
+    "size": "md",
+    "description": "Confira a reserva e registre a data, o valor e a forma do recebimento.",
+    "fields": [
+      "Reserva *",
+      "Hóspede",
+      "Data *",
+      "Valor *",
+      "Forma *",
+      "Observação"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Reservas.tsx"
+  },
+  {
+    "module": "Reservas",
+    "label": "Cadastro rápido de cliente",
+    "size": "md",
+    "description": "Cadastre o responsável e retorne ao preenchimento da reserva.",
+    "fields": [
+      "Nome completo *",
+      "CPF *",
+      "Telefone",
+      "E-mail"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Reservas.tsx"
+  },
+  {
+    "module": "CheckInOut",
+    "label": "Check-in com reserva",
+    "size": "lg",
+    "description": "Confira os dados da reserva e siga as etapas existentes para iniciar a hospedagem.",
+    "fields": [
+      "Responsável",
+      "CPF do responsável",
+      "Quantidade de hóspedes",
+      "Quarto compatível e disponível *",
+      "Identificação da chave/cartão *",
+      "Data/hora da entrega *",
+      "Observação operacional"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/CheckInOut.tsx"
+  },
+  {
+    "module": "CheckInOut",
+    "label": "Recebimento da hospedagem",
+    "size": "md",
+    "description": "Confira o saldo e registre o pagamento da hospedagem.",
+    "fields": [
+      "Cliente",
+      "Saldo pendente",
+      "Valor a receber",
+      "Forma",
+      "Data",
+      "ResponsibleSelect",
+      "Observacao"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/CheckInOut.tsx"
+  },
+  {
+    "module": "CheckInOut",
+    "label": "Check-in sem reserva",
+    "size": "xl",
+    "description": "Selecione o hóspede, defina a acomodação e revise os valores antes de iniciar a hospedagem.",
+    "fields": [
+      "Hóspede responsável *",
+      "Entrada",
+      "Saída prevista",
+      "Quantidade de hóspedes",
+      "Quarto disponível",
+      "Modalidade",
+      "Pacote",
+      "Observações"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/CheckInOut.tsx"
+  },
+  {
+    "module": "CheckInOut",
+    "label": "Cadastro rápido de hóspede",
+    "size": "md",
+    "description": "Cadastre o hóspede e continue o atendimento de balcão.",
+    "fields": [
+      "Nome completo *",
+      "CPF *",
+      "Telefone",
+      "E-mail"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/CheckInOut.tsx"
+  },
+  {
+    "module": "Hospedes",
+    "label": "Hóspede ou cliente",
+    "size": "lg",
+    "description": "Preencha as seções de identificação, endereço, contatos, preferências e documentos.",
+    "fields": [
+      "Nome completo *",
+      "CPF *",
+      "Data de nascimento",
+      "Tipo de documento *",
+      "Número do documento *",
+      "Nacionalidade",
+      "Gênero",
+      "CEP",
+      "Estado (UF)",
+      "Logradouro (Rua / Av.)",
+      "Número",
+      "Complemento",
+      "Bairro",
+      "Cidade",
+      "E-mail *",
+      "Telefone / WhatsApp *",
+      "Nome do contato de emergência",
+      "Telefone de emergência",
+      "Tipo de quarto preferido",
+      "Preferência de andar",
+      "Fumante",
+      "Observações / preferências adicionais"
+    ],
+    "footer": "fixed, preserving the five existing steps",
+    "source": "src/components/pages/Hospedes.tsx"
+  },
+  {
+    "module": "Quartos",
+    "label": "Quarto",
+    "size": "lg",
+    "description": "Informe a identificação, a categoria e as características da acomodação.",
+    "fields": [
+      "Número *",
+      "Andar *",
+      "Categoria *",
+      "Capacidade *",
+      "Limpeza *",
+      "Manutenção *",
+      "Tarifa",
+      "Observações",
+      "Vista",
+      "Tipo de cama"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Quartos.tsx"
+  },
+  {
+    "module": "Quartos",
+    "label": "Categoria de quarto",
+    "size": "md",
+    "description": "Defina a capacidade e a tarifa padrão da categoria.",
+    "fields": [
+      "Nome *",
+      "Descrição",
+      "Capacidade padrão *",
+      "Tarifa padrão *",
+      "Observações"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Quartos.tsx"
+  },
+  {
+    "module": "Estoque",
+    "label": "Produto de estoque",
+    "size": "lg",
+    "description": "Organize a identificação, os valores e os limites de estoque do produto.",
+    "fields": [
+      "Código *",
+      "Categoria *",
+      "Nome do produto *",
+      "Unidade de medida *",
+      "Quantidade inicial *",
+      "Preço unitário para consumo",
+      "Estoque mínimo *",
+      "Estoque máximo",
+      "Localização (dep./prateleira)",
+      "Fornecedor",
+      "Observações"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Estoque.tsx"
+  },
+  {
+    "module": "Estoque",
+    "label": "Entrada ou saída de estoque",
+    "size": "md",
+    "description": "Selecione o produto, informe a quantidade e identifique o responsável.",
+    "fields": [
+      "Produto *",
+      "{`Quantidade (${fm.idProduto ? produtos.find((p) => String(p.id) === fm.idProduto)?.unidade ?? \"\" : \"un\"}) *`}",
+      "Responsável *",
+      "Observações"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Estoque.tsx"
+  },
+  {
+    "module": "Pacotes",
+    "label": "Pacote comercial e benefícios",
+    "size": "xl",
+    "description": "Defina as condições comerciais, a elegibilidade e os benefícios incluídos no pacote.",
+    "fields": [
+      "Código *",
+      "Nome *",
+      "Descrição",
+      "Temporada",
+      "Regime alimentar",
+      "Adicionar categoria elegível",
+      "Mínimo de diárias *",
+      "Máximo de diárias *",
+      "Hóspedes contemplados *",
+      "Regra de preço *",
+      "Preço *",
+      "Desconto (%)",
+      "Vigência inicial *",
+      "Vigência final *",
+      "Benefícios inclusos",
+      "Tipo do benefício",
+      "Produto do estoque",
+      "Serviço",
+      "Quantidade incluída",
+      "Limite",
+      "Condições de contratação",
+      "Status"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Pacotes.tsx"
+  },
+  {
+    "module": "Eventos",
+    "label": "Recebimento de evento",
+    "size": "md",
+    "description": "Confira o evento e registre a data, o valor e a forma de pagamento.",
+    "fields": [
+      "Evento",
+      "Saldo pendente",
+      "Valor",
+      "Forma",
+      "Data",
+      "ResponsibleSelect",
+      "Observações"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Eventos.tsx"
+  },
+  {
+    "module": "Eventos",
+    "label": "Sala de evento",
+    "size": "md",
+    "description": "Informe a capacidade, a estrutura e o valor por hora do espaço.",
+    "fields": [],
+    "footer": "fixed",
+    "source": "src/components/pages/Eventos.tsx"
+  },
+  {
+    "module": "Eventos",
+    "label": "Serviço de evento",
+    "size": "md",
+    "description": "Defina o serviço, a unidade de cobrança e o preço de contratação.",
+    "fields": [],
+    "footer": "fixed",
+    "source": "src/components/pages/Eventos.tsx"
+  },
+  {
+    "module": "Eventos",
+    "label": "Evento",
+    "size": "xl",
+    "description": "Preencha as seis etapas existentes e revise a contratação antes de salvar.",
+    "fields": [
+      "Nome do evento",
+      "Tipo",
+      "Cliente cadastrado",
+      "Contratante",
+      "Contato",
+      "Telefone",
+      "E-mail",
+      "Participantes",
+      "Observações",
+      "Sala",
+      "Preco contratado por hora",
+      "Início",
+      "Fim",
+      "Montagem antes do evento (minutos)",
+      "Desmontagem após o evento (minutos)",
+      "Adicionar servico",
+      "Input",
+      "Input",
+      "Input",
+      "Input",
+      "Input",
+      "Input",
+      "Desconto",
+      "Forma de cobranca",
+      "Hospedagem ativa",
+      "Exigir sinal para confirmar",
+      "Sinal (%)",
+      "Vencimento do saldo",
+      "Vencimento do sinal",
+      "Política de cancelamento e reembolso"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Eventos.tsx"
+  },
+  {
+    "module": "Consumos",
+    "label": "Consumo de hospedagem",
+    "size": "lg",
+    "description": "Vincule o consumo à hospedagem ativa e confira quantidade, valor e benefícios aplicados.",
+    "fields": [
+      "Hospedagem ativa *",
+      "Tipo",
+      "Produto ativo *",
+      "Serviço *",
+      "Quantidade *",
+      "Valor unitário",
+      "ResponsibleSelect",
+      "Descrição"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Consumos.tsx"
+  },
+  {
+    "module": "Hospedagens",
+    "label": "Registro de troca de quarto",
+    "size": "md",
+    "description": "Selecione a nova acomodação e registre o motivo e o responsável pela transferência.",
+    "fields": [
+      "Quarto atual",
+      "Novo quarto disponível",
+      "ResponsibleSelect",
+      "Motivo da transferência *"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Hospedagens.tsx"
+  },
+  {
+    "module": "Hospedagens",
+    "label": "Consumo na gestão da hospedagem",
+    "size": "lg",
+    "description": "Selecione o produto ou serviço e confira os valores antes de registrar o consumo.",
+    "fields": [
+      "Tipo",
+      "Produto do frigobar / estoque *",
+      "Serviço *",
+      "Quantidade",
+      "Valor unitário",
+      "ResponsibleSelect",
+      "Descrição"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Hospedagens.tsx"
+  },
+  {
+    "module": "Financeiro",
+    "label": "Recebimento de reserva ou fatura",
+    "size": "lg",
+    "description": "Confira os valores da conta e informe os dados do recebimento.",
+    "fields": [
+      "Cliente",
+      "Reserva / hospedagem",
+      "Valor total devido",
+      "Valor ja recebido",
+      "Saldo pendente",
+      "Valor a receber *",
+      "Forma de pagamento *",
+      "Data *",
+      "ResponsibleSelect",
+      "Observações"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Financeiro.tsx"
+  },
+  {
+    "module": "Financeiro",
+    "label": "Recebimento de evento no financeiro",
+    "size": "lg",
+    "description": "Confira os valores do evento e informe os dados do recebimento.",
+    "fields": [
+      "Cliente",
+      "Evento",
+      "Valor total devido",
+      "Valor ja recebido",
+      "Saldo pendente",
+      "Valor a receber *",
+      "Forma de pagamento *",
+      "Data *",
+      "ResponsibleSelect",
+      "Observações"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Financeiro.tsx"
+  },
+  {
+    "module": "Financeiro",
+    "label": "Conta a pagar",
+    "size": "lg",
+    "description": "Identifique a obrigação, o fornecedor, o centro de custo e o vencimento.",
+    "fields": [],
+    "footer": "fixed",
+    "source": "src/components/pages/Financeiro.tsx"
+  },
+  {
+    "module": "Financeiro",
+    "label": "Pagamento de conta",
+    "size": "md",
+    "description": "Confira o saldo e registre os dados do pagamento.",
+    "fields": [
+      "Fornecedor",
+      "Saldo pendente",
+      "Valor *",
+      "Forma *",
+      "Data",
+      "ResponsibleSelect",
+      "Observações"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Financeiro.tsx"
+  },
+  {
+    "module": "Financeiro",
+    "label": "Abertura de caixa",
+    "size": "md",
+    "description": "Identifique o turno e informe o fundo inicial em dinheiro.",
+    "fields": [
+      "ResponsibleSelect",
+      "Turno",
+      "Valor inicial em dinheiro",
+      "Observações"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Financeiro.tsx"
+  },
+  {
+    "module": "Financeiro",
+    "label": "Registro de fechamento de caixa",
+    "size": "md",
+    "description": "Conte o dinheiro físico e registre a conferência do turno.",
+    "fields": [
+      "Dinheiro contado na gaveta (R$) *",
+      "Diferença entre contado e esperado",
+      "Justificativa da diferença / observações"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Financeiro.tsx"
+  },
+  {
+    "module": "Financeiro",
+    "label": "Movimentação manual de caixa",
+    "size": "md",
+    "description": "Informe o tipo, o valor e o responsável pela movimentação.",
+    "fields": [
+      "Tipo",
+      "Método",
+      "Valor",
+      "ResponsibleSelect",
+      "Descrição",
+      "Observações"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Financeiro.tsx"
+  },
+  {
+    "module": "Financeiro",
+    "label": "Centro de custo",
+    "size": "md",
+    "description": "Cadastre a identificação e a finalidade do centro de custo.",
+    "fields": [
+      "Código",
+      "Nome",
+      "Situação",
+      "Descrição"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Financeiro.tsx"
+  },
+  {
+    "module": "Financeiro",
+    "label": "Conciliação bancária simulada",
+    "size": "lg",
+    "description": "Compare o extrato informado com os movimentos registrados. Não há integração bancária externa.",
+    "fields": [
+      "Data banco",
+      "Tipo",
+      "Valor banco",
+      "Movimento do sistema",
+      "Descricao banco",
+      "Observações"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Financeiro.tsx"
+  },
+  {
+    "module": "Usuarios",
+    "label": "Usuário",
+    "size": "md",
+    "description": "Informe a identificação e as credenciais iniciais do usuário.",
+    "fields": [
+      "Nome completo *",
+      "E-mail *",
+      "Login *",
+      "Senha inicial *",
+      "Perfil inicial *"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Usuarios.tsx"
+  },
+  {
+    "module": "Usuarios",
+    "label": "Perfil de acesso",
+    "size": "lg",
+    "description": "Defina a identificação do perfil e selecione os módulos permitidos.",
+    "fields": [
+      "Nome do perfil *",
+      "Descrição *",
+      "Módulos permitidos *"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Usuarios.tsx"
+  },
+  {
+    "module": "Funcionarios",
+    "label": "Funcionário",
+    "size": "lg",
+    "description": "Preencha a identificação, os contatos e as informações do vínculo profissional.",
+    "fields": [
+      "Nome completo *",
+      "CPF *",
+      "Data de nascimento",
+      "Telefone",
+      "E-mail",
+      "Endereço",
+      "Data de admissão *",
+      "Cargo *",
+      "Salário do funcionário *",
+      "Turno *",
+      "Perfil de acesso",
+      "Observações"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Funcionarios.tsx"
+  },
+  {
+    "module": "Funcionarios",
+    "label": "Cargo",
+    "size": "md",
+    "description": "Defina o cargo, o salário base e as informações de atuação.",
+    "fields": [
+      "Nome do cargo *",
+      "Salário base *",
+      "Descrição *",
+      "Permissões e módulos do cargo"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Funcionarios.tsx"
+  },
+  {
+    "module": "Funcionarios",
+    "label": "Turno de trabalho",
+    "size": "md",
+    "description": "Organize os dias, os horários e a carga de trabalho do turno.",
+    "fields": [
+      "Nome do turno *",
+      "Dias ou escala *",
+      "Horário inicial *",
+      "Horário final *",
+      "Intervalo em minutos",
+      "Carga semanal"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Funcionarios.tsx"
+  },
+  {
+    "module": "Funcionarios",
+    "label": "Atribuição de funcionário",
+    "size": "md",
+    "description": "Vincule a atividade ao funcionário e defina o período e a prioridade.",
+    "fields": [
+      "Funcionário *",
+      "Título *",
+      "Data inicial *",
+      "Data final",
+      "Prioridade",
+      "Descrição *"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Funcionarios.tsx"
+  },
+  {
+    "module": "Funcionarios",
+    "label": "Registro de ponto",
+    "size": "md",
+    "description": "Identifique o funcionário, o horário e o tipo de registro.",
+    "fields": [
+      "Funcionário *",
+      "Data e hora *",
+      "Tipo de registro *",
+      "Origem",
+      "Observação"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Funcionarios.tsx"
+  },
+  {
+    "module": "LimpezaManutencao",
+    "label": "Tarefa de limpeza ou manutenção",
+    "size": "lg",
+    "description": "Defina o local, o responsável, o agendamento e as orientações da tarefa.",
+    "fields": [
+      "Quarto *",
+      "Tipo de limpeza *",
+      "Camareira responsável *",
+      "Data e hora agendada *",
+      "Prioridade *",
+      "Status",
+      "Orientações e observações",
+      "Quarto ou local *",
+      "Tipo *",
+      "Categoria *",
+      "Responsável *",
+      "Data e hora agendada *",
+      "Prioridade *",
+      "Status",
+      "Descrição do serviço *"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/LimpezaManutencao.tsx"
+  },
+  {
+    "module": "LimpezaManutencao",
+    "label": "Registro de execução de limpeza ou manutenção",
+    "size": "md",
+    "description": "Confira a execução e informe os dados que serão registrados na conclusão.",
+    "fields": [
+      "Executado por *",
+      "Data e hora da conclusão *",
+      "Condição do quarto *",
+      "Custo total",
+      "{\n                  tab === \"limpeza\"\n                    ? \"Registro da limpeza *\"\n                    : \"Serviço e materiais utilizados *\"\n                }"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/LimpezaManutencao.tsx"
+  },
+  {
+    "module": "Fiscal",
+    "label": "Documento fiscal ou recibo demonstrativo",
+    "size": "lg",
+    "description": "Selecione a origem e confira o destinatário e os valores do documento.",
+    "fields": [
+      "Tipo",
+      "Data de emissao",
+      "Origem operacional",
+      "Destinatario",
+      "Documento do destinatario",
+      "Valor",
+      "Descricao"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Fiscal.tsx"
+  },
+  {
+    "module": "Comunicacoes",
+    "label": "Comunicação",
+    "size": "lg",
+    "description": "Escolha o destinatário, o canal e o conteúdo antes de registrar o envio.",
+    "fields": [
+      "Tipo de comunicação *",
+      "Canal *",
+      "Destinatário *",
+      "{form.channel === \"E-mail\" ? \"E-mail de destino *\" : \"Telefone de destino *\"}",
+      "Natureza",
+      "Data e hora de envio",
+      "Gatilho ou origem",
+      "Assunto *",
+      "Mensagem *"
+    ],
+    "footer": "fixed",
+    "source": "src/components/pages/Comunicacoes.tsx"
+  }
+]

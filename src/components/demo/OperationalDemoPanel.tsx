@@ -1,3 +1,4 @@
+import { DialogAssistant } from "../use-dialog-layer";
 import { useEffect, useMemo, useState } from "react";
 import type { Page } from "../AppShell";
 import { useHotelOperations } from "../HotelOperationsContext";
@@ -82,7 +83,7 @@ export default function OperationalDemoPanel({ currentPage, allowedPages, onNavi
     if (step.id === "journey-client-save") {
       const client = operations.clients.find((item) => item.email === String(step.inputData.email) && item.scenarioKey === key);
       if (client) engine.reportValidation({ status: "completed", message: `Hospede salvo e exibido na tabela.`, ids: { clientId: client.id } });
-    } else if (step.id === "journey-rooms" && room?.status === "Livre" && room.cleaningStatus === "Limpo" && room.maintenanceStatus === "DisponÃ­vel") {
+    } else if (step.id === "journey-rooms" && room?.status === "Livre" && room.cleaningStatus === "Limpo" && room.maintenanceStatus === "Disponível") {
       engine.reportValidation({ status: "completed", message: `Quarto ${room.number} livre, limpo e disponivel.`, ids: { roomId: room.id } });
     } else if (step.id === "journey-rate") {
       const commercialPackage = operations.packages.find((item) => item.scenarioKey === key);
@@ -103,9 +104,9 @@ export default function OperationalDemoPanel({ currentPage, allowedPages, onNavi
       engine.reportValidation({ status: "completed", message: "Check-out concluido e limpeza gerada.", ids: { housekeepingTaskId: task.id } });
     } else if (step.id === "journey-history" && stay?.status === "Encerrada") {
       engine.reportValidation({ status: "completed", message: "Historico do hospede atualizado." });
-    } else if (step.id === "journey-cleaning" && task?.status === "ConcluÃ­da" && room?.cleaningStatus === "Limpo") {
+    } else if (step.id === "journey-cleaning" && task?.status === "Concluída" && room?.cleaningStatus === "Limpo") {
       engine.reportValidation({ status: "completed", message: "Limpeza concluida e quarto liberado." });
-    } else if (step.id === "journey-results" && stay?.status === "Encerrada" && task?.status === "ConcluÃ­da" && operations.activeReceiptsTotal(reservation?.id ?? 0) === 1020) {
+    } else if (step.id === "journey-results" && stay?.status === "Encerrada" && task?.status === "Concluída" && operations.activeReceiptsTotal(reservation?.id ?? 0) === 1020) {
       engine.reportValidation({ status: "completed", message: "Jornada completa refletida nos indicadores." });
     }
   }, [operations, step, status, engine.activeCommand, engine.scenario]);
@@ -133,7 +134,7 @@ export default function OperationalDemoPanel({ currentPage, allowedPages, onNavi
   const progressText = `Passo ${engine.progress.currentStep + 1} de ${route.steps.length}`;
   const primaryLabel = canAdvance ? (isLastStep ? "Concluir" : "Proximo") : step.cta ?? "Proximo";
 
-  return <>
+  return <DialogAssistant>
     {targetRect && <DemoSpotlight rect={targetRect} />}
     <aside className={`demo-panel ${panelOnTop ? "demo-panel--top" : ""}`} role="dialog" aria-label={`Demonstracao operacional: ${step.title}`}>
       <div className="demo-panel__heading">
@@ -162,7 +163,7 @@ export default function OperationalDemoPanel({ currentPage, allowedPages, onNavi
     </aside>
     {requirementOpen && <Modal title={`Rastreabilidade - ${step.rfs}`} onClose={() => setRequirementOpen(false)}><Alert type="info">Resumo interno de rastreabilidade. A matriz completa permanece fora da apresentacao principal.</Alert><div className="detail-list"><Info label="Codigo" value={step.rfs} /><Info label="Processo" value={step.process} /><Info label="Operacao" value={step.title} /><Info label="Situacao" value={statusLabel[status]} /></div></Modal>}
     {confirmRestart && <ConfirmDialog title="Reiniciar roteiro operacional" description="O progresso e os registros deste cenario serao removidos. Dados normais permanecem preservados." onCancel={() => setConfirmRestart(false)} onConfirm={() => { engine.restartRoute(); setConfirmRestart(false); }} />}
-  </>;
+  </DialogAssistant>;
 }
 
 function Info({ label, value }: { label: string; value: string }) {

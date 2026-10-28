@@ -1,4 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useAccessControl } from "../access-control";
+import { roundMoney, validateRefund, validateBankMatch } from "../domain/financial-rules";
 import {
   PAYMENT_METHODS,
   derivePayableStatus,
@@ -17,6 +19,7 @@ import {
   calculateServicesTotal,
   canTransitionEventStatus,
   eventDurationHours,
+  eventFinancialSnapshot,
   findRoomScheduleConflict,
   validateEventPeriod,
   validateTimelineTimes,
@@ -239,6 +242,9 @@ export type CashSession = {
   shift?: "Manhã" | "Tarde" | "Noite";
   expectedCash?: number;
   difference?: number;
+  openedBy?: { id: number; name: string };
+  closedBy?: { id: number; name: string };
+  closingNotes?: string;
 };
 
 export type CashMovement = {
@@ -249,7 +255,7 @@ export type CashMovement = {
   createdAt: string;
   value: number;
   methodId: PaymentMethodId;
-  source: "recebimento" | "pagamento" | "manual";
+  source: "recebimento" | "pagamento" | "manual" | "devolucao_evento" | "estorno_recebimento";
   sourceId: number;
   description: string;
   responsible: string;
@@ -395,16 +401,24 @@ export type EventRecord = {
   roomValueContracted: number;
   start: string;
   end: string;
+  setupMinutes?: number;
+  teardownMinutes?: number;
   services: ContractedEventService[];
   servicesValueContracted: number;
   discountValue: number;
   totalContracted: number;
   billingType: EventBillingType;
   linkedReservationId?: number;
+  depositRequired?: boolean;
+  depositPercent?: number;
+  depositDueDate?: string;
+  balanceDueDate?: string;
+  cancellationPolicy?: string;
   status: EventStatus;
   createdAt: string;
   canceledAt?: string;
   financialNotes?: string;
+  cancellation?: { received: number; refunded: number; retained: number; methodId?: PaymentMethodId; responsible: string; at: string };
   timeline: EventTimelineItem[];
 };
 
@@ -516,6 +530,23 @@ type ClientResult = OperationResult & { client?: Client };
 function localDate(date = new Date()) {
   const offset = date.getTimezoneOffset() * 60000;
   return new Date(date.getTime() - offset).toISOString().slice(0, 10);
+}
+
+export const OVERDUE_INVOICE_POLICY = {
+  graceDays: 0,
+  lateFeePercent: 2,
+  dailyInterestPercent: 0.033,
+};
+
+function invoiceLateCharges(baseTotal: number, dueDate: string, referenceDate = today()) {
+  const due = new Date(`${dueDate}T12:00`);
+  const reference = new Date(`${referenceDate}T12:00`);
+  const delayedDays = Math.max(0, Math.floor((reference.getTime() - due.getTime()) / 86400000));
+  if (delayedDays <= OVERDUE_INVOICE_POLICY.graceDays) return 0;
+  const chargeableDays = delayedDays - OVERDUE_INVOICE_POLICY.graceDays;
+  const fine = baseTotal * OVERDUE_INVOICE_POLICY.lateFeePercent / 100;
+  const interest = baseTotal * OVERDUE_INVOICE_POLICY.dailyInterestPercent / 100 * chargeableDays;
+  return Math.round((fine + interest + Number.EPSILON) * 100) / 100;
 }
 
 function relativeDate(days: number) {
@@ -869,8 +900,6 @@ type StoredOperations = {
   fiscalProfile: HotelFiscalProfile;
   fiscalDocuments: FiscalDocument[];
   communications: Communication[];
-  products: StockProduct[];
-  stockMovements: StockMovement[];
 };
 
 function demonstrationState(): StoredOperations {
@@ -965,6 +994,15 @@ function loadStoredOperations(): StoredOperations {
 }
 
 type OperationsContextValue = {
+  conferenceRooms: ConferenceRoom[];
+  eventServices: EventService[];
+  events: EventRecord[];
+  eventReceipts: EventReceipt[];
+  fiscalProfile: HotelFiscalProfile;
+  fiscalDocuments: FiscalDocument[];
+  communications: Communication[];
+  products: StockProduct[];
+  stockMovements: StockMovement[];
   clients: Client[];
   rooms: Room[];
   categories: RoomCategory[];
@@ -1025,9 +1063,9 @@ type OperationsContextValue = {
   inactivateEventService: (id: number) => OperationResult;
   createEvent: (input: EventInput) => OperationResult & { event?: EventRecord };
   updateEvent: (id: number, input: EventInput) => OperationResult;
-  cancelEvent: (id: number, input: { reason: string; treatment: string }) => OperationResult;
+  cancelEvent: (id: number, input: EventCancellationInput) => OperationResult;
   registerEventReceipt: (input: { eventId: number; value: number; method: string; notes: string; responsible: string; date?: string; operationKey?: string }) => OperationResult;
-  getEventFinancials: (eventId: number) => ReservationFinancials | null;
+  getEventFinancials: (eventId: number) => EventFinancials | null;
   updateFiscalProfile: (input: HotelFiscalProfile) => OperationResult;
   issueFiscalDocument: (input: FiscalDocumentInput) => OperationResult;
   cancelFiscalDocument: (id: number, reason: string) => OperationResult;
@@ -1040,6 +1078,20 @@ export type ReservationFinancials = {
   received: number;
   balance: number;
   status: ReturnType<typeof deriveReceivableStatus>;
+  baseTotal?: number;
+  lateCharges?: number;
+  dueDate?: string;
+};
+
+export type EventFinancials = Omit<ReservationFinancials, "status"> & {
+  status: ReservationFinancials["status"] | "Na fatura da hospedagem";
+  linkedBalance?: number;
+};
+export type EventCancellationInput = {
+  reason: string;
+  treatment: string;
+  refundValue?: number;
+  refundMethod?: string;
 };
 
 type PayableInput = {
@@ -1062,6 +1114,7 @@ export type FiscalDocumentInput = Omit<FiscalDocument, "id" | "number" | "status
 const OperationsContext = createContext<OperationsContextValue | null>(null);
 
 export function HotelOperationsProvider({ children }: { children: ReactNode }) {
+  const { activeAccount, registerLog } = useAccessControl();
   const loadedState = useRef(loadStoredOperations());
   const [clients, setClients] = useState(loadedState.current.clients);
   const [rooms, setRooms] = useState(loadedState.current.rooms);
@@ -1236,17 +1289,32 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     if (!reservation) return null;
     const invoice = invoices.find((item) => item.reservationId === reservationId);
     const extras = consumptions.filter((item) => item.reservationId === reservationId && !item.includedInPackage && item.status !== "Estornado").reduce((total, item) => total + item.value, 0);
-    const total = invoice?.total ?? reservationBaseValue(reservation) + extras;
+    const baseTotal = invoice?.total ?? reservationBaseValue(reservation) + extras;
     const received = confirmedReceiptsTotal(reservationId);
+    const lateCharges = received + 0.009 >= baseTotal || reservation.status === "Cancelada"
+      ? 0
+      : invoiceLateCharges(Math.max(0, baseTotal - received), reservation.exit);
+    const total = baseTotal + lateCharges;
     return {
       total,
       received,
       balance: pendingBalance(total, received),
       status: deriveReceivableStatus(total, received, reservation.exit, reservation.status === "Cancelada", today()),
+      baseTotal,
+      lateCharges,
+      dueDate: reservation.exit,
     };
   };
 
   const openSessionForMovement = () => cashSessions.find((session) => !session.closedAt);
+
+  const validateCashMovement = (methodId: PaymentMethodId, value: number, direction: "entrada" | "saida"): OperationResult => {
+    if (!isCashPayment(methodId)) return { ok: true };
+    const session = openSessionForMovement();
+    if (!session) return { ok: false, error: "Abra o caixa em Financeiro → Caixa antes de movimentar dinheiro. Pix e transferências podem ser registrados sem caixa aberto." };
+    if (direction === "saida" && roundMoney(value) > roundMoney(cashExpectedTotal(session.id))) return { ok: false, error: "O caixa não tem dinheiro suficiente para esta saída." };
+    return { ok: true };
+  };
 
   const registerReceipt = (input: { reservationId: number; value: number; method: string; notes: string; responsible: string; scenarioKey?: string; date?: string; operationKey?: string }): OperationResult => {
     const reservation = reservations.find((item) => item.id === input.reservationId);
@@ -1260,6 +1328,8 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     }
     const date = input.date ?? today();
     const methodId = normalizePaymentMethod(input.method);
+    const cashValidation = validateCashMovement(methodId, input.value, "entrada");
+    if (!cashValidation.ok) return cashValidation;
     const stay = stays.find((item) => item.reservationId === input.reservationId);
     const nextId = Math.max(0, ...receipts.map((item) => item.id)) + 1;
     const openSession = openSessionForMovement();
@@ -1298,7 +1368,7 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     const projectedReceived = confirmedReceiptsTotal(input.reservationId) + input.value;
     setInvoices((current) => current.map((invoice) => invoice.reservationId === input.reservationId ? {
       ...invoice,
-      status: projectedReceived + 0.009 >= invoice.total ? "Quitada" : "Aberta",
+      status: projectedReceived + 0.009 >= financials.total ? "Quitada" : "Aberta",
       updatedAt: new Date().toISOString(),
     } : invoice));
     return { ok: true };
@@ -1307,11 +1377,20 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
   const changeReceiptStatus = (receiptId: number, status: Exclude<ReceiptStatus, "Confirmado">, responsible: string): OperationResult => {
     const receipt = receipts.find((item) => item.id === receiptId);
     if (!receipt || receipt.status !== "Confirmado") return { ok: false, error: "Recebimento válido não encontrado." };
+    const methodId = receipt.methodId ?? normalizePaymentMethod(receipt.method);
+    const cashValidation = validateCashMovement(methodId, receipt.value, "saida");
+    if (!cashValidation.ok) return cashValidation;
     setReceipts((current) => current.map((item) => item.id === receiptId ? {
       ...item,
       status,
       notes: `${item.notes}${item.notes ? " · " : ""}${status} por ${responsible} em ${new Date().toLocaleString("pt-BR")}.`,
     } : item));
+    setCashMovements((current) => [...current, {
+      id: Math.max(0, ...current.map((item) => item.id)) + 1, sessionId: openSessionForMovement()?.id,
+      direction: "saida", date: today(), createdAt: new Date().toISOString(), value: receipt.value,
+      methodId, source: "estorno_recebimento", sourceId: receipt.id,
+      description: `Estorno ${receipt.code}`, responsible, notes: `${status} — recebimento original preservado.`,
+    }]);
     const projectedReceived = Math.max(0, activeReceiptsTotal(receipt.reservationId) - receipt.value);
     setInvoices((current) => current.map((invoice) => invoice.reservationId === receipt.reservationId ? {
       ...invoice,
@@ -1325,26 +1404,10 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     .filter((item) => item.eventId === eventId && item.status === "Confirmado")
     .reduce((total, item) => total + item.value, 0);
 
-  const getEventFinancials = (eventId: number): ReservationFinancials | null => {
+  const getEventFinancials = (eventId: number): EventFinancials | null => {
     const event = events.find((item) => item.id === eventId);
     if (!event) return null;
-    if (event.billingType === "Vinculada a hospedagem" && event.linkedReservationId) {
-      const reservationFinancials = getReservationFinancials(event.linkedReservationId);
-      const received = reservationFinancials ? Math.min(event.totalContracted, reservationFinancials.received) : 0;
-      return {
-        total: event.totalContracted,
-        received,
-        balance: pendingBalance(event.totalContracted, received),
-        status: deriveReceivableStatus(event.totalContracted, received, event.end.slice(0, 10), event.status === "Cancelado", today()),
-      };
-    }
-    const received = eventReceiptsTotal(eventId);
-    return {
-      total: event.totalContracted,
-      received,
-      balance: pendingBalance(event.totalContracted, received),
-      status: deriveReceivableStatus(event.totalContracted, received, event.end.slice(0, 10), event.status === "Cancelado", today()),
-    };
+    return eventFinancialSnapshot(event, eventReceiptsTotal(eventId), today(), event.linkedReservationId ? getReservationFinancials(event.linkedReservationId)?.balance : undefined);
   };
 
   const normalizeEventInput = (input: EventInput, eventId?: number): OperationResult & { event?: Omit<EventRecord, "id" | "code" | "createdAt"> } => {
@@ -1356,7 +1419,9 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     if (!room) return { ok: false, error: "Sala de conferencia nao encontrada." };
     if (room.status !== "Ativo") return { ok: false, error: "Nao e permitido agendar evento em sala inativa." };
     if (input.guests > room.capacity) return { ok: false, error: `A sala comporta no maximo ${room.capacity} participantes.` };
-    const conflict = findRoomScheduleConflict(events, input.roomId, input.start, input.end, eventId);
+    if (![input.setupMinutes ?? 0, input.teardownMinutes ?? 0].every((value) => Number.isInteger(value) && value >= 0 && value <= 1440)) return { ok: false, error: "Montagem e desmontagem devem ter entre 0 e 1.440 minutos." };
+    if (![input.roomHourlyRateContracted, input.discountValue, ...input.services.flatMap((line) => [line.quantity, line.contractedUnitPrice])].every(Number.isFinite) || input.roomHourlyRateContracted < 0 || input.discountValue < 0) return { ok: false, error: "Informe preços e desconto válidos." };
+    const conflict = findRoomScheduleConflict(events, input.roomId, input.start, input.end, eventId, input.setupMinutes, input.teardownMinutes);
     if (conflict) return { ok: false, error: `Conflito com ${conflict.code} - ${conflict.name}.` };
     if (input.services.some((line) => line.quantity <= 0 || line.contractedUnitPrice < 0)) return { ok: false, error: "Servicos contratados precisam ter quantidade e preco validos." };
     const inactiveService = input.services.find((line) => !eventServices.some((service) => service.id === line.serviceId && service.status === "Ativo") && !events.some((event) => event.id === eventId && event.services.some((existing) => existing.serviceId === line.serviceId)));
@@ -1368,13 +1433,23 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
       const reservation = reservations.find((item) => item.id === input.linkedReservationId);
       const stay = stays.find((item) => item.reservationId === input.linkedReservationId && item.status === "Ativa");
       if (!reservation || !stay) return { ok: false, error: "Selecione uma hospedagem ativa para vincular a cobranca." };
-      if (reservation.status === "ConcluÃ­da" || reservation.status === "Cancelada") return { ok: false, error: "Nao e permitido vincular evento a hospedagem encerrada ou cancelada." };
+      if (reservation.status === "Concluída" || reservation.status === "Cancelada") return { ok: false, error: "Nao e permitido vincular evento a hospedagem encerrada ou cancelada." };
+    }
+    if (input.billingType === "Separada" && input.depositRequired) {
+      if (!Number.isFinite(input.depositPercent) || (input.depositPercent ?? 0) <= 0 || (input.depositPercent ?? 0) > 100) return { ok: false, error: "Informe um percentual de sinal entre 1% e 100%." };
+      if (!input.depositDueDate || !input.balanceDueDate) return { ok: false, error: "Informe os vencimentos do sinal e do saldo." };
     }
     const durationHoursContracted = eventDurationHours(input.start, input.end);
     const roomValueContracted = calculateRoomContractValue(input.start, input.end, input.roomHourlyRateContracted);
     const services = input.services.map((line) => ({ ...line, subtotal: calculateServiceSubtotal(line.quantity, line.contractedUnitPrice) }));
     const servicesValueContracted = calculateServicesTotal(services);
     const totalContracted = calculateEventTotal(roomValueContracted, servicesValueContracted, input.discountValue);
+    const depositValue = input.depositRequired ? totalContracted * (input.depositPercent ?? 0) / 100 : 0;
+    const alreadyReceived = eventId ? eventReceiptsTotal(eventId) : 0;
+    if (alreadyReceived > totalContracted + 0.009) return { ok: false, error: "O total não pode ficar abaixo do valor já recebido. Regularize os recebimentos antes de alterar o contrato." };
+    if (input.status === "Confirmado" && input.billingType === "Separada" && depositValue > alreadyReceived + 0.009) {
+      return { ok: false, error: `O evento exige sinal de ${formatMoney(depositValue)}. Registre o recebimento antes de confirma-lo.` };
+    }
     return {
       ok: true,
       event: {
@@ -1411,8 +1486,8 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     });
     setInvoices((current) => current.map((invoice) => invoice.stayId === stay.id ? {
       ...invoice,
-      extrasValue: consumptions.filter((item) => item.stayId === stay.id && item.originEventId !== event.id && !item.includedInPackage).reduce((total, item) => total + item.value, event.totalContracted),
-      total: invoice.baseValue + consumptions.filter((item) => item.stayId === stay.id && item.originEventId !== event.id && !item.includedInPackage).reduce((total, item) => total + item.value, event.totalContracted) - invoice.discounts,
+      extrasValue: consumptions.filter((item) => item.stayId === stay.id && item.originEventId !== event.id && !item.includedInPackage && item.status !== "Estornado").reduce((total, item) => total + item.value, event.totalContracted),
+      total: invoice.baseValue + consumptions.filter((item) => item.stayId === stay.id && item.originEventId !== event.id && !item.includedInPackage && item.status !== "Estornado").reduce((total, item) => total + item.value, event.totalContracted) - invoice.discounts,
       status: "Aberta",
       updatedAt: new Date().toISOString(),
     } : invoice));
@@ -1425,7 +1500,7 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     setInvoices((current) => current.map((invoice) => {
       if (invoice.stayId !== linked.stayId) return invoice;
       const extrasValue = consumptions
-        .filter((item) => item.stayId === linked.stayId && item.originEventId !== eventId && !item.includedInPackage)
+        .filter((item) => item.stayId === linked.stayId && item.originEventId !== eventId && !item.includedInPackage && item.status !== "Estornado")
         .reduce((total, item) => total + item.value, 0);
       return {
         ...invoice,
@@ -1477,8 +1552,9 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
   };
 
   const createEvent = (input: EventInput): OperationResult & { event?: EventRecord } => {
+    if (input.status !== "Planejado") return { ok: false, error: "Cadastre o evento como Planejado e avance a situação após conferir o contrato e o sinal." };
     const normalized = normalizeEventInput(input);
-    if (!normalized.ok || !normalized.event) return normalized;
+    if (!normalized.ok || !normalized.event) return { ok: false, error: normalized.error };
     const nextId = Math.max(0, ...events.map((item) => item.id)) + 1;
     const event: EventRecord = { ...normalized.event, id: nextId, code: `EVT-${String(206 + nextId).padStart(4, "0")}`, createdAt: new Date().toISOString() };
     setEvents((current) => [event, ...current]);
@@ -1489,6 +1565,9 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
   const updateEvent = (id: number, input: EventInput): OperationResult => {
     const existing = events.find((item) => item.id === id);
     if (!existing) return { ok: false, error: "Evento nao encontrado." };
+    if (["Cancelado", "Concluido"].includes(existing.status)) return { ok: false, error: "Eventos encerrados preservam seu histórico e não podem ser alterados." };
+    if (input.status === "Cancelado") return { ok: false, error: "Use Cancelar evento para conferir os valores e registrar a devolução." };
+    if (eventReceiptsTotal(id) > 0 && (existing.billingType !== input.billingType || existing.linkedReservationId !== input.linkedReservationId)) return { ok: false, error: "Não é possível mudar a cobrança de um evento com recebimentos." };
     if (!canTransitionEventStatus(existing.status, input.status) && existing.status !== input.status) return { ok: false, error: "Transicao de status do evento nao permitida." };
     const normalized = normalizeEventInput(input, id);
     if (!normalized.ok || !normalized.event) return normalized;
@@ -1499,14 +1578,36 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     return { ok: true };
   };
 
-  const cancelEvent = (id: number, input: { reason: string; treatment: string }): OperationResult => {
+  const cancelEvent = (id: number, input: EventCancellationInput): OperationResult => {
     const event = events.find((item) => item.id === id);
-    if (!event) return { ok: false, error: "Evento nao encontrado." };
-    if (event.status === "Cancelado" || event.status === "Concluido") return { ok: false, error: "Este evento nao pode ser cancelado." };
-    const paid = eventReceiptsTotal(id);
-    if (paid > 0 && !input.treatment.trim()) return { ok: false, error: "Informe o tratamento financeiro dos recebimentos ja realizados." };
-    setEvents((current) => current.map((item) => item.id === id ? { ...item, status: "Cancelado", canceledAt: new Date().toISOString(), financialNotes: `${input.reason}${paid > 0 ? ` Tratamento financeiro: ${input.treatment}` : ""}` } : item));
+    if (!event || ["Cancelado", "Concluido", "Em andamento"].includes(event.status)) return { ok: false, error: "Somente eventos planejados ou confirmados podem ser cancelados." };
+    if (!input.reason.trim()) return { ok: false, error: "Informe o motivo do cancelamento." };
+    if (!activeAccount) return { ok: false, error: "Entre no sistema para cancelar o evento." };
+    if (event.billingType === "Vinculada a hospedagem" && !stays.some((stay) => stay.reservationId === event.linkedReservationId && stay.status === "Ativa")) return { ok: false, error: "A hospedagem já foi encerrada. Regularize a fatura antes de cancelar este evento." };
+    const received = eventReceiptsTotal(id);
+    const refunded = input.refundValue ?? (received > 0 ? NaN : 0);
+    const validation = validateRefund(received, refunded);
+    if (!validation.ok) return validation;
+    if (received > 0 && !input.treatment.trim()) return { ok: false, error: "Explique o acordo de devolução ou retenção dos valores recebidos." };
+    if (refunded > 0 && !input.refundMethod) return { ok: false, error: "Selecione a forma da devolução." };
+    const methodId = normalizePaymentMethod(input.refundMethod ?? "pix");
+    const cashValidation = validateCashMovement(methodId, refunded, "saida");
+    if (refunded > 0 && !cashValidation.ok) return cashValidation;
+    const at = new Date().toISOString();
+    const retained = roundMoney(received - refunded);
+    setEvents((current) => current.map((item) => item.id === id ? {
+      ...item, status: "Cancelado", canceledAt: at,
+      financialNotes: `${input.reason.trim()}${input.treatment.trim() ? ` · ${input.treatment.trim()}` : ""}`,
+      cancellation: { received, refunded, retained, methodId: refunded > 0 ? methodId : undefined, responsible: activeAccount.name, at },
+    } : item));
+    if (refunded > 0) setCashMovements((current) => [...current, {
+      id: Math.max(0, ...current.map((item) => item.id)) + 1,
+      sessionId: openSessionForMovement()?.id, direction: "saida", date: today(), createdAt: at,
+      value: refunded, methodId, source: "devolucao_evento", sourceId: id,
+      description: `Devolução ${event.code} - ${event.name}`, responsible: activeAccount.name, notes: input.treatment,
+    }]);
     removeLinkedEventConsumption(id);
+    registerLog("Evento cancelado", "Eventos", `${event.code}: devolvido ${formatMoney(refunded)}, retido ${formatMoney(retained)}. ${input.reason}`, "Sucesso");
     return { ok: true };
   };
 
@@ -1521,6 +1622,8 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     if (input.operationKey && eventReceipts.some((receipt) => receipt.operationKey === input.operationKey)) return { ok: false, error: "Este recebimento ja foi processado." };
     const date = input.date ?? today();
     const methodId = normalizePaymentMethod(input.method);
+    const cashValidation = validateCashMovement(methodId, input.value, "entrada");
+    if (!cashValidation.ok) return cashValidation;
     const nextId = Math.max(0, ...eventReceipts.map((item) => item.id)) + 1;
     const openSession = openSessionForMovement();
     const createdAt = new Date().toISOString();
@@ -1553,6 +1656,10 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
       responsible: input.responsible,
       notes: openSession ? input.notes : `${input.notes}${input.notes ? " " : ""}Registrado sem caixa aberto.`,
     }]);
+    const depositValue = event.depositRequired ? event.totalContracted * (event.depositPercent ?? 0) / 100 : 0;
+    if (event.status === "Planejado" && depositValue > 0 && eventReceiptsTotal(event.id) + input.value + 0.009 >= depositValue) {
+      setEvents((current) => current.map((item) => item.id === event.id ? { ...item, status: "Confirmado" } : item));
+    }
     return { ok: true };
   };
 
@@ -1651,6 +1758,8 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     const validation = validateSettlement(input.value, pendingBalance(payable.originalValue, paid), "pagamento");
     if (!validation.ok) return validation;
     const methodId = normalizePaymentMethod(input.method);
+    const cashValidation = validateCashMovement(methodId, input.value, "saida");
+    if (!cashValidation.ok) return cashValidation;
     const date = input.date ?? today();
     const createdAt = new Date().toISOString();
     const paymentId = Math.max(0, ...payables.flatMap((item) => item.payments.map((payment) => payment.id))) + 1;
@@ -1678,8 +1787,9 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     if (cashSessions.some((session) => !session.closedAt)) return { ok: false, error: "Ja existe um caixa aberto." };
     if (!input.responsible.trim()) return { ok: false, error: "Informe o responsavel pelo caixa." };
     if (!Number.isFinite(input.openingCash) || input.openingCash < 0) return { ok: false, error: "Informe um valor inicial valido." };
+    if (!activeAccount) return { ok: false, error: "Entre no sistema para abrir o caixa." };
     const nextId = Math.max(0, ...cashSessions.map((item) => item.id)) + 1;
-    setCashSessions((current) => [{ id: nextId, code: `CX-${String(nextId).padStart(4, "0")}`, openedAt: new Date().toISOString(), responsible: input.responsible, openingCash: input.openingCash, notes: input.notes, shift: input.shift ?? "Manhã" }, ...current]);
+    setCashSessions((current) => [{ id: nextId, code: `CX-${String(nextId).padStart(4, "0")}`, openedAt: new Date().toISOString(), responsible: input.responsible, openingCash: input.openingCash, openedBy: { id: activeAccount.id, name: activeAccount.name }, notes: input.notes, shift: input.shift ?? "Manhã" }, ...current]);
     return { ok: true };
   };
 
@@ -1694,8 +1804,11 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     const session = cashSessions.find((item) => item.id === input.sessionId);
     if (!session || session.closedAt) return { ok: false, error: "Caixa aberto nao encontrado." };
     if (!Number.isFinite(input.countedCash) || input.countedCash < 0) return { ok: false, error: "Informe o valor contado." };
-    const expectedCash = cashExpectedTotal(input.sessionId);
-    setCashSessions((current) => current.map((item) => item.id === input.sessionId ? { ...item, closedAt: new Date().toISOString(), countedCash: input.countedCash, expectedCash, difference: input.countedCash - expectedCash, notes: input.notes } : item));
+    if (!activeAccount) return { ok: false, error: "Entre no sistema para fechar o caixa." };
+    const expectedCash = roundMoney(cashExpectedTotal(input.sessionId));
+    const difference = roundMoney(input.countedCash - expectedCash);
+    if (difference !== 0 && !input.notes.trim()) return { ok: false, error: "Há uma diferença de caixa. Informe a justificativa antes de fechar." };
+    setCashSessions((current) => current.map((item) => item.id === input.sessionId ? { ...item, closedAt: new Date().toISOString(), countedCash: input.countedCash, expectedCash, difference, closedBy: { id: activeAccount.id, name: activeAccount.name }, closingNotes: input.notes } : item));
     return { ok: true };
   };
 
@@ -1704,6 +1817,8 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     if (!openSession) return { ok: false, error: "Abra um caixa antes de lancar movimentos manuais." };
     if (!Number.isFinite(input.value) || input.value <= 0) return { ok: false, error: "Informe um valor valido." };
     const methodId = normalizePaymentMethod(input.method);
+    const cashValidation = validateCashMovement(methodId, input.value, input.direction);
+    if (!cashValidation.ok) return cashValidation;
     setCashMovements((current) => [...current, {
       id: Math.max(0, ...current.map((item) => item.id)) + 1,
       sessionId: openSession.id,
@@ -1740,6 +1855,11 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     if (!Number.isFinite(input.value) || input.value <= 0) return { ok: false, error: "Informe o valor bancario." };
     const movement = input.movementId ? cashMovements.find((item) => item.id === input.movementId) : undefined;
     if (input.movementId && !movement) return { ok: false, error: "Movimentacao do sistema nao encontrada." };
+    if (!input.date || !input.description.trim()) return { ok: false, error: "Informe data e descrição da transação bancária." };
+    if (movement) {
+      const validation = validateBankMatch(input, movement, bankTransactions.some((item) => item.id !== input.transactionId && item.matchedMovementId === movement.id));
+      if (!validation.ok) return validation;
+    }
     const id = input.transactionId ?? Math.max(0, ...bankTransactions.map((item) => item.id)) + 1;
     const transaction: BankTransaction = { id, date: input.date, description: input.description, value: input.value, direction: input.direction, matchedMovementId: input.movementId, notes: input.notes };
     setBankTransactions((current) => input.transactionId ? current.map((item) => item.id === input.transactionId ? transaction : item) : [transaction, ...current]);

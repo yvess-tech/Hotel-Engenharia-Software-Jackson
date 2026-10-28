@@ -511,7 +511,7 @@ export default function Relatorios() {
       {tab === "relatorios" && (
         <div className="space-y-5">
           <Card>
-            <div className="grid gap-3 lg:grid-cols-[minmax(260px,1fr)_180px_180px_auto] lg:items-end">
+            <div className="create-form-inline">
               <Select
                 label="Tipo de relatório"
                 value={reportType}
