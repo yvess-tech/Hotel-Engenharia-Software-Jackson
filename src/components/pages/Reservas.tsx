@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
+
 import {
+  FormSection,
   Alert,
   Badge,
   Btn,
@@ -17,6 +19,7 @@ import {
   Textarea,
   formatDisplayDate,
 } from "../ui"
+
 import {
   calculatePackageValue,
   countNights,
@@ -32,143 +35,240 @@ import {
   type Reservation,
   type ReservationStatus,
 } from "../HotelOperationsContext"
+
 import { useDemoEngine } from "../demo/DemoEngineContext"
 
 type Tab = "reservas" | "recebimentos"
+
 type ReservationModal = "new" | "edit" | "view" | "cancel" | null
+
 type ReceiptModal = "new" | "view" | null
 
 const validStatuses: ReservationStatus[] = [
   "Pendente",
+
   "Confirmada",
+
   "Hospedado",
+
   "Concluída",
+
   "Cancelada",
 ]
+
 const emptyReservation = {
   clientId: "",
+
   guest: "",
+
   companions: "",
+
   entry: "",
+
   exit: "",
+
   category: "Standard",
+
   roomId: "",
+
   guests: "1",
+
   status: "Pendente" as ReservationStatus,
+
   contractType: "Tarifa convencional" as ContractType,
+
   packageId: "",
+
   notes: "",
 }
+
 const emptyReceipt = () => ({
   reservationId: "",
+
   date: today(),
+
   value: "",
+
   method: "pix",
+
   notes: "",
 })
+
 const mockReceipt = (reservationId = "") => ({
   reservationId,
+
   date: today(),
+
   value: "250",
+
   method: "pix",
+
   notes: "Recebimento de exemplo para demonstração.",
 })
+
 const mockQuickClient = {
   name: "Rafael Monteiro Demo",
+
   cpf: "111.444.777-35",
+
   email: "rafael.demo@pacaasnovos.com.br",
+
   phone: "(69) 99321-7788",
 }
 
 export default function Reservas() {
   const {
     clients,
+
     rooms,
+
     setRooms,
+
     categories,
+
     reservations,
+
     receipts,
+
     packages,
+
     setReservations,
+
     createClient,
+
     registerReceipt,
+
     changeReceiptStatus,
+
     cancelReservation,
+
     activeReceiptsTotal,
   } = useHotelOperations()
+
   const [tab, setTab] = useState<Tab>("reservas")
+
   const [search, setSearch] = useState("")
+
   const [statusFilter, setStatusFilter] = useState("")
+
   const [reservationModal, setReservationModal] =
     useState<ReservationModal>(null)
+
   const [receiptModal, setReceiptModal] = useState<ReceiptModal>(null)
+
   const [selected, setSelected] = useState<Reservation | null>(null)
+
   const [selectedReceiptId, setSelectedReceiptId] = useState<number | null>(
     null,
   )
+
   const [cancelReason, setCancelReason] = useState("")
+
   const [checkingAvailability, setCheckingAvailability] = useState(false)
+
   const [validation, setValidation] = useState("")
+
   const [form, setForm] = useState(emptyReservation)
+
   const [receiptForm, setReceiptForm] = useState(emptyReceipt())
+
   const [quickClientOpen, setQuickClientOpen] = useState(false)
+
   const [quickClient, setQuickClient] = useState({
     name: "",
+
     cpf: "",
+
     email: "",
+
     phone: "",
   })
+
   const [quickClientError, setQuickClientError] = useState("")
+
   const [clientPickerOpen, setClientPickerOpen] = useState(false)
+
   const [clientSearch, setClientSearch] = useState("")
+
   const [demoScenarioKey, setDemoScenarioKey] = useState("")
+
   const demo = useDemoEngine()
 
   useEffect(() => {
     const command = demo.activeCommand
+
     if (!command || command.target !== "reservas") return
+
     const scenarioKey = demo.scenario?.scenarioKey ?? ""
+
     if (command.command === "prefill-reservation-form") {
       const entry = today()
+
       const departure = new Date(`${entry}T12:00:00`)
+
       departure.setDate(
         departure.getDate() + Number(command.payload.nights ?? 3),
       )
+
       const client = clients.find(
         (item) => item.id === demo.scenario?.ids.clientId,
       )
+
       const room = rooms.find((item) => item.id === demo.scenario?.ids.roomId)
+
       const commercialPackage = packages.find(
         (item) => item.id === demo.scenario?.ids.packageId,
       )
+
       if (!client || !room || !commercialPackage) {
         demo.resolveCommand(command.id, {
           status: "error",
+
           message: "Cliente, quarto ou pacote do cenário não foi encontrado.",
         })
+
         return
       }
+
       setSelected(null)
+
       setDemoScenarioKey(scenarioKey)
+
       setForm({
         ...emptyReservation,
+
         clientId: String(client.id),
+
         guest: client.name,
+
         entry,
+
         exit: departure.toISOString().slice(0, 10),
+
         category: room.category,
+
         roomId: String(room.id),
+
         guests: "1",
+
         status: "Confirmada",
+
         contractType: "Pacote comercial",
+
         packageId: String(commercialPackage.id),
+
         notes: "Reserva fictícia exclusiva da demonstração operacional.",
       })
+
       setTab("reservas")
+
       setValidation("")
+
       setReservationModal("new")
+
       demo.resolveCommand(command.id, {
         status: "running",
+
         message:
           "Reserva preenchida. Revise disponibilidade, pacote e use Salvar Reserva.",
       })
@@ -176,25 +276,38 @@ export default function Reservas() {
       const reservation = reservations.find(
         (item) => item.id === demo.scenario?.ids.reservationId,
       )
+
       if (!reservation) {
         demo.resolveCommand(command.id, {
           status: "error",
+
           message: "Reserva do cenário não encontrada.",
         })
+
         return
       }
+
       setReceiptForm({
         reservationId: String(reservation.id),
+
         date: today(),
+
         value: String(command.payload.value),
+
         method: String(command.payload.method),
+
         notes: "Antecipação da jornada demonstrativa.",
       })
+
       setTab("recebimentos")
+
       setValidation("")
+
       setReceiptModal("new")
+
       demo.resolveCommand(command.id, {
         status: "running",
+
         message: "Antecipação preenchida. Use Confirmar Recebimento.",
       })
     }
@@ -202,20 +315,26 @@ export default function Reservas() {
 
   useEffect(() => {
     if (!form.entry || !form.exit || !form.category) return
+
     setCheckingAvailability(true)
+
     const timer = window.setTimeout(() => setCheckingAvailability(false), 350)
+
     return () => window.clearTimeout(timer)
   }, [form.entry, form.exit, form.category])
 
   const nights = countNights(form.entry, form.exit)
+
   const availableRooms = useMemo(() => {
     if (!form.entry || !form.exit) return []
+
     return rooms.filter((room) => {
       if (
         room.category !== form.category ||
         room.maintenanceStatus === "Bloqueado"
       )
         return false
+
       const conflict = reservations.some(
         (reservation) =>
           reservation.id !== selected?.id &&
@@ -224,63 +343,86 @@ export default function Reservas() {
           form.entry < reservation.exit &&
           form.exit > reservation.entry,
       )
+
       return !conflict
     })
   }, [form.entry, form.exit, form.category, rooms, reservations, selected])
 
   const eligiblePackages = packages
+
     .filter(
       (commercialPackage) =>
         commercialPackage.active &&
         commercialPackage.validFrom <= form.entry &&
         commercialPackage.validTo >= form.exit,
     )
+
     .map((commercialPackage) => ({
       commercialPackage,
+
       eligibility: packageEligibility(
         commercialPackage,
+
         form.entry,
+
         form.exit,
+
         form.category,
+
         Number(form.guests),
       ),
     }))
+
   const selectedPackage = packages.find(
     (item) => item.id === Number(form.packageId),
   )
+
   const selectedPackageEligibility = selectedPackage
     ? packageEligibility(
         selectedPackage,
+
         form.entry,
+
         form.exit,
+
         form.category,
+
         Number(form.guests),
       )
     : null
+
   const selectedRoom = rooms.find((room) => room.id === Number(form.roomId))
+
   const dailyRate =
     selectedRoom?.rate ??
     categories.find((category) => category.name === form.category)?.rate ??
     0
+
   const contractedValue =
     form.contractType === "Pacote comercial" && selectedPackage
       ? calculatePackageValue(selectedPackage, nights)
       : nights * dailyRate
+
   const received = selected ? activeReceiptsTotal(selected.id) : 0
 
   const filteredReservations = reservations.filter((reservation) => {
     const query = search.toLowerCase()
+
     return (
       (!query ||
         reservation.code.toLowerCase().includes(query) ||
         reservation.guest.toLowerCase().includes(query) ||
         rooms
+
           .find((room) => room.id === reservation.roomId)
+
           ?.number.includes(query)) &&
       (!statusFilter || reservation.status === statusFilter)
     )
   })
+
   const clientQuery = clientSearch.trim().toLowerCase()
+
   const filteredClients = clients.filter(
     (client) =>
       client.status === "Ativo" &&
@@ -290,80 +432,124 @@ export default function Reservas() {
         client.email.toLowerCase().includes(clientQuery) ||
         client.phone.includes(clientSearch.trim())),
   )
+
   const selectedReceipt = receipts.find(
     (receipt) => receipt.id === selectedReceiptId,
   )
+
   const receiptReservation = reservations.find(
     (reservation) => reservation.id === Number(receiptForm.reservationId),
   )
 
   const openNew = () => {
     const entry = today()
+
     const exitDate = new Date(`${entry}T12:00:00`)
+
     exitDate.setDate(exitDate.getDate() + 2)
+
     const client = clients.find((item) => item.status === "Ativo") ?? clients[0]
+
     const category = categories[0]?.name ?? "Standard"
+
     const room =
       rooms.find(
         (item) =>
           item.category === category && item.maintenanceStatus !== "Bloqueado",
       ) ?? rooms[0]
+
     setSelected(null)
+
     setDemoScenarioKey("")
+
     setValidation("")
+
     setClientSearch("")
+
     setForm({
       ...emptyReservation,
+
       clientId: client ? String(client.id) : "",
+
       guest: client?.name ?? "",
+
       companions: "Carlos Monteiro",
+
       entry,
+
       exit: exitDate.toISOString().slice(0, 10),
+
       category: room?.category ?? category,
+
       roomId: room ? String(room.id) : "",
+
       guests: "2",
+
       status: "Confirmada",
+
       notes: "Reserva de exemplo preenchida para demonstração do cadastro.",
     })
+
     setReservationModal("new")
   }
 
   const openEdit = (reservation: Reservation) => {
     setSelected(reservation)
+
     setValidation("")
+
     setClientSearch("")
+
     setForm({
       clientId: String(reservation.clientId),
+
       guest: reservation.guest,
+
       companions: reservation.companions.join(", "),
+
       entry: reservation.entry,
+
       exit: reservation.exit,
+
       category: reservation.category,
+
       roomId: String(reservation.roomId),
+
       guests: String(reservation.guests),
+
       status: reservation.status,
+
       contractType: reservation.contractType,
+
       packageId: String(reservation.packageId ?? ""),
+
       notes: reservation.notes,
     })
+
     setReservationModal("edit")
   }
 
   const saveReservation = () => {
     const room = rooms.find((item) => item.id === Number(form.roomId))
+
     const client = clients.find((item) => item.id === Number(form.clientId))
+
     if (!client || !form.entry || !form.exit || !room || nights < 1) {
       setValidation(
         "Preencha os dados obrigatórios e informe um período válido.",
       )
+
       return
     }
+
     if (Number(form.guests) > room.capacity) {
       setValidation(
         `O quarto selecionado comporta no máximo ${room.capacity} hóspedes.`,
       )
+
       return
     }
+
     if (
       form.contractType === "Pacote comercial" &&
       (!selectedPackage || !selectedPackageEligibility?.eligible)
@@ -372,42 +558,70 @@ export default function Reservas() {
         selectedPackageEligibility?.reasons.join("; ") ||
           "Selecione um pacote comercial elegível.",
       )
+
       return
     }
+
     const companions = form.companions
+
       .split(",")
+
       .map((name) => name.trim())
+
       .filter(Boolean)
+
       .slice(0, Math.max(0, Number(form.guests) - 1))
+
     const packageSnapshot =
       selectedPackage && form.contractType === "Pacote comercial"
         ? createPackageSnapshot(selectedPackage, nights)
         : undefined
+
     const data = {
       clientId: client.id,
+
       guest: client.name,
+
       companions,
+
       entry: form.entry,
+
       exit: form.exit,
+
       category: form.category,
+
       roomId: room.id,
+
       guests: Number(form.guests),
+
       status: form.status,
+
       dailyRate: room.rate,
+
       contractType: form.contractType,
+
       contractedValue,
+
       packageId: selectedPackage?.id,
+
       packageSnapshot,
+
       notes: form.notes,
     }
+
     if (reservationModal === "new") {
       const nextId = Math.max(0, ...reservations.map((item) => item.id)) + 1
+
       setReservations((current) => [
         ...current,
+
         {
           id: nextId,
+
           scenarioKey: demoScenarioKey || undefined,
+
           code: `RES-${1000 + nextId}`,
+
           ...data,
         },
       ])
@@ -417,12 +631,15 @@ export default function Reservas() {
           item.id === selected.id
             ? {
                 ...item,
+
                 ...data,
+
                 audit: `Atualizada em ${new Date().toLocaleString("pt-BR")}.`,
               }
             : item,
         ),
       )
+
       if (selected.roomId !== room.id) {
         setRooms((current) =>
           current.map((item) =>
@@ -433,6 +650,7 @@ export default function Reservas() {
         )
       }
     }
+
     if (
       form.status === "Confirmada" &&
       form.entry <= today() &&
@@ -444,70 +662,111 @@ export default function Reservas() {
         ),
       )
     }
+
     setReservationModal(null)
   }
 
   const saveReceipt = () => {
     const reservationId = Number(receiptForm.reservationId)
+
     const value = Number(receiptForm.value.replace(",", "."))
+
     if (!reservationId || value <= 0) return
+
     const result = registerReceipt({
       reservationId,
+
       value,
+
       method: receiptForm.method,
+
       date: receiptForm.date,
+
       notes: receiptForm.notes,
+
       responsible: "Recepção",
     })
+
     if (!result.ok) {
       setValidation(result.error ?? "Não foi possível registrar o recebimento.")
+
       return
     }
+
     setReceiptModal(null)
   }
 
   const updateReceiptStatus = (
     id: number,
+
     status: Exclude<ReceiptStatus, "Confirmado">,
   ) => changeReceiptStatus(id, status, "Recepção")
 
   const saveQuickClient = () => {
     const result = createClient({
       name: quickClient.name,
+
       cpf: quickClient.cpf,
+
       documentType: "RG",
+
       documentNumber: "",
+
       birthDate: "",
+
       nationality: "Brasileira",
+
       gender: "",
+
       postalCode: "",
+
       street: "",
+
       addressNumber: "",
+
       complement: "",
+
       district: "",
+
       city: "",
+
       state: "",
+
       email: quickClient.email,
+
       phone: quickClient.phone,
+
       emergencyPhone: "",
+
       emergencyContact: "",
+
       preferredRoomType: "",
+
       preferredFloor: "",
+
       smoker: "Não",
+
       preferences: "",
     })
+
     if (!result.ok || !result.client) {
       setQuickClientError(
         result.error ?? "Não foi possível cadastrar o cliente.",
       )
+
       return
     }
+
     setForm((current) => ({
       ...current,
+
       clientId: String(result.client?.id),
+
       guest: result.client?.name ?? "",
     }))
+
     setClientSearch(result.client.name)
+
     setQuickClientOpen(false)
   }
 
@@ -524,9 +783,11 @@ export default function Reservas() {
                 const reservation = reservations.find(
                   (item) => item.status !== "Cancelada",
                 )
+
                 setReceiptForm(
                   mockReceipt(reservation ? String(reservation.id) : ""),
                 )
+
                 setReceiptModal("new")
               }}
             >
@@ -538,6 +799,7 @@ export default function Reservas() {
       <Tabs
         tabs={[
           { id: "reservas", label: "Reservas" },
+
           { id: "recebimentos", label: "Recebimentos" },
         ]}
         active={tab}
@@ -571,29 +833,44 @@ export default function Reservas() {
           <Table
             headers={[
               "Código",
+
               "Responsável",
+
               "Período",
+
               "Quarto",
+
               "Contratação",
+
               "Valor",
+
               "Status",
+
               "Ações",
             ]}
             rows={filteredReservations.map((reservation) => [
               reservation.code,
+
               reservation.guest,
+
               `${formatDisplayDate(reservation.entry)} a ${formatDisplayDate(reservation.exit)}`,
+
               rooms.find((room) => room.id === reservation.roomId)?.number ??
                 "—",
+
               reservation.packageSnapshot?.name ?? reservation.contractType,
+
               formatMoney(reservationBaseValue(reservation)),
+
               <Badge label={reservation.status} />,
+
               <div className="table-actions">
                 <Btn
                   small
                   variant="ghost"
                   onClick={() => {
                     setSelected(reservation)
+
                     setReservationModal("view")
                   }}
                 >
@@ -617,7 +894,9 @@ export default function Reservas() {
                     variant="ghost"
                     onClick={() => {
                       setSelected(reservation)
+
                       setCancelReason("")
+
                       setReservationModal("cancel")
                     }}
                   >
@@ -635,32 +914,48 @@ export default function Reservas() {
           <Table
             headers={[
               "Código",
+
               "Reserva",
+
               "Hóspede",
+
               "Data",
+
               "Valor",
+
               "Forma",
+
               "Status",
+
               "Ações",
             ]}
             rows={receipts.map((receipt) => {
               const reservation = reservations.find(
                 (item) => item.id === receipt.reservationId,
               )
+
               return [
                 receipt.code,
+
                 reservation?.code ?? "—",
+
                 reservation?.guest ?? "—",
+
                 receipt.date,
+
                 formatMoney(receipt.value),
+
                 receipt.method,
+
                 <Badge label={receipt.status} />,
+
                 <div className="table-actions">
                   <Btn
                     small
                     variant="ghost"
                     onClick={() => {
                       setSelectedReceiptId(receipt.id)
+
                       setReceiptModal("view")
                     }}
                   >
@@ -704,265 +999,366 @@ export default function Reservas() {
               : `Atualizar ${selected?.code}`
           }
           onClose={() => setReservationModal(null)}
+          footer={
+            <>{validation && <Alert type="error">{validation}</Alert>}
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setReservationModal(null)}>
+                  Cancelar
+                </Btn>
+                <Btn disabled={checkingAvailability} onClick={saveReservation}>
+                  {reservationModal === "new"
+                    ? "Salvar Reserva"
+                    : "Atualizar Reserva"}
+                </Btn>
+              </FormActions>
+            </>
+          }
+          intent="create"
+          size="xl"
+          description="Identifique o hóspede, defina o período e confira a acomodação e as condições comerciais."
         >
           <SectionTitle>Dados da reserva</SectionTitle>
           <FormGrid cols={2}>
             <FullCol>
-              <div style={{ position: "relative" }}>
-                <Input
-                  label="Cliente responsável *"
-                  placeholder="Digite nome, CPF, e-mail ou telefone"
-                  value={clientPickerOpen ? clientSearch : form.guest}
-                  onFocus={() => {
-                    setClientPickerOpen(true)
-                    setClientSearch("")
-                  }}
-                  onBlur={() =>
-                    window.setTimeout(() => setClientPickerOpen(false), 120)
-                  }
-                  onChange={(event) => {
-                    setClientSearch(event.target.value)
-                    setClientPickerOpen(true)
-                    setForm({ ...form, clientId: "", guest: "" })
-                  }}
-                />
-                {clientPickerOpen && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      zIndex: 20,
-                      top: "100%",
-                      left: 0,
-                      right: 0,
-                      marginTop: "4px",
-                      maxHeight: "240px",
-                      overflowY: "auto",
-                      background: "var(--bg-card)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "8px",
-                      boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
-                    }}
-                  >
-                    {filteredClients.length === 0 ? (
-                      <div
-                        style={{
-                          padding: "12px",
-                          fontFamily: "var(--font-sans)",
-                          fontSize: "0.84rem",
-                          color: "var(--text-muted)",
+              <FormSection title="Hóspede responsável">
+                <FormGrid cols={2}>
+                  <FullCol>
+                    <div style={{ position: "relative" }}>
+                      <Input
+                        label="Cliente responsável *"
+                        placeholder="Digite nome, CPF, e-mail ou telefone"
+                        value={clientPickerOpen ? clientSearch : form.guest}
+                        onFocus={() => {
+                          setClientPickerOpen(true)
+
+                          setClientSearch("")
                         }}
-                      >
-                        Nenhum cliente ativo encontrado.
-                      </div>
-                    ) : (
-                      filteredClients.slice(0, 8).map((client) => (
-                        <button
-                          key={client.id}
-                          type="button"
-                          onClick={() => {
-                            setForm({
-                              ...form,
-                              clientId: String(client.id),
-                              guest: client.name,
-                            })
-                            setClientSearch(client.name)
-                            setClientPickerOpen(false)
-                          }}
+                        onBlur={() =>
+                          window.setTimeout(
+                            () => setClientPickerOpen(false),
+                            120,
+                          )
+                        }
+                        onChange={(event) => {
+                          setClientSearch(event.target.value)
+
+                          setClientPickerOpen(true)
+
+                          setForm({ ...form, clientId: "", guest: "" })
+                        }}
+                      />
+                      {clientPickerOpen && (
+                        <div
                           style={{
-                            width: "100%",
-                            border: 0,
-                            background: "transparent",
-                            padding: "10px 12px",
-                            textAlign: "left",
-                            cursor: "pointer",
-                            display: "flex",
-                            justifyContent: "space-between",
-                            gap: "12px",
-                            color: "var(--text-strong)",
+                            position: "absolute",
+
+                            zIndex: 20,
+
+                            top: "100%",
+
+                            left: 0,
+
+                            right: 0,
+
+                            marginTop: "4px",
+
+                            maxHeight: "240px",
+
+                            overflowY: "auto",
+
+                            background: "var(--bg-card)",
+
+                            border: "1px solid var(--border)",
+
+                            borderRadius: "8px",
+
+                            boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
                           }}
                         >
-                          <span
-                            style={{
-                              fontFamily: "var(--font-sans)",
-                              fontWeight: 700,
-                            }}
-                          >
-                            {client.name}
-                          </span>
-                          <span
-                            style={{
-                              fontFamily: "var(--font-sans)",
-                              color: "var(--text-muted)",
-                            }}
-                          >
-                            {client.cpf}
-                          </span>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
+                          {filteredClients.length === 0 ? (
+                            <div
+                              style={{
+                                padding: "12px",
+
+                                fontFamily: "var(--font-sans)",
+
+                                fontSize: "0.84rem",
+
+                                color: "var(--text-muted)",
+                              }}
+                            >
+                              Nenhum cliente ativo encontrado.
+                            </div>
+                          ) : (
+                            filteredClients.slice(0, 8).map((client) => (
+                              <button
+                                key={client.id}
+                                type="button"
+                                onClick={() => {
+                                  setForm({
+                                    ...form,
+
+                                    clientId: String(client.id),
+
+                                    guest: client.name,
+                                  })
+
+                                  setClientSearch(client.name)
+
+                                  setClientPickerOpen(false)
+                                }}
+                                style={{
+                                  width: "100%",
+
+                                  border: 0,
+
+                                  background: "transparent",
+
+                                  padding: "10px 12px",
+
+                                  textAlign: "left",
+
+                                  cursor: "pointer",
+
+                                  display: "flex",
+
+                                  justifyContent: "space-between",
+
+                                  gap: "12px",
+
+                                  color: "var(--text-strong)",
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    fontFamily: "var(--font-sans)",
+
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  {client.name}
+                                </span>
+                                <span
+                                  style={{
+                                    fontFamily: "var(--font-sans)",
+
+                                    color: "var(--text-muted)",
+                                  }}
+                                >
+                                  {client.cpf}
+                                </span>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </FullCol>
+                  <FullCol>
+                    <Btn
+                      variant="secondary"
+                      onClick={() => {
+                        setQuickClient(mockQuickClient)
+
+                        setQuickClientError("")
+
+                        setQuickClientOpen(true)
+                      }}
+                    >
+                      + Cadastrar cliente sem perder a reserva
+                    </Btn>
+                  </FullCol>
+                </FormGrid>
+              </FormSection>
             </FullCol>
             <FullCol>
-              <Btn
-                variant="secondary"
-                onClick={() => {
-                  setQuickClient(mockQuickClient)
-                  setQuickClientError("")
-                  setQuickClientOpen(true)
-                }}
-              >
-                + Cadastrar cliente sem perder a reserva
-              </Btn>
-            </FullCol>
-            <Input
-              label="Entrada *"
-              type="date"
-              value={form.entry}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  entry: event.target.value,
-                  roomId: "",
-                  packageId: "",
-                })
-              }
-            />
-            <Input
-              label="Saída *"
-              type="date"
-              min={form.entry}
-              value={form.exit}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  exit: event.target.value,
-                  roomId: "",
-                  packageId: "",
-                })
-              }
-            />
-            <Input
-              label="Quantidade de hóspedes *"
-              type="number"
-              min="1"
-              value={form.guests}
-              onChange={(event) =>
-                setForm({ ...form, guests: event.target.value, packageId: "" })
-              }
-            />
-            <Select
-              label="Categoria *"
-              value={form.category}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  category: event.target.value,
-                  roomId: "",
-                  packageId: "",
-                })
-              }
-            >
-              {categories.map((category) => (
-                <option key={category.id}>{category.name}</option>
-              ))}
-            </Select>
-            <Select
-              label="Quarto *"
-              disabled={checkingAvailability || !form.entry || !form.exit}
-              value={form.roomId}
-              onChange={(event) =>
-                setForm({ ...form, roomId: event.target.value })
-              }
-            >
-              <option value="">Selecione</option>
-              {availableRooms.map((room) => (
-                <option key={room.id} value={room.id}>
-                  {room.number} — {room.category}
-                </option>
-              ))}
-            </Select>
-            <Select
-              label="Modalidade *"
-              value={form.contractType}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  contractType: event.target.value as ContractType,
-                  packageId: "",
-                })
-              }
-            >
-              <option>Tarifa convencional</option>
-              <option>Pacote comercial</option>
-            </Select>
-            <Select
-              label="Status *"
-              value={form.status}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  status: event.target.value as ReservationStatus,
-                })
-              }
-            >
-              {validStatuses
-                .filter(
-                  (status) =>
-                    !["Cancelada", "Hospedado", "Concluída"].includes(status),
-                )
-                .map((status) => (
-                  <option key={status}>{status}</option>
-                ))}
-            </Select>
-            {form.contractType === "Pacote comercial" && (
-              <FullCol>
-                <Select
-                  label="Pacote comercial *"
-                  value={form.packageId}
-                  onChange={(event) =>
-                    setForm({ ...form, packageId: event.target.value })
-                  }
-                >
-                  <option value="">Selecione um pacote elegível</option>
-                  {eligiblePackages.map(
-                    ({ commercialPackage, eligibility }) => (
-                      <option
-                        key={commercialPackage.id}
-                        value={commercialPackage.id}
-                        disabled={!eligibility.eligible}
-                      >
-                        {commercialPackage.name} —{" "}
-                        {eligibility.eligible
-                          ? formatMoney(
-                              calculatePackageValue(commercialPackage, nights),
-                            )
-                          : eligibility.reasons.join(", ")}
+              <FormSection title="Período e acomodação">
+                <FormGrid cols={2}>
+                  <Input
+                    label="Entrada *"
+                    type="date"
+                    value={form.entry}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+
+                        entry: event.target.value,
+
+                        roomId: "",
+
+                        packageId: "",
+                      })
+                    }
+                  />
+                  <Input
+                    label="Saída *"
+                    type="date"
+                    min={form.entry}
+                    value={form.exit}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+
+                        exit: event.target.value,
+
+                        roomId: "",
+
+                        packageId: "",
+                      })
+                    }
+                  />
+                  <Input
+                    label="Quantidade de hóspedes *"
+                    type="number"
+                    min="1"
+                    value={form.guests}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        guests: event.target.value,
+                        packageId: "",
+                      })
+                    }
+                  />
+                  <Select
+                    label="Categoria *"
+                    value={form.category}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+
+                        category: event.target.value,
+
+                        roomId: "",
+
+                        packageId: "",
+                      })
+                    }
+                  >
+                    {categories.map((category) => (
+                      <option key={category.id}>{category.name}</option>
+                    ))}
+                  </Select>
+                  <Select
+                    label="Quarto *"
+                    disabled={checkingAvailability || !form.entry || !form.exit}
+                    value={form.roomId}
+                    onChange={(event) =>
+                      setForm({ ...form, roomId: event.target.value })
+                    }
+                  >
+                    <option value="">Selecione</option>
+                    {availableRooms.map((room) => (
+                      <option key={room.id} value={room.id}>
+                        {room.number} — {room.category}
                       </option>
-                    ),
-                  )}
-                </Select>
-              </FullCol>
-            )}
-            <FullCol>
-              <Input
-                label="Acompanhantes"
-                helpText="Separe os nomes por vírgula. O responsável não deve ser repetido."
-                value={form.companions}
-                onChange={(event) =>
-                  setForm({ ...form, companions: event.target.value })
-                }
-              />
+                    ))}
+                  </Select>
+                </FormGrid>
+              </FormSection>
             </FullCol>
             <FullCol>
-              <Textarea
-                label="Observações"
-                value={form.notes}
-                onChange={(event) =>
-                  setForm({ ...form, notes: event.target.value })
-                }
-              />
+              <FormSection title="Condições comerciais">
+                <FormGrid cols={2}>
+                  <Select
+                    label="Modalidade *"
+                    value={form.contractType}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+
+                        contractType: event.target.value as ContractType,
+
+                        packageId: "",
+                      })
+                    }
+                  >
+                    <option>Tarifa convencional</option>
+                    <option>Pacote comercial</option>
+                  </Select>
+                  <Select
+                    label="Status *"
+                    value={form.status}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+
+                        status: event.target.value as ReservationStatus,
+                      })
+                    }
+                  >
+                    {validStatuses
+
+                      .filter(
+                        (status) =>
+                          !["Cancelada", "Hospedado", "Concluída"].includes(
+                            status,
+                          ),
+                      )
+
+                      .map((status) => (
+                        <option key={status}>{status}</option>
+                      ))}
+                  </Select>
+                  {form.contractType === "Pacote comercial" && (
+                    <FullCol>
+                      <Select
+                        label="Pacote comercial *"
+                        value={form.packageId}
+                        onChange={(event) =>
+                          setForm({ ...form, packageId: event.target.value })
+                        }
+                      >
+                        <option value="">Selecione um pacote elegível</option>
+                        {eligiblePackages.map(
+                          ({ commercialPackage, eligibility }) => (
+                            <option
+                              key={commercialPackage.id}
+                              value={commercialPackage.id}
+                              disabled={!eligibility.eligible}
+                            >
+                              {commercialPackage.name} —{" "}
+                              {eligibility.eligible
+                                ? formatMoney(
+                                    calculatePackageValue(
+                                      commercialPackage,
+                                      nights,
+                                    ),
+                                  )
+                                : eligibility.reasons.join(", ")}
+                            </option>
+                          ),
+                        )}
+                      </Select>
+                    </FullCol>
+                  )}
+                </FormGrid>
+              </FormSection>
+            </FullCol>
+            <FullCol>
+              <FormSection title="Informações adicionais">
+                <FormGrid cols={2}>
+                  <FullCol>
+                    <Input
+                      label="Acompanhantes"
+                      helpText="Separe os nomes por vírgula. O responsável não deve ser repetido."
+                      value={form.companions}
+                      onChange={(event) =>
+                        setForm({ ...form, companions: event.target.value })
+                      }
+                    />
+                  </FullCol>
+                  <FullCol>
+                    <Textarea
+                      label="Observações"
+                      value={form.notes}
+                      onChange={(event) =>
+                        setForm({ ...form, notes: event.target.value })
+                      }
+                    />
+                  </FullCol>
+                </FormGrid>
+              </FormSection>
             </FullCol>
           </FormGrid>
           {checkingAvailability && (
@@ -990,7 +1386,7 @@ export default function Reservas() {
               condições serão congeladas na reserva.
             </Alert>
           )}
-          {validation && <Alert type="error">{validation}</Alert>}
+
           <div className="reservation-summary">
             <SectionTitle>Resumo comercial</SectionTitle>
             <div className="summary-grid">
@@ -1022,16 +1418,6 @@ export default function Reservas() {
               />
             </div>
           </div>
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setReservationModal(null)}>
-              Cancelar
-            </Btn>
-            <Btn disabled={checkingAvailability} onClick={saveReservation}>
-              {reservationModal === "new"
-                ? "Salvar Reserva"
-                : "Atualizar Reserva"}
-            </Btn>
-          </FormActions>
         </Modal>
       )}
 
@@ -1084,6 +1470,7 @@ export default function Reservas() {
               disabled={!cancelReason.trim()}
               onClick={() => {
                 cancelReservation(selected.id, cancelReason)
+
                 setReservationModal(null)
               }}
             >
@@ -1096,6 +1483,19 @@ export default function Reservas() {
         <Modal
           title="Cadastrar Recebimento"
           onClose={() => setReceiptModal(null)}
+          footer={
+            <>
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setReceiptModal(null)}>
+                  Cancelar
+                </Btn>
+                <Btn onClick={saveReceipt}>Confirmar Recebimento</Btn>
+              </FormActions>
+            </>
+          }
+          intent="create"
+          size="md"
+          description="Confira a reserva e registre a data, o valor e a forma do recebimento."
         >
           <FormGrid cols={2}>
             <FullCol>
@@ -1105,13 +1505,16 @@ export default function Reservas() {
                 onChange={(event) =>
                   setReceiptForm({
                     ...receiptForm,
+
                     reservationId: event.target.value,
                   })
                 }
               >
                 <option value="">Selecione</option>
                 {reservations
+
                   .filter((item) => item.status !== "Cancelada")
+
                   .map((reservation) => (
                     <option key={reservation.id} value={reservation.id}>
                       {reservation.code} — {reservation.guest}
@@ -1143,6 +1546,7 @@ export default function Reservas() {
               onChange={(event) =>
                 setReceiptForm({ ...receiptForm, value: event.target.value })
               }
+              currency
             />
             <Select
               label="Forma *"
@@ -1167,12 +1571,6 @@ export default function Reservas() {
               />
             </FullCol>
           </FormGrid>
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setReceiptModal(null)}>
-              Cancelar
-            </Btn>
-            <Btn onClick={saveReceipt}>Confirmar Recebimento</Btn>
-          </FormActions>
         </Modal>
       )}
       {receiptModal === "view" && selectedReceipt && (
@@ -1212,6 +1610,19 @@ export default function Reservas() {
         <Modal
           title="Cadastro rápido de cliente"
           onClose={() => setQuickClientOpen(false)}
+          footer={
+            <>
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setQuickClientOpen(false)}>
+                  Cancelar
+                </Btn>
+                <Btn onClick={saveQuickClient}>Cadastrar e selecionar</Btn>
+              </FormActions>
+            </>
+          }
+          intent="create"
+          size="md"
+          description="Cadastre o responsável e retorne ao preenchimento da reserva."
         >
           <FormGrid cols={2}>
             <FullCol>
@@ -1250,12 +1661,6 @@ export default function Reservas() {
             </FullCol>
           </FormGrid>
           {quickClientError && <Alert type="error">{quickClientError}</Alert>}
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setQuickClientOpen(false)}>
-              Cancelar
-            </Btn>
-            <Btn onClick={saveQuickClient}>Cadastrar e selecionar</Btn>
-          </FormActions>
         </Modal>
       )}
     </div>
@@ -1264,11 +1669,15 @@ export default function Reservas() {
 
 function Summary({
   label,
+
   value,
+
   strong,
 }: {
   label: string
+
   value: string
+
   strong?: boolean
 }) {
   return (
@@ -1281,11 +1690,15 @@ function Summary({
 
 function ReservationDetails({
   reservation,
+
   roomNumber,
+
   received,
 }: {
   reservation: Reservation
+
   roomNumber: string
+
   received: number
 }) {
   return (

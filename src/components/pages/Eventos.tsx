@@ -63,39 +63,57 @@ type EventStep = 1 | 2 | 3 | 4 | 5 | 6
 
 const eventStatuses: EventStatus[] = [
   "Planejado",
+
   "Confirmado",
+
   "Em andamento",
+
   "Concluido",
+
   "Cancelado",
 ]
 
 const paymentMethods = PAYMENT_METHODS.map((method) => ({
   value: method.id,
+
   label: method.label,
 }))
 
 const emptyTimeline = (): EventTimelineItem => ({
   id: Date.now(),
+
   time: "08:00",
+
   activity: "",
+
   responsible: "",
+
   notes: "",
 })
 
 const emptyRoom = (): ConferenceRoomInput => ({
   name: "",
+
   location: "",
+
   capacity: 0,
+
   area: 0,
+
   hourlyRate: 0,
+
   resources: "",
 })
 
 const emptyService = (): EventServiceInput => ({
   name: "",
+
   category: "Coffee break",
+
   description: "",
+
   unit: "por evento",
+
   price: 0,
 })
 
@@ -109,6 +127,7 @@ function localDateTime(days: number, time: string) {
 
 function emptyEvent(
   room?: ConferenceRoom,
+
   services: EventService[] = [],
 ): EventInput {
   const start = localDateTime(10, "08:00")
@@ -117,58 +136,102 @@ function emptyEvent(
 
   return {
     name: "",
+
     type: "Corporativo",
+
     contractorName: "",
+
     contact: "",
+
     phone: "",
+
     email: "",
+
     contractorClientId: undefined,
+
     guests: 1,
+
     notes: "",
+
     roomId: room?.id ?? 0,
+
     roomHourlyRateContracted: room?.hourlyRate ?? 0,
+
     start,
+
     end,
+
     setupMinutes: 30,
+
     teardownMinutes: 30,
+
     services: services.slice(0, 0).map(serviceToLine),
+
     discountValue: 0,
+
     billingType: "Separada",
+
     linkedReservationId: undefined,
+
     depositRequired: true,
+
     depositPercent: 30,
+
     depositDueDate: start.slice(0, 10),
+
     balanceDueDate: start.slice(0, 10),
+
     cancellationPolicy:
       "Sinal não reembolsável em caso de cancelamento a menos de 7 dias do evento.",
+
     status: "Planejado",
+
     timeline: [
       {
         id: 1,
+
         time: "08:00",
+
         activity: "Preparacao da sala",
+
         responsible: "Equipe de eventos",
+
         notes: "",
       },
+
       {
         id: 2,
+
         time: "08:30",
+
         activity: "Credenciamento",
+
         responsible: "Recepcao",
+
         notes: "",
       },
+
       {
         id: 3,
+
         time: "09:00",
+
         activity: "Abertura",
+
         responsible: "Contratante",
+
         notes: "",
       },
+
       {
         id: 4,
+
         time: "12:00",
+
         activity: "Encerramento",
+
         responsible: "Contratante",
+
         notes: "",
       },
     ],
@@ -177,16 +240,24 @@ function emptyEvent(
 
 function serviceToLine(
   service: EventService,
+
   quantity = 1,
 ): ContractedEventService {
   return {
     id: Date.now() + Math.round(Math.random() * 1000),
+
     serviceId: service.id,
+
     serviceName: service.name,
+
     category: service.category,
+
     unit: service.unit,
+
     quantity,
+
     contractedUnitPrice: service.price,
+
     subtotal: quantity * service.price,
   }
 }
@@ -194,31 +265,57 @@ function serviceToLine(
 function eventToForm(event: EventRecord): EventInput {
   return {
     scenarioKey: event.scenarioKey,
+
     name: event.name,
+
     type: event.type,
+
     contractorClientId: event.contractorClientId,
+
     contractorName: event.contractorName,
+
     contact: event.contact,
+
     phone: event.phone,
+
     email: event.email,
+
     guests: event.guests,
+
     notes: event.notes,
+
     roomId: event.roomId,
+
     roomHourlyRateContracted: event.roomHourlyRateContracted,
+
     start: event.start,
+
     end: event.end,
+
     setupMinutes: event.setupMinutes ?? 0,
+
     teardownMinutes: event.teardownMinutes ?? 0,
+
     services: event.services,
+
     discountValue: event.discountValue,
+
     billingType: event.billingType,
+
     linkedReservationId: event.linkedReservationId,
+
     depositRequired: event.depositRequired ?? false,
+
     depositPercent: event.depositPercent ?? 0,
+
     depositDueDate: event.depositDueDate ?? event.start.slice(0, 10),
+
     balanceDueDate: event.balanceDueDate ?? event.end.slice(0, 10),
+
     cancellationPolicy: event.cancellationPolicy ?? "",
+
     status: event.status,
+
     timeline: event.timeline,
   }
 }
@@ -247,13 +344,17 @@ function formTotals(form: EventInput) {
 
   const total = Math.max(
     0,
+
     roomValue + servicesValue - Number(form.discountValue || 0),
   )
 
   return {
     roomValue,
+
     servicesValue,
+
     total,
+
     duration: durationHours(form.start, form.end),
   }
 }
@@ -265,22 +366,39 @@ export default function Eventos() {
 
   const {
     clients,
+
     reservations,
+
     stays,
+
     conferenceRooms,
+
     eventServices,
+
     events,
+
     eventReceipts,
+
     createConferenceRoom,
+
     updateConferenceRoom,
+
     inactivateConferenceRoom,
+
     createEventService,
+
     updateEventService,
+
     inactivateEventService,
+
     createEvent,
+
     updateEvent,
+
     cancelEvent,
+
     registerEventReceipt,
+
     getEventFinancials,
   } = useHotelOperations()
 
@@ -303,10 +421,15 @@ export default function Eventos() {
 
   const [filters, setFilters] = useState({
     search: "",
+
     status: "",
+
     type: "",
+
     roomId: "",
+
     from: "",
+
     to: "",
   })
 
@@ -320,9 +443,13 @@ export default function Eventos() {
 
   const [cancelForm, setCancelForm] = useState({
     reason: "",
+
     treatment: "",
+
     refundValue: "",
+
     refundMethod: "pix",
+
     choice: "full",
   })
 
@@ -332,9 +459,13 @@ export default function Eventos() {
 
   const [receiptForm, setReceiptForm] = useState({
     value: "",
+
     method: "pix",
+
     responsible: activeAccount?.name ?? "Eventos",
+
     notes: "",
+
     date: today(),
   })
 
@@ -360,11 +491,17 @@ export default function Eventos() {
     eventForm.roomId && eventForm.start && eventForm.end
       ? findRoomScheduleConflict(
           events,
+
           eventForm.roomId,
+
           eventForm.start,
+
           eventForm.end,
+
           modal === "event-edit" ? selectedId : undefined,
+
           eventForm.setupMinutes,
+
           eventForm.teardownMinutes,
         )
       : null
@@ -375,6 +512,7 @@ export default function Eventos() {
 
     .map((stay) => ({
       stay,
+
       reservation: reservations.find(
         (reservation) => reservation.id === stay.reservationId,
       ),
@@ -403,14 +541,23 @@ export default function Eventos() {
 
       setEventForm({
         ...emptyEvent(room),
+
         name: "Treinamento Corporativo",
+
         contractorName: "Empresa Exemplo Ltda.",
+
         contact: "Marina Alves",
+
         phone: "(69) 99999-3300",
+
         email: "marina@empresaexemplo.com.br",
+
         guests: 30,
+
         roomId: room?.id ?? 0,
+
         roomHourlyRateContracted: room?.hourlyRate ?? 300,
+
         services: [coffee, projector]
 
           .filter((item): item is EventService => Boolean(item))
@@ -418,6 +565,7 @@ export default function Eventos() {
           .map((service) =>
             serviceToLine(
               service,
+
               service.name.toLowerCase().includes("coffee") ? 30 : 1,
             ),
           ),
@@ -425,6 +573,7 @@ export default function Eventos() {
 
       demo.resolveCommand(command.id, {
         status: "running",
+
         message:
           "Formulario de evento preenchido para a jornada administrativa.",
       })
@@ -462,11 +611,13 @@ export default function Eventos() {
         event.status !== "Cancelado" &&
         event.start >= new Date().toISOString().slice(0, 16),
     ).length,
+
     contracted: filteredEvents
 
       .filter((event) => event.status !== "Cancelado")
 
       .reduce((total, event) => total + event.totalContracted, 0),
+
     received: events
 
       .filter(
@@ -475,8 +626,10 @@ export default function Eventos() {
 
       .reduce(
         (total, event) => total + (getEventFinancials(event.id)?.received ?? 0),
+
         0,
       ),
+
     pending: events
 
       .filter(
@@ -486,6 +639,7 @@ export default function Eventos() {
 
       .reduce(
         (total, event) => total + (getEventFinancials(event.id)?.balance ?? 0),
+
         0,
       ),
   }
@@ -519,7 +673,9 @@ export default function Eventos() {
 
     const timelineValidation = validateTimelineTimes(
       eventForm.timeline.map((item) => item.time),
+
       eventForm.start,
+
       eventForm.end,
     )
 
@@ -542,9 +698,13 @@ export default function Eventos() {
 
     registerLog(
       modal === "event-edit" ? "Evento atualizado" : "Evento cadastrado",
+
       "Eventos",
+
       eventForm.name,
+
       "Sucesso",
+
       actor,
     )
 
@@ -564,9 +724,13 @@ export default function Eventos() {
     else {
       registerLog(
         modal === "room-edit" ? "Sala atualizada" : "Sala cadastrada",
+
         "Eventos",
+
         roomForm.name,
+
         "Sucesso",
+
         actor,
       )
 
@@ -585,9 +749,13 @@ export default function Eventos() {
     else {
       registerLog(
         modal === "service-edit" ? "Servico atualizado" : "Servico cadastrado",
+
         "Eventos",
+
         serviceForm.name,
+
         "Sucesso",
+
         actor,
       )
 
@@ -615,9 +783,13 @@ export default function Eventos() {
     else {
       registerLog(
         "Evento cancelado",
+
         "Eventos",
+
         selectedEvent.code,
+
         "Sucesso",
+
         actor,
       )
 
@@ -630,11 +802,17 @@ export default function Eventos() {
 
     const result = registerEventReceipt({
       eventId: selectedEvent.id,
+
       value: Number(receiptForm.value),
+
       method: receiptForm.method,
+
       responsible: receiptForm.responsible,
+
       notes: receiptForm.notes,
+
       date: receiptForm.date,
+
       operationKey: `event-receipt-${Date.now()}`,
     })
 
@@ -701,8 +879,11 @@ export default function Eventos() {
       <Tabs
         tabs={[
           { id: "agenda", label: "Agenda" },
+
           { id: "eventos", label: "Eventos" },
+
           { id: "salas", label: "Salas" },
+
           { id: "servicos", label: "Serviços" },
         ]}
         active={tab}
@@ -729,9 +910,13 @@ export default function Eventos() {
 
             setEventForm({
               ...emptyEvent(room),
+
               roomId,
+
               start,
+
               end,
+
               roomHourlyRateContracted: room?.hourlyRate ?? 0,
             })
 
@@ -820,11 +1005,28 @@ export default function Eventos() {
           </div>
           <Table
             caption="Eventos cadastrados"
-            headers={["Evento","Contratante","Período e espaço","Cobrança e sinal","Contratado","Recebido","Saldo","Situação","Ações"]}
+            headers={[
+              "Evento",
+              "Contratante",
+              "Período e espaço",
+              "Cobrança e sinal",
+              "Contratado",
+              "Recebido",
+              "Saldo",
+              "Situação",
+              "Ações",
+            ]}
             rows={filteredEvents.map((event) => [
-<div className="management-cell"><strong>{event.name}</strong><small>{event.code} · {event.type}</small></div>,
-event.contractorName,
-<div className="management-cell">
+              <div className="management-cell">
+                <strong>{event.name}</strong>
+                <small>
+                  {event.code} · {event.type}
+                </small>
+              </div>,
+
+              event.contractorName,
+
+              <div className="management-cell">
                 <strong>
                   {formatDisplayDate(event.start).replace("T", " · ")}
                 </strong>
@@ -833,23 +1035,36 @@ event.contractorName,
                   {event.roomName}
                 </small>
               </div>,
-<div className="management-cell"><span>{event.billingType === "Separada"
-                ? "Evento"
-                : "Fatura da hospedagem"}</span><small>{event.billingType === "Separada" && event.depositRequired
-                ? `${event.depositPercent ?? 0}% · ${formatMoney((event.totalContracted * (event.depositPercent ?? 0)) / 100)}`
-                : "Sem sinal"}</small></div>,
-formatMoney(event.totalContracted),
-event.billingType === "Vinculada a hospedagem"
+
+              <div className="management-cell">
+                <span>
+                  {event.billingType === "Separada"
+                    ? "Evento"
+                    : "Fatura da hospedagem"}
+                </span>
+                <small>
+                  {event.billingType === "Separada" && event.depositRequired
+                    ? `${event.depositPercent ?? 0}% · ${formatMoney((event.totalContracted * (event.depositPercent ?? 0)) / 100)}`
+                    : "Sem sinal"}
+                </small>
+              </div>,
+
+              formatMoney(event.totalContracted),
+
+              event.billingType === "Vinculada a hospedagem"
                 ? "Na fatura"
                 : formatMoney(getEventFinancials(event.id)?.received ?? 0),
-event.billingType === "Vinculada a hospedagem"
+
+              event.billingType === "Vinculada a hospedagem"
                 ? "Consultar hospedagem"
                 : formatMoney(
                     getEventFinancials(event.id)?.balance ??
                       event.totalContracted,
                   ),
-<Badge label={event.status} />,
-<div className="table-actions">
+
+              <Badge label={event.status} />,
+
+              <div className="table-actions">
                 <Btn
                   small
                   variant="ghost"
@@ -880,6 +1095,7 @@ event.billingType === "Vinculada a hospedagem"
 
                         setReceiptForm({
                           ...receiptForm,
+
                           value: String(
                             getEventFinancials(event.id)?.balance ?? 0,
                           ),
@@ -901,9 +1117,13 @@ event.billingType === "Vinculada a hospedagem"
 
                       setCancelForm({
                         reason: "",
+
                         treatment: "",
+
                         refundValue: "",
+
                         refundMethod: "pix",
+
                         choice: "full",
                       })
 
@@ -913,8 +1133,8 @@ event.billingType === "Vinculada a hospedagem"
                     Cancelar
                   </Btn>
                 )}
-              </div>
-])}
+              </div>,
+            ])}
           />
         </Card>
       )}
@@ -941,22 +1161,36 @@ event.billingType === "Vinculada a hospedagem"
             caption="Salas e espaços para eventos"
             headers={[
               "Nome",
+
               "Localizacao",
+
               "Capacidade",
+
               "Area",
+
               "Recursos",
+
               "Preco por hora",
+
               "Situacao",
+
               "Acoes",
             ]}
             rows={conferenceRooms.map((room) => [
               room.name,
+
               room.location,
+
               `${room.capacity} pessoas`,
+
               `${room.area} m2`,
+
               room.resources || "Nao informado",
+
               formatMoney(room.hourlyRate),
+
               <Badge label={room.status} />,
+
               <div className="table-actions">
                 <Btn
                   small
@@ -979,10 +1213,15 @@ event.billingType === "Vinculada a hospedagem"
 
                         setRoomForm({
                           name: room.name,
+
                           location: room.location,
+
                           capacity: room.capacity,
+
                           area: room.area,
+
                           hourlyRate: room.hourlyRate,
+
                           resources: room.resources,
                         })
 
@@ -1036,20 +1275,32 @@ event.billingType === "Vinculada a hospedagem"
             caption="Catálogo de serviços de eventos"
             headers={[
               "Nome",
+
               "Categoria",
+
               "Descricao",
+
               "Unidade",
+
               "Preco",
+
               "Situacao",
+
               "Acoes",
             ]}
             rows={eventServices.map((service) => [
               service.name,
+
               service.category,
+
               service.description,
+
               service.unit,
+
               formatMoney(service.price),
+
               <Badge label={service.status} />,
+
               <div className="table-actions">
                 <Btn
                   small
@@ -1072,9 +1323,13 @@ event.billingType === "Vinculada a hospedagem"
 
                         setServiceForm({
                           name: service.name,
+
                           category: service.category,
+
                           description: service.description,
+
                           unit: service.unit,
+
                           price: service.price,
                         })
 
@@ -1139,12 +1394,15 @@ event.billingType === "Vinculada a hospedagem"
               ? () => {
                   const next: Record<string, EventStatus> = {
                     Planejado: "Confirmado",
+
                     Confirmado: "Em andamento",
+
                     "Em andamento": "Concluido",
                   }
 
                   const result = updateEvent(selectedEvent.id, {
                     ...eventToForm(selectedEvent),
+
                     status: next[selectedEvent.status],
                   })
 
@@ -1164,6 +1422,7 @@ event.billingType === "Vinculada a hospedagem"
               ? () => {
                   setReceiptForm({
                     ...receiptForm,
+
                     value: String(
                       getEventFinancials(selectedEvent.id)?.balance ?? 0,
                     ),
@@ -1175,6 +1434,7 @@ event.billingType === "Vinculada a hospedagem"
           }
           reservationLabel={reservationLabel(
             reservations,
+
             selectedEvent.linkedReservationId,
           )}
         />
@@ -1253,9 +1513,11 @@ event.billingType === "Vinculada a hospedagem"
                   onChange={(event) =>
                     setCancelForm({
                       ...cancelForm,
+
                       refundValue: event.target.value,
                     })
                   }
+                  currency
                 />
               )}
               {cancelForm.choice !== "retain" && (
@@ -1265,6 +1527,7 @@ event.billingType === "Vinculada a hospedagem"
                   onChange={(event) =>
                     setCancelForm({
                       ...cancelForm,
+
                       refundMethod: event.target.value,
                     })
                   }
@@ -1305,6 +1568,7 @@ event.billingType === "Vinculada a hospedagem"
                 onChange={(event) =>
                   setCancelForm({
                     ...cancelForm,
+
                     treatment: event.target.value,
                   })
                 }
@@ -1334,6 +1598,9 @@ event.billingType === "Vinculada a hospedagem"
               </FormActions>
             </>
           }
+          intent="create"
+          size="md"
+          description="Confira o evento e registre a data, o valor e a forma de pagamento."
         >
           <Alert type="info">
             Ao confirmar, este valor será registrado como entrada no Financeiro
@@ -1357,6 +1624,7 @@ event.billingType === "Vinculada a hospedagem"
               onChange={(event) =>
                 setReceiptForm({ ...receiptForm, value: event.target.value })
               }
+              currency
             />
             <Select
               label="Forma"
@@ -1417,6 +1685,9 @@ event.billingType === "Vinculada a hospedagem"
               </FormActions>
             </>
           }
+          intent="create"
+          size="md"
+          description="Informe a capacidade, a estrutura e o valor por hora do espaço."
         >
           <RoomForm form={roomForm} setForm={setRoomForm} />
         </Modal>
@@ -1480,6 +1751,9 @@ event.billingType === "Vinculada a hospedagem"
               </FormActions>
             </>
           }
+          intent="create"
+          size="md"
+          description="Defina o serviço, a unidade de cobrança e o preço de contratação."
         >
           <ServiceForm form={serviceForm} setForm={setServiceForm} />
         </Modal>
@@ -1519,17 +1793,29 @@ event.billingType === "Vinculada a hospedagem"
 
 function EventWizard({
   form,
+
   setForm,
+
   step,
+
   setStep,
+
   rooms,
+
   services,
+
   clients,
+
   eligibleStays,
+
   conflict,
+
   totals,
+
   onClose,
+
   onSave,
+
   message,
 }: {
   form: EventInput
@@ -1589,7 +1875,9 @@ function EventWizard({
 
     setForm({
       ...form,
+
       roomId,
+
       roomHourlyRateContracted: room?.hourlyRate ?? 0,
     })
   }
@@ -1601,8 +1889,10 @@ function EventWizard({
 
     setForm({
       ...form,
+
       services: [
         ...form.services,
+
         serviceToLine(service, service.unit === "por pessoa" ? form.guests : 1),
       ],
     })
@@ -1640,14 +1930,22 @@ function EventWizard({
           </FormActions>
         </>
       }
+      intent="create"
+      size="xl"
+      description="Preencha as seis etapas existentes e revise a contratação antes de salvar."
     >
       <nav className="management-wizard" aria-label="Etapas do cadastro">
         {([
           "Evento e cliente",
+
           "Espaço e período",
+
           "Serviços",
+
           "Cronograma",
+
           "Cobrança",
+
           "Revisão",
         ] as const).map((label, index) => (
           <button
@@ -1691,10 +1989,15 @@ function EventWizard({
 
               setForm({
                 ...form,
+
                 contractorClientId: client?.id,
+
                 contractorName: client?.name ?? "",
+
                 contact: client?.name ?? form.contact,
+
                 email: client?.email ?? "",
+
                 phone: client?.phone ?? "",
               })
             }}
@@ -1790,9 +2093,11 @@ function EventWizard({
             onChange={(event) =>
               setForm({
                 ...form,
+
                 roomHourlyRateContracted: Number(event.target.value),
               })
             }
+            currency
           />
           <Input
             label="Início"
@@ -1886,15 +2191,22 @@ function EventWizard({
             caption="Serviços da contratação"
             headers={[
               "Servico",
+
               "Unidade",
+
               "Quantidade",
+
               "Preco contratado",
+
               "Subtotal",
+
               "Acoes",
             ]}
             rows={form.services.map((line, index) => [
               line.serviceName,
+
               line.unit,
+
               <Input
                 type="number"
                 min="0.01"
@@ -1905,7 +2217,9 @@ function EventWizard({
                     quantity: Number(event.target.value),
                   })
                 }
+                aria-label="Quantidade de serviço"
               />,
+
               <Input
                 type="number"
                 min="0"
@@ -1916,8 +2230,12 @@ function EventWizard({
                     contractedUnitPrice: Number(event.target.value),
                   })
                 }
+                aria-label="Preço unitário contratado"
+                currency
               />,
+
               formatMoney(lineSubtotal(line)),
+
               <Btn
                 small
                 variant="danger"
@@ -1925,6 +2243,7 @@ function EventWizard({
                 onClick={() =>
                   setForm({
                     ...form,
+
                     services: form.services.filter(
                       (_, itemIndex) => itemIndex !== index,
                     ),
@@ -1944,9 +2263,13 @@ function EventWizard({
             caption="Atividades do cronograma"
             headers={[
               "Horario",
+
               "Atividade",
+
               "Responsavel",
+
               "Observacoes",
+
               "Acoes",
             ]}
             rows={form.timeline.map((item, index) => [
@@ -1958,7 +2281,9 @@ function EventWizard({
                     time: event.target.value,
                   })
                 }
+                aria-label="Horário da atividade"
               />,
+
               <Input
                 value={item.activity}
                 onChange={(event) =>
@@ -1966,7 +2291,9 @@ function EventWizard({
                     activity: event.target.value,
                   })
                 }
+                aria-label="Descrição da atividade"
               />,
+
               <Input
                 value={item.responsible}
                 onChange={(event) =>
@@ -1974,7 +2301,9 @@ function EventWizard({
                     responsible: event.target.value,
                   })
                 }
+                aria-label="Responsável pela atividade"
               />,
+
               <Input
                 value={item.notes}
                 onChange={(event) =>
@@ -1982,7 +2311,9 @@ function EventWizard({
                     notes: event.target.value,
                   })
                 }
+                aria-label="Observações da atividade"
               />,
+
               <Btn
                 small
                 variant="danger"
@@ -1990,6 +2321,7 @@ function EventWizard({
                 onClick={() =>
                   setForm({
                     ...form,
+
                     timeline: form.timeline.filter(
                       (_, itemIndex) => itemIndex !== index,
                     ),
@@ -2005,6 +2337,7 @@ function EventWizard({
             onClick={() =>
               setForm({
                 ...form,
+
                 timeline: [...form.timeline, emptyTimeline()],
               })
             }
@@ -2032,6 +2365,7 @@ function EventWizard({
             onChange={(event) =>
               setForm({ ...form, discountValue: Number(event.target.value) })
             }
+            currency
           />
           <Info label="Total contratado" value={formatMoney(totals.total)} />
           <Select
@@ -2040,7 +2374,9 @@ function EventWizard({
             onChange={(event) =>
               setForm({
                 ...form,
+
                 billingType: event.target.value as EventInput["billingType"],
+
                 linkedReservationId: undefined,
               })
             }
@@ -2055,6 +2391,7 @@ function EventWizard({
               onChange={(event) =>
                 setForm({
                   ...form,
+
                   linkedReservationId: Number(event.target.value),
                 })
               }
@@ -2075,6 +2412,7 @@ function EventWizard({
                 onChange={(event) =>
                   setForm({
                     ...form,
+
                     depositRequired: event.target.value === "sim",
                   })
                 }
@@ -2092,6 +2430,7 @@ function EventWizard({
                   onChange={(event) =>
                     setForm({
                       ...form,
+
                       depositPercent: Number(event.target.value),
                     })
                   }
@@ -2189,14 +2528,23 @@ function EventWizard({
 
 function AgendaView({
   events,
+
   rooms,
+
   date,
+
   setDate,
+
   view,
+
   setView,
+
   roomId,
+
   setRoomId,
+
   openEvent,
+
   startEvent,
 }: {
   events: EventRecord[]
@@ -2230,6 +2578,7 @@ function AgendaView({
 
             return item.toISOString().slice(0, 10)
           }),
+
     [date, view],
   )
 
@@ -2241,6 +2590,7 @@ function AgendaView({
 
   const hours = Array.from(
     { length: fullDay ? 24 : 16 },
+
     (_, index) => index + (fullDay ? 0 : 7),
   )
 
@@ -2307,6 +2657,7 @@ function AgendaView({
               className="management-agenda-grid"
               style={{
                 gridTemplateColumns: `repeat(${days.length}, minmax(150px, 1fr))`,
+
                 overflowX: "auto",
               }}
             >
@@ -2393,6 +2744,7 @@ function AgendaView({
 
 function RoomForm({
   form,
+
   setForm,
 }: {
   form: ConferenceRoomInput
@@ -2438,6 +2790,7 @@ function RoomForm({
         onChange={(event) =>
           setForm({ ...form, hourlyRate: Number(event.target.value) })
         }
+        currency
       />
       <FullCol>
         <Textarea
@@ -2454,6 +2807,7 @@ function RoomForm({
 
 function ServiceForm({
   form,
+
   setForm,
 }: {
   form: EventServiceInput
@@ -2497,6 +2851,7 @@ function ServiceForm({
         onChange={(event) =>
           setForm({ ...form, price: Number(event.target.value) })
         }
+        currency
       />
       <FullCol>
         <Textarea
@@ -2513,12 +2868,19 @@ function ServiceForm({
 
 function EventDetails({
   event,
+
   receipts,
+
   financials,
+
   reservationLabel,
+
   onClose,
+
   onReceive,
+
   onAdvance,
+
   message,
 }: {
   event: EventRecord
@@ -2581,46 +2943,72 @@ function EventDetails({
                 printDocument(`Ordem de serviço · ${event.code}`, [
                   {
                     title: event.name,
+
                     headers: ["Informação", "Detalhe"],
+
                     rows: [
                       ["Situação", event.status],
+
                       ["Contratante", event.contractorName],
+
                       [
                         "Contato",
+
                         `${event.contact} · ${event.phone || event.email}`,
                       ],
+
                       ["Sala", event.roomName],
+
                       ["Início", formatDisplayDate(event.start)],
+
                       ["Fim", formatDisplayDate(event.end)],
+
                       [
                         "Montagem / desmontagem",
+
                         `${event.setupMinutes ?? 0} min antes / ${event.teardownMinutes ?? 0} min depois`,
                       ],
+
                       ["Participantes", String(event.guests)],
+
                       ["Observações", event.notes || "—"],
                     ],
                   },
+
                   {
                     title: "Serviços contratados",
+
                     headers: ["Serviço", "Quantidade", "Unidade"],
+
                     rows: event.services.map((line) => [
                       line.serviceName,
+
                       String(line.quantity),
+
                       line.unit,
                     ]),
                   },
+
                   {
                     title: "Cronograma e responsáveis",
+
                     headers: [
                       "Horário",
+
                       "Atividade",
+
                       "Responsável",
+
                       "Observações",
                     ],
+
                     rows: event.timeline.map((item) => [
                       item.time,
+
                       item.activity,
+
                       item.responsible,
+
                       item.notes,
                     ]),
                   },
@@ -2737,18 +3125,28 @@ function EventDetails({
           caption="Serviços contratados do evento"
           headers={[
             "Servico",
+
             "Categoria",
+
             "Quantidade",
+
             "Unidade",
+
             "Preco contratado",
+
             "Subtotal",
           ]}
           rows={event.services.map((line) => [
             line.serviceName,
+
             line.category,
+
             String(line.quantity),
+
             line.unit,
+
             formatMoney(line.contractedUnitPrice),
+
             formatMoney(line.subtotal),
           ])}
         />
@@ -2778,9 +3176,13 @@ function EventDetails({
             headers={["Codigo", "Data", "Valor", "Forma", "Status"]}
             rows={receipts.map((receipt) => [
               receipt.code,
+
               receipt.date,
+
               formatMoney(receipt.value),
+
               receipt.method,
+
               receipt.status,
             ])}
           />
@@ -2813,7 +3215,9 @@ function Timeline({ items }: { items: EventTimelineItem[] }) {
   return (
     <div className="management-timeline">
       {[...items]
+
         .sort((first, second) => first.time.localeCompare(second.time))
+
         .map((item) => (
           <div key={item.id} className="management-timeline__item">
             <time>{item.time}</time>
@@ -2832,12 +3236,16 @@ function Timeline({ items }: { items: EventTimelineItem[] }) {
 
 function updateServiceLine(
   form: EventInput,
+
   setForm: (form: EventInput) => void,
+
   index: number,
+
   patch: Partial<ContractedEventService>,
 ) {
   setForm({
     ...form,
+
     services: form.services.map((line, itemIndex) =>
       itemIndex === index ? { ...line, ...patch } : line,
     ),
@@ -2846,12 +3254,16 @@ function updateServiceLine(
 
 function updateTimeline(
   form: EventInput,
+
   setForm: (form: EventInput) => void,
+
   index: number,
+
   patch: Partial<EventTimelineItem>,
 ) {
   setForm({
     ...form,
+
     timeline: form.timeline.map((item, itemIndex) =>
       itemIndex === index ? { ...item, ...patch } : item,
     ),
@@ -2860,6 +3272,7 @@ function updateTimeline(
 
 function reservationLabel(
   reservations: { id: number; code: string; guest: string }[],
+
   reservationId?: number,
 ) {
   const reservation = reservations.find((item) => item.id === reservationId)

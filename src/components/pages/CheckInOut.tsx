@@ -570,6 +570,44 @@ export default function CheckInOut() {
           wide
           title={`Iniciar hospedagem — ${selected.code}`}
           onClose={() => setModal(null)}
+          footer={
+            <>
+              {error && <Alert type="error">{error}</Alert>}
+              <FormActions>
+                <Btn
+                  variant="ghost"
+                  onClick={() =>
+                    step === 1
+                      ? setModal(null)
+                      : setStep((current) => current - 1)
+                  }
+                >
+                  {step === 1 ? "Cancelar atendimento" : "Voltar e revisar"}
+                </Btn>
+                {step < 4 ? (
+                  <Btn
+                    disabled={
+                      (step === 2 && !documents.main) ||
+                      (step === 3 && (!roomId || !keyData.identifier))
+                    }
+                    onClick={() => setStep((current) => current + 1)}
+                  >
+                    {step === 3 ? "Ver resumo da hospedagem" : "Continuar"}
+                  </Btn>
+                ) : (
+                  <Btn
+                    disabled={isFuture && !authorizeEarly}
+                    onClick={confirmCheckin}
+                  >
+                    Confirmar e iniciar hospedagem
+                  </Btn>
+                )}
+              </FormActions>
+            </>
+          }
+          intent="create"
+          size="lg"
+          description="Confira os dados da reserva e siga as etapas existentes para iniciar a hospedagem."
         >
           <div
             style={{
@@ -836,35 +874,6 @@ export default function CheckInOut() {
               )}
             </>
           )}
-          {error && <Alert type="error">{error}</Alert>}
-          <FormActions>
-            <Btn
-              variant="ghost"
-              onClick={() =>
-                step === 1 ? setModal(null) : setStep((current) => current - 1)
-              }
-            >
-              {step === 1 ? "Cancelar atendimento" : "Voltar e revisar"}
-            </Btn>
-            {step < 4 ? (
-              <Btn
-                disabled={
-                  (step === 2 && !documents.main) ||
-                  (step === 3 && (!roomId || !keyData.identifier))
-                }
-                onClick={() => setStep((current) => current + 1)}
-              >
-                {step === 3 ? "Ver resumo da hospedagem" : "Continuar"}
-              </Btn>
-            ) : (
-              <Btn
-                disabled={isFuture && !authorizeEarly}
-                onClick={confirmCheckin}
-              >
-                Confirmar e iniciar hospedagem
-              </Btn>
-            )}
-          </FormActions>
         </Modal>
       )}
 
@@ -1023,6 +1032,21 @@ export default function CheckInOut() {
         <Modal
           title="Registrar Recebimento"
           onClose={() => setModal("checkout")}
+          footer={
+            <>
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setModal("checkout")}>
+                  Cancelar
+                </Btn>
+                <Btn onClick={registerBalancePayment}>
+                  Confirmar recebimento
+                </Btn>
+              </FormActions>
+            </>
+          }
+          intent="create"
+          size="md"
+          description="Confira o saldo e registre o pagamento da hospedagem."
         >
           <FormGrid cols={2}>
             <Input label="Cliente" value={selected.guest} readOnly />
@@ -1041,6 +1065,7 @@ export default function CheckInOut() {
               onChange={(event) =>
                 setPaymentForm({ ...paymentForm, value: event.target.value })
               }
+              currency
             />
             <Select
               label="Forma"
@@ -1079,12 +1104,6 @@ export default function CheckInOut() {
               />
             </FullCol>
           </FormGrid>
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setModal("checkout")}>
-              Cancelar
-            </Btn>
-            <Btn onClick={registerBalancePayment}>Confirmar recebimento</Btn>
-          </FormActions>
         </Modal>
       )}
       {walkIn && (
@@ -1092,6 +1111,58 @@ export default function CheckInOut() {
           wide
           title="Iniciar hospedagem sem reserva"
           onClose={() => setWalkIn(false)}
+          footer={
+            <>
+              {error && <Alert type="error">{error}</Alert>}
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setWalkIn(false)}>
+                  Cancelar atendimento
+                </Btn>
+                <Btn
+                  disabled={
+                    !walkInForm.clientId ||
+                    !walkInForm.roomId ||
+                    !walkInForm.exit ||
+                    (walkInForm.contractType === "Pacote comercial" &&
+                      !walkInForm.packageId)
+                  }
+                  onClick={() => {
+                    const result = walkInCheckIn({
+                      clientId: Number(walkInForm.clientId),
+                      companions: [],
+                      entry: walkInForm.entry,
+                      exit: walkInForm.exit,
+                      roomId: Number(walkInForm.roomId),
+                      guests: Number(walkInForm.guests),
+                      contractType: walkInForm.contractType,
+                      packageId: walkInForm.packageId
+                        ? Number(walkInForm.packageId)
+                        : undefined,
+                      notes: walkInForm.notes,
+                    })
+                    if (!result.ok)
+                      return setError(
+                        result.error ?? "Não foi possível concluir.",
+                      )
+                    setWalkIn(false)
+                    if (result.stayId) {
+                      const navigation = stayNavigationEvent(result.stayId)
+                      window.dispatchEvent(
+                        new CustomEvent(navigation.name, {
+                          detail: navigation.stayId,
+                        }),
+                      )
+                    }
+                  }}
+                >
+                  Confirmar e iniciar hospedagem
+                </Btn>
+              </FormActions>
+            </>
+          }
+          intent="create"
+          size="xl"
+          description="Selecione o hóspede, defina a acomodação e revise os valores antes de iniciar a hospedagem."
         >
           <div
             style={{
@@ -1276,55 +1347,64 @@ export default function CheckInOut() {
               ?.number ?? "não selecionado"}{" "}
             · {walkInForm.guests} hóspede(s).
           </Alert>
-          {error && <Alert type="error">{error}</Alert>}
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setWalkIn(false)}>
-              Cancelar atendimento
-            </Btn>
-            <Btn
-              disabled={
-                !walkInForm.clientId ||
-                !walkInForm.roomId ||
-                !walkInForm.exit ||
-                (walkInForm.contractType === "Pacote comercial" &&
-                  !walkInForm.packageId)
-              }
-              onClick={() => {
-                const result = walkInCheckIn({
-                  clientId: Number(walkInForm.clientId),
-                  companions: [],
-                  entry: walkInForm.entry,
-                  exit: walkInForm.exit,
-                  roomId: Number(walkInForm.roomId),
-                  guests: Number(walkInForm.guests),
-                  contractType: walkInForm.contractType,
-                  packageId: walkInForm.packageId
-                    ? Number(walkInForm.packageId)
-                    : undefined,
-                  notes: walkInForm.notes,
-                })
-                if (!result.ok)
-                  return setError(result.error ?? "Não foi possível concluir.")
-                setWalkIn(false)
-                if (result.stayId) {
-                  const navigation = stayNavigationEvent(result.stayId)
-                  window.dispatchEvent(
-                    new CustomEvent(navigation.name, {
-                      detail: navigation.stayId,
-                    }),
-                  )
-                }
-              }}
-            >
-              Confirmar e iniciar hospedagem
-            </Btn>
-          </FormActions>
         </Modal>
       )}
       {walkInClientOpen && (
         <Modal
           title="Cadastro rápido de hóspede"
           onClose={() => setWalkInClientOpen(false)}
+          footer={
+            <>
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setWalkInClientOpen(false)}>
+                  Cancelar
+                </Btn>
+                <Btn
+                  onClick={() => {
+                    const result = createClient({
+                      name: walkInClient.name,
+                      cpf: walkInClient.cpf,
+                      documentType: "RG",
+                      documentNumber: "",
+                      birthDate: "",
+                      nationality: "Brasileira",
+                      gender: "",
+                      postalCode: "",
+                      street: "",
+                      addressNumber: "",
+                      complement: "",
+                      district: "",
+                      city: "",
+                      state: "",
+                      email: walkInClient.email,
+                      phone: walkInClient.phone,
+                      emergencyPhone: "",
+                      emergencyContact: "",
+                      preferredRoomType: "",
+                      preferredFloor: "",
+                      smoker: "Não",
+                      preferences: "",
+                    })
+                    if (!result.ok || !result.client)
+                      return setError(
+                        result.error ?? "Não foi possível cadastrar o hóspede.",
+                      )
+                    setWalkInForm({
+                      ...walkInForm,
+                      clientId: String(result.client.id),
+                    })
+                    setWalkInClientOpen(false)
+                    setError("")
+                  }}
+                >
+                  Cadastrar e selecionar
+                </Btn>
+              </FormActions>
+            </>
+          }
+          intent="create"
+          size="md"
+          description="Cadastre o hóspede e continue o atendimento de balcão."
         >
           <FormGrid cols={2}>
             <FullCol>
@@ -1364,51 +1444,6 @@ export default function CheckInOut() {
               />
             </FullCol>
           </FormGrid>
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setWalkInClientOpen(false)}>
-              Cancelar
-            </Btn>
-            <Btn
-              onClick={() => {
-                const result = createClient({
-                  name: walkInClient.name,
-                  cpf: walkInClient.cpf,
-                  documentType: "RG",
-                  documentNumber: "",
-                  birthDate: "",
-                  nationality: "Brasileira",
-                  gender: "",
-                  postalCode: "",
-                  street: "",
-                  addressNumber: "",
-                  complement: "",
-                  district: "",
-                  city: "",
-                  state: "",
-                  email: walkInClient.email,
-                  phone: walkInClient.phone,
-                  emergencyPhone: "",
-                  emergencyContact: "",
-                  preferredRoomType: "",
-                  preferredFloor: "",
-                  smoker: "Não",
-                  preferences: "",
-                })
-                if (!result.ok || !result.client)
-                  return setError(
-                    result.error ?? "Não foi possível cadastrar o hóspede.",
-                  )
-                setWalkInForm({
-                  ...walkInForm,
-                  clientId: String(result.client.id),
-                })
-                setWalkInClientOpen(false)
-                setError("")
-              }}
-            >
-              Cadastrar e selecionar
-            </Btn>
-          </FormActions>
         </Modal>
       )}
     </div>

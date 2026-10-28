@@ -1,4 +1,5 @@
-import { useEffect, useRef, type ComponentProps, type ReactNode } from "react"
+import { useRef, type ComponentProps, type ReactNode } from "react"
+
 import {
   Card,
   Icon,
@@ -10,13 +11,16 @@ import {
   formatDisplayDate,
   type IconName,
 } from "./ui"
+
 import "../styles/management.css"
 
 export default function ManagementPage({
   module,
+
   children,
 }: {
   module: "events" | "finance"
+
   children: ReactNode
 }) {
   return (
@@ -28,13 +32,19 @@ export default function ManagementPage({
 
 export function ManagementHeader({
   title,
+
   description,
+
   eyebrow,
+
   actions,
 }: {
   title: string
+
   description: string
+
   eyebrow: string
+
   actions?: ReactNode
 }) {
   return (
@@ -48,15 +58,23 @@ export function ManagementHeader({
 
 export function Surface({
   children,
+
   className = "",
+
   title,
+
   description,
+
   actions,
 }: {
   children: ReactNode
+
   className?: string
+
   title?: string
+
   description?: string
+
   actions?: ReactNode
 }) {
   return (
@@ -75,11 +93,15 @@ export function Surface({
 
 export function SectionHeading({
   title,
+
   description,
+
   actions,
 }: {
   title: string
+
   description?: string
+
   actions?: ReactNode
 }) {
   return (
@@ -95,15 +117,23 @@ export function SectionHeading({
 
 export function MetricCard({
   label,
+
   value,
+
   description,
+
   icon = "banknote",
+
   tone = "default",
 }: {
   label: string
+
   value: string
+
   description?: string
+
   icon?: IconName
+
   tone?: "default" | "positive" | "warning" | "negative"
 }) {
   return (
@@ -122,15 +152,18 @@ export function MetricCard({
 
 export function DetailValue({
   label,
+
   value,
 }: {
   label: string
+
   value: ReactNode
 }) {
   const display =
     typeof value === "string"
       ? formatDisplayDate(value).replace(/(\d{2}\/\d{2}\/\d{4})T/g, "$1 às ")
       : value
+
   return (
     <dl className="management-detail">
       <dt>{label}</dt>
@@ -142,25 +175,42 @@ export function DetailValue({
 export function ManagementBadge({ label }: { label: string; color?: string }) {
   const names: Record<string, string> = {
     Concluido: "Concluído",
+
     Saida: "Saída",
   }
+
   const tones = {
     Planejado: "warn",
+
     Confirmado: "ok",
+
     "Em andamento": "info",
+
     Concluido: "neutral",
+
     Cancelado: "neutral",
+
     Cancelada: "neutral",
+
     Recebida: "ok",
+
     Paga: "ok",
+
     "Parcialmente recebida": "info",
+
     "Parcialmente paga": "info",
+
     Vencida: "danger",
+
     "A conferir": "warn",
+
     Entrada: "ok",
+
     Saida: "danger",
+
     Saída: "danger",
   } as const
+
   return (
     <StatusBadge
       status={names[label] ?? label}
@@ -171,50 +221,83 @@ export function ManagementBadge({ label }: { label: string; color?: string }) {
 
 export function ManagementTable({
   headers,
+
   rows,
+
   caption = "Registros",
+
   emptyDescription = "Não há registros para esta visualização. Confira os filtros ou cadastre um novo item.",
+
   ...props
 }: ComponentProps<typeof Table> & { emptyDescription?: string }) {
   const normalize = (label: string) =>
     label
+
       .normalize("NFD")
+
       .replace(/[\u0300-\u036f]/g, "")
+
       .toLowerCase()
+
   const monetary =
     /valor|total|saldo|preco|recebido|contratado|encargos|pago|pendente|subtotal|esperado|contado|diferenca|a receber|a pagar|entradas realizadas|saidas realizadas/
+
   const labels: Record<string, string> = {
     Codigo: "Código",
+
     Descricao: "Descrição",
+
     Situacao: "Situação",
+
     Historico: "Histórico",
+
     Acao: "Ação",
+
     Acoes: "Ações",
+
     Responsavel: "Responsável",
+
     Metodo: "Método",
+
     Preco: "Preço",
+
     Area: "Área",
+
     Localizacao: "Localização",
+
     Servico: "Serviço",
+
     "Preco contratado": "Preço contratado",
+
     "Preco por hora": "Preço por hora",
+
     Diferenca: "Diferença",
   }
+
   const classes = headers.map((label) => {
     const name = normalize(label)
+
     if (monetary.test(name) || /^(quantidade|area|capacidade)$/.test(name))
       return "management-col--number"
+
     if (/^(acao|acoes|conferencia)$/.test(name))
       return "management-col--actions"
+
     if (/descricao|historico|recursos|observacoes/.test(name))
       return "management-col--description"
+
     if (/data|vencimento|abertura|fechamento|^codigo$|^periodo$/.test(name))
       return "management-col--date"
+
     return "management-col--text"
   })
+
   const alignments = classes.map((name) =>
-    name === "management-col--number" || name === "management-col--actions" ? "right" as const : "left" as const,
+    name === "management-col--number" || name === "management-col--actions"
+      ? "right" as const
+      : "left" as const,
   )
+
   return (
     <div
       className="management-table"
@@ -238,6 +321,7 @@ export function ManagementTable({
         rows={rows.map((row) =>
           row.map((cell) => {
             if (typeof cell !== "string") return cell
+
             if (/^[+-]?R\$/.test(cell) || /^Crédito:/.test(cell))
               return (
                 <span
@@ -252,8 +336,10 @@ export function ManagementTable({
                   {cell}
                 </span>
               )
+
             return formatDisplayDate(cell).replace(
               /(\d{2}\/\d{2}\/\d{4})T/g,
+
               "$1 às ",
             )
           }),
@@ -265,14 +351,19 @@ export function ManagementTable({
 
 export function ManagementTabs<T extends string>({
   tabs,
+
   active,
+
   onChange,
 }: {
   tabs: { id: T; label: string }[]
+
   active: T
+
   onChange: (id: T) => void
 }) {
   const root = useRef<HTMLElement>(null)
+
   return (
     <nav
       ref={root}
@@ -284,7 +375,9 @@ export function ManagementTabs<T extends string>({
           event.target.getAttribute("role") !== "tab"
         )
           return
+
         const index = tabs.findIndex((tab) => tab.id === active)
+
         const next =
           event.key === "ArrowRight"
             ? (index + 1) % tabs.length
@@ -295,10 +388,15 @@ export function ManagementTabs<T extends string>({
                 : event.key === "End"
                   ? tabs.length - 1
                   : undefined
+
         if (next === undefined) return
+
         event.preventDefault()
+
         onChange(tabs[next].id)
+
         root.current
+
           ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
           [next]?.focus()
       }}
@@ -310,54 +408,17 @@ export function ManagementTabs<T extends string>({
 
 export function ManagementModal({
   description,
+
   ...props
 }: ComponentProps<typeof Modal>) {
-  const root = useRef<HTMLDivElement>(null)
-  const close = useRef(props.onClose)
-  close.current = props.onClose
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null
-    const dialog = root.current?.querySelector<HTMLElement>('[role="dialog"]')
-    dialog?.focus()
-    const handleKey = (event: KeyboardEvent) => {
-      if (!dialog || document.querySelector('[role="alertdialog"]')) return
-      if (event.key === "Escape") {
-        event.preventDefault()
-        close.current()
-        return
-      }
-      if (event.key !== "Tab") return
-      const fields = [
-        ...dialog.querySelectorAll<HTMLElement>(
-          'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
-        ),
-      ].filter((element) => element.offsetParent !== null)
-      const first = fields[0]
-      const last = fields[fields.length - 1]
-      if (
-        event.shiftKey &&
-        (document.activeElement === first || document.activeElement === dialog)
-      ) {
-        event.preventDefault()
-        last?.focus()
-      } else if (
-        !event.shiftKey &&
-        (document.activeElement === last || document.activeElement === dialog)
-      ) {
-        event.preventDefault()
-        first?.focus()
-      }
-    }
-    dialog?.addEventListener("keydown", handleKey)
-    return () => {
-      dialog?.removeEventListener("keydown", handleKey)
-      if (previous?.isConnected) previous.focus()
-    }
-  }, [])
   const title = props.title
+
     .normalize("NFD")
+
     .replace(/[\u0300-\u036f]/g, "")
+
     .toLowerCase()
+
   const context = /cancelar/.test(title)
     ? "Revise os valores e o acordo com o contratante antes de confirmar."
     : /receber/.test(title)
@@ -383,13 +444,12 @@ export function ManagementModal({
                         : /servico/.test(title)
                           ? "Informações do serviço e sua unidade de cobrança."
                           : "Confira as informações antes de concluir a operação."
+
   return (
-    <div ref={root}>
-      <Modal
-        {...props}
-        className={`management-modal ${props.className ?? ""}`}
-        description={description ?? context}
-      />
-    </div>
+    <Modal
+      {...props}
+      className={`management-modal ${props.className ?? ""}`}
+      description={description ?? context}
+    />
   )
 }

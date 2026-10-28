@@ -19,6 +19,7 @@ import CashFlowPanel from "./CashFlowPanel"
 import printDocument from "../print-document"
 
 import {
+  FormSection,
   Alert,
   Btn,
   FormActions,
@@ -58,32 +59,47 @@ type ModalType = "receber" | "receberEvento" | "newPagar" | "editPagar" | "payPa
 
 const methodOptions = PAYMENT_METHODS.map((method) => ({
   value: method.id,
+
   label: method.label,
 }))
 
 const emptyPayable = {
   description: "",
+
   supplier: "",
+
   category: "Operacional",
+
   costCenterId: "",
+
   originalValue: "",
+
   dueDate: today(),
+
   notes: "",
 }
 
 const emptyPayment = {
   value: "",
+
   method: "pix",
+
   responsible: "Administracao",
+
   notes: "",
+
   date: today(),
 }
 
 const emptyReceipt = {
   value: "",
+
   method: "pix",
+
   responsible: "Recepcao",
+
   notes: "",
+
   date: today(),
 }
 
@@ -92,29 +108,53 @@ export default function Financeiro() {
 
   const {
     reservations,
+
     receipts,
+
     consumptions,
+
     invoices,
+
     payables,
+
     costCenters,
+
     cashSessions,
+
     cashMovements,
+
     events,
+
     eventReceipts,
+
     bankTransactions,
+
     registerReceipt,
+
     createPayable,
+
     updatePayable,
+
     registerPayablePayment,
+
     openCashSession,
+
     closeCashSession,
+
     registerManualCashMovement,
+
     createCostCenter,
+
     updateCostCenter,
+
     reconcileBankTransaction,
+
     getReservationFinancials,
+
     cashExpectedTotal,
+
     getEventFinancials,
+
     registerEventReceipt,
   } = useHotelOperations()
 
@@ -143,38 +183,55 @@ export default function Financeiro() {
 
   const [cashOpenForm, setCashOpenForm] = useState({
     responsible: activeAccount?.name ?? "",
+
     openingCash: "500",
+
     shift: "Manhã" as "Manhã" | "Tarde" | "Noite",
+
     notes: "",
   })
 
   const [cashCloseForm, setCashCloseForm] = useState({
     countedCash: "",
+
     notes: "",
   })
 
   const [cashMoveForm, setCashMoveForm] = useState({
     direction: "saida",
+
     value: "",
+
     method: "cash",
+
     description: "",
+
     responsible: "Recepcao",
+
     notes: "",
   })
 
   const [centerForm, setCenterForm] = useState({
     code: "",
+
     name: "",
+
     description: "",
+
     active: true,
   })
 
   const [bankForm, setBankForm] = useState({
     date: today(),
+
     description: "",
+
     value: "",
+
     direction: "credito",
+
     movementId: "",
+
     notes: "",
   })
 
@@ -184,6 +241,7 @@ export default function Financeiro() {
 
   useEffect(() => {
     setMessage("")
+
     if (modal) setNotice("")
   }, [modal])
 
@@ -206,8 +264,11 @@ export default function Financeiro() {
 
       setReceiptForm({
         ...emptyReceipt,
+
         value: "300",
+
         method: "debit_card",
+
         notes: "Pagamento parcial da jornada demonstrativa.",
       })
 
@@ -216,6 +277,7 @@ export default function Financeiro() {
 
     demo.resolveCommand(command.id, {
       status: "running",
+
       message:
         "Conta operacional aberta. Registre R$ 300,00 em debito e depois R$ 270,00 em dinheiro.",
     })
@@ -236,12 +298,19 @@ export default function Financeiro() {
 
           return {
             reservation,
+
             invoice,
+
             total: financials?.total ?? reservationBaseValue(reservation),
+
             received: financials?.received ?? 0,
+
             balance: financials?.balance ?? 0,
+
             status: financials?.status ?? "Pendente",
+
             lateCharges: financials?.lateCharges ?? 0,
+
             history: receipts.filter(
               (receipt) =>
                 receipt.reservationId === reservation.id &&
@@ -249,6 +318,7 @@ export default function Financeiro() {
             ),
           }
         }),
+
     [reservations, receipts, consumptions, invoices],
   )
 
@@ -263,16 +333,22 @@ export default function Financeiro() {
 
           return {
             event,
+
             total: financials?.total ?? event.totalContracted,
+
             received: financials?.received ?? 0,
+
             balance: financials?.balance ?? event.totalContracted,
+
             status: financials?.status ?? "Pendente",
+
             history: eventReceipts.filter(
               (receipt) =>
                 receipt.eventId === event.id && receipt.status === "Confirmado",
             ),
           }
         }),
+
     [events, eventReceipts],
   )
 
@@ -302,6 +378,7 @@ export default function Financeiro() {
       (payable.canceledAt
         ? 0
         : pendingBalance(payable.originalValue, paidValue(payable))),
+
     0,
   )
 
@@ -309,6 +386,7 @@ export default function Financeiro() {
     receivables.reduce((total, item) => total + item.balance, 0) +
     eventReceivables.reduce(
       (total, item) => total + (item.status === "Cancelada" ? 0 : item.balance),
+
       0,
     )
 
@@ -333,11 +411,17 @@ export default function Financeiro() {
 
     const result = registerReceipt({
       reservationId: selectedReceivable.reservation.id,
+
       value: Number(receiptForm.value),
+
       method: receiptForm.method,
+
       date: receiptForm.date,
+
       responsible: receiptForm.responsible,
+
       notes: receiptForm.notes,
+
       operationKey: `financeiro-receipt-${Date.now()}`,
     })
 
@@ -357,11 +441,17 @@ export default function Financeiro() {
 
     const result = registerEventReceipt({
       eventId: selectedEventReceivable.event.id,
+
       value: Number(receiptForm.value),
+
       method: receiptForm.method,
+
       date: receiptForm.date,
+
       responsible: receiptForm.responsible,
+
       notes: receiptForm.notes,
+
       operationKey: `financeiro-event-receipt-${Date.now()}`,
     })
 
@@ -379,11 +469,17 @@ export default function Financeiro() {
   const savePayable = () => {
     const input = {
       description: payableForm.description,
+
       supplier: payableForm.supplier,
+
       category: payableForm.category,
+
       costCenterId: Number(payableForm.costCenterId),
+
       originalValue: Number(payableForm.originalValue),
+
       dueDate: payableForm.dueDate,
+
       notes: payableForm.notes,
     }
 
@@ -408,11 +504,17 @@ export default function Financeiro() {
 
     const result = registerPayablePayment({
       payableId: selectedPayable.id,
+
       value: Number(paymentForm.value),
+
       method: paymentForm.method,
+
       responsible: paymentForm.responsible,
+
       date: paymentForm.date,
+
       notes: paymentForm.notes,
+
       operationKey: `financeiro-payable-${Date.now()}`,
     })
 
@@ -433,7 +535,9 @@ export default function Financeiro() {
         ? updateCostCenter(selectedCenter.id, centerForm)
         : createCostCenter({
             code: centerForm.code,
+
             name: centerForm.name,
+
             description: centerForm.description,
           })
 
@@ -453,7 +557,9 @@ export default function Financeiro() {
 
     return {
       transaction,
+
       movement,
+
       difference: movement
         ? transaction.value - movement.value
         : transaction.value,
@@ -525,10 +631,15 @@ export default function Financeiro() {
       <Tabs
         tabs={[
           { id: "receber", label: "Contas a Receber" },
+
           { id: "fluxo", label: "Fluxo de Caixa" },
+
           { id: "pagar", label: "Contas a Pagar" },
+
           { id: "caixa", label: "Caixa" },
+
           { id: "centros", label: "Centros de Custo" },
+
           { id: "conciliacao", label: "Conciliação Bancária" },
         ]}
         active={tab}
@@ -554,31 +665,63 @@ export default function Financeiro() {
           </details>
           <Table
             caption="Contas a receber de reservas, hospedagens e eventos"
-            headers={["Origem / cliente","Total / encargos","Recebido","Saldo","Situação","Recebimentos","Ação"]}
+            headers={[
+              "Origem / cliente",
+              "Total / encargos",
+              "Recebido",
+              "Saldo",
+              "Situação",
+              "Recebimentos",
+              "Ação",
+            ]}
             rows={[
               ...receivables.map((item) => [
-<div className="management-cell"><strong>{item.invoice
-                  ? `Fatura ${item.reservation.code.replace("RES", "HOS")}`
-                  : `Reserva ${item.reservation.code}`}</strong><span>{item.reservation.guest}</span><small>{receivableDescription(item.reservation)}</small></div>,
-<div className="management-cell"><strong>{formatMoney(item.total)}</strong><small>Encargos: {item.lateCharges > 0 ? formatMoney(item.lateCharges) : "—"}</small></div>,
-formatMoney(item.received),
-item.received > item.total
+                <div className="management-cell">
+                  <strong>
+                    {item.invoice
+                      ? `Fatura ${item.reservation.code.replace("RES", "HOS")}`
+                      : `Reserva ${item.reservation.code}`}
+                  </strong>
+                  <span>{item.reservation.guest}</span>
+                  <small>{receivableDescription(item.reservation)}</small>
+                </div>,
+
+                <div className="management-cell">
+                  <strong>{formatMoney(item.total)}</strong>
+                  <small>
+                    Encargos:{" "}
+                    {item.lateCharges > 0 ? formatMoney(item.lateCharges) : "—"}
+                  </small>
+                </div>,
+
+                formatMoney(item.received),
+
+                item.received > item.total
                   ? `Crédito: ${formatMoney(item.received - item.total)}`
                   : formatMoney(item.balance),
-<Badge label={item.status} />,
-<details className="management-receipt-history"><summary>{item.history.length} {item.history.length === 1 ? "recebimento" : "recebimentos"}</summary>{item.history.length ? (
-                  <div className="management-history">
-                    {item.history.map((receipt) => (
-                      <span key={receipt.id}>
-                        {formatDisplayDate(receipt.date)} ·{" "}
-                        {formatMoney(receipt.value)} · {receipt.method}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  "Sem recebimentos"
-                )}</details>,
-<Btn
+
+                <Badge label={item.status} />,
+
+                <details className="management-receipt-history">
+                  <summary>
+                    {item.history.length}{" "}
+                    {item.history.length === 1 ? "recebimento" : "recebimentos"}
+                  </summary>
+                  {item.history.length ? (
+                    <div className="management-history">
+                      {item.history.map((receipt) => (
+                        <span key={receipt.id}>
+                          {formatDisplayDate(receipt.date)} ·{" "}
+                          {formatMoney(receipt.value)} · {receipt.method}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    "Sem recebimentos"
+                  )}
+                </details>,
+
+                <Btn
                   small
                   disabled={item.balance <= 0}
                   onClick={() => {
@@ -586,6 +729,7 @@ item.received > item.total
 
                     setReceiptForm({
                       ...emptyReceipt,
+
                       value: String(item.balance),
                     })
 
@@ -595,27 +739,47 @@ item.received > item.total
                   }}
                 >
                   Receber
-                </Btn>
-]),
+                </Btn>,
+              ]),
+
               ...eventReceivables.map((item) => [
-<div className="management-cell"><strong>{`Evento ${item.event.code}`}</strong><span>{item.event.contractorName}</span><small>{item.event.name}</small></div>,
-<div className="management-cell"><strong>{formatMoney(item.total)}</strong><small>Encargos: {"—"}</small></div>,
-formatMoney(item.received),
-formatMoney(item.balance),
-<Badge label={item.status} />,
-<details className="management-receipt-history"><summary>{item.history.length} {item.history.length === 1 ? "recebimento" : "recebimentos"}</summary>{item.history.length ? (
-                  <div className="management-history">
-                    {item.history.map((receipt) => (
-                      <span key={receipt.id}>
-                        {formatDisplayDate(receipt.date)} ·{" "}
-                        {formatMoney(receipt.value)} · {receipt.method}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  "Sem recebimentos"
-                )}</details>,
-<Btn
+                <div className="management-cell">
+                  <strong>{`Evento ${item.event.code}`}</strong>
+                  <span>{item.event.contractorName}</span>
+                  <small>{item.event.name}</small>
+                </div>,
+
+                <div className="management-cell">
+                  <strong>{formatMoney(item.total)}</strong>
+                  <small>Encargos: {"—"}</small>
+                </div>,
+
+                formatMoney(item.received),
+
+                formatMoney(item.balance),
+
+                <Badge label={item.status} />,
+
+                <details className="management-receipt-history">
+                  <summary>
+                    {item.history.length}{" "}
+                    {item.history.length === 1 ? "recebimento" : "recebimentos"}
+                  </summary>
+                  {item.history.length ? (
+                    <div className="management-history">
+                      {item.history.map((receipt) => (
+                        <span key={receipt.id}>
+                          {formatDisplayDate(receipt.date)} ·{" "}
+                          {formatMoney(receipt.value)} · {receipt.method}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    "Sem recebimentos"
+                  )}
+                </details>,
+
+                <Btn
                   small
                   disabled={
                     item.balance <= 0 || item.event.status === "Cancelado"
@@ -625,6 +789,7 @@ formatMoney(item.balance),
 
                     setReceiptForm({
                       ...emptyReceipt,
+
                       value: String(item.balance),
                     })
 
@@ -634,8 +799,8 @@ formatMoney(item.balance),
                   }}
                 >
                   Receber
-                </Btn>
-]),
+                </Btn>,
+              ]),
             ]}
           />
         </Card>
@@ -654,6 +819,7 @@ formatMoney(item.balance),
 
                 setPayableForm({
                   ...emptyPayable,
+
                   costCenterId: String(costCenters[0]?.id ?? ""),
                 })
 
@@ -667,13 +833,21 @@ formatMoney(item.balance),
             caption="Contas a pagar"
             headers={[
               "Codigo",
+
               "Descricao",
+
               "Fornecedor",
+
               "Centro",
+
               "Valor",
+
               "Pago",
+
               "Saldo",
+
               "Situacao",
+
               "Acoes",
             ]}
             rows={payables.map((payable) => {
@@ -681,9 +855,13 @@ formatMoney(item.balance),
 
               const status = derivePayableStatus(
                 payable.originalValue,
+
                 paid,
+
                 payable.dueDate,
+
                 Boolean(payable.canceledAt),
+
                 today(),
               )
 
@@ -692,13 +870,21 @@ formatMoney(item.balance),
                   <strong>{payable.code}</strong>
                   <small>{payable.category}</small>
                 </div>,
+
                 payable.description,
+
                 payable.supplier,
+
                 costCenterName(costCenters, payable.costCenterId),
+
                 formatMoney(payable.originalValue),
+
                 formatMoney(paid),
+
                 formatMoney(pendingBalance(payable.originalValue, paid)),
+
                 <Badge label={status} />,
+
                 <div className="table-actions">
                   <Btn
                     small
@@ -708,11 +894,17 @@ formatMoney(item.balance),
 
                       setPayableForm({
                         description: payable.description,
+
                         supplier: payable.supplier,
+
                         category: payable.category,
+
                         costCenterId: String(payable.costCenterId),
+
                         originalValue: String(payable.originalValue),
+
                         dueDate: payable.dueDate,
+
                         notes: payable.notes,
                       })
 
@@ -732,6 +924,7 @@ formatMoney(item.balance),
 
                       setPaymentForm({
                         ...emptyPayment,
+
                         value: String(
                           pendingBalance(payable.originalValue, paid),
                         ),
@@ -766,6 +959,7 @@ formatMoney(item.balance),
                   onClick={() => {
                     setCashCloseForm({
                       countedCash: "",
+
                       notes: "",
                     })
 
@@ -833,27 +1027,39 @@ formatMoney(item.balance),
               caption="Movimentações financeiras"
               headers={[
                 "Data",
+
                 "Tipo",
+
                 "Metodo",
+
                 "Descricao",
+
                 "Valor",
+
                 "Caixa",
+
                 "Responsavel",
               ]}
               rows={cashMovements.map((movement) => [
                 movement.date,
+
                 <Badge
                   label={movement.direction === "entrada" ? "Entrada" : "Saída"}
                 />,
+
                 paymentMethodLabel(movement.methodId),
+
                 movement.description,
+
                 `${
                   movement.direction === "entrada" ? "+" : "-"
                 }${formatMoney(movement.value)}`,
+
                 movement.sessionId
                   ? (cashSessions.find((item) => item.id === movement.sessionId)
                       ?.code ?? "-")
                   : "Sem caixa",
+
                 movement.responsible,
               ])}
             />
@@ -866,13 +1072,21 @@ formatMoney(item.balance),
               caption="Histórico de fechamentos de caixa"
               headers={[
                 "Caixa",
+
                 "Turno",
+
                 "Responsável",
+
                 "Abertura",
+
                 "Fechamento",
+
                 "Esperado",
+
                 "Contado",
+
                 "Diferença",
+
                 "Conferência",
               ]}
               rows={cashSessions
@@ -881,15 +1095,23 @@ formatMoney(item.balance),
 
                 .map((session) => [
                   session.code,
+
                   session.shift ?? "—",
+
                   session.responsible,
+
                   new Date(session.openedAt).toLocaleString("pt-BR"),
+
                   new Date(session.closedAt!).toLocaleString("pt-BR"),
+
                   formatMoney(
                     session.expectedCash ?? cashExpectedTotal(session.id),
                   ),
+
                   formatMoney(session.countedCash ?? 0),
+
                   formatMoney(session.difference ?? 0),
+
                   <div className="management-history">
                     <p>
                       Aberto por {session.openedBy?.name ?? session.responsible}
@@ -905,49 +1127,71 @@ formatMoney(item.balance),
                         printDocument(`Fechamento de caixa · ${session.code}`, [
                           {
                             title: "Conferência do turno",
+
                             headers: ["Informação", "Valor"],
+
                             rows: [
                               ["Turno", session.shift ?? "—"],
+
                               ["Responsável", session.responsible],
+
                               [
                                 "Aberto por",
+
                                 session.openedBy?.name ?? session.responsible,
                               ],
+
                               [
                                 "Fechado por",
+
                                 session.closedBy?.name ?? "Não registrado",
                               ],
+
                               [
                                 "Esperado",
+
                                 formatMoney(
                                   session.expectedCash ??
                                     cashExpectedTotal(session.id),
                                 ),
                               ],
+
                               [
                                 "Contado",
+
                                 formatMoney(session.countedCash ?? 0),
                               ],
+
                               [
                                 "Diferença",
+
                                 formatMoney(session.difference ?? 0),
                               ],
+
                               ["Justificativa", session.closingNotes ?? "—"],
                             ],
                           },
+
                           {
                             title: "Movimentos do turno",
+
                             headers: ["Descrição", "Tipo", "Forma", "Valor"],
+
                             rows: cashMovements
+
                               .filter(
                                 (movement) => movement.sessionId === session.id,
                               )
+
                               .map((movement) => [
                                 movement.description,
+
                                 movement.direction === "entrada"
                                   ? "Entrada"
                                   : "Saída",
+
                                 paymentMethodLabel(movement.methodId),
+
                                 formatMoney(movement.value),
                               ]),
                           },
@@ -976,8 +1220,11 @@ formatMoney(item.balance),
 
                 setCenterForm({
                   code: "",
+
                   name: "",
+
                   description: "",
+
                   active: true,
                 })
 
@@ -991,30 +1238,47 @@ formatMoney(item.balance),
             caption="Centros de custo"
             headers={[
               "Codigo",
+
               "Nome",
+
               "Descricao",
+
               "Receitas",
+
               "Despesas",
+
               "Saldo",
+
               "Status",
+
               "Acoes",
             ]}
             rows={costCenters.map((center) => {
               const totals = costCenterTotals(
                 center,
+
                 receipts,
+
                 payables,
+
                 cashMovements,
               )
 
               return [
                 center.code,
+
                 center.name,
+
                 center.description,
+
                 formatMoney(totals.receipts),
+
                 formatMoney(totals.payments),
+
                 formatMoney(totals.receipts - totals.payments),
+
                 <Badge label={center.active ? "Ativo" : "Inativo"} />,
+
                 <Btn
                   small
                   variant="ghost"
@@ -1023,8 +1287,11 @@ formatMoney(item.balance),
 
                     setCenterForm({
                       code: center.code,
+
                       name: center.name,
+
                       description: center.description,
+
                       active: center.active,
                     })
 
@@ -1052,10 +1319,15 @@ formatMoney(item.balance),
               onClick={() => {
                 setBankForm({
                   date: today(),
+
                   description: "",
+
                   value: "",
+
                   direction: "credito",
+
                   movementId: "",
+
                   notes: "",
                 })
 
@@ -1074,29 +1346,43 @@ formatMoney(item.balance),
             caption="Conciliação bancária"
             headers={[
               "Data",
+
               "Banco",
+
               "Tipo",
+
               "Valor banco",
+
               "Movimento sistema",
+
               "Diferenca",
+
               "Status",
             ]}
             rows={reconciledRows.map(
               ({ transaction, movement, difference }) => [
                 transaction.date,
+
                 transaction.description,
+
                 transaction.direction === "credito" ? "Credito" : "Debito",
+
                 formatMoney(transaction.value),
+
                 movement
                   ? `${movement.description} (${formatMoney(movement.value)})`
                   : "Nao vinculado",
+
                 formatMoney(Math.abs(difference)),
+
                 <Badge
                   label={
                     movement &&
                     validateBankMatch(
                       transaction,
+
                       movement,
+
                       bankTransactions.some(
                         (other) =>
                           other.id !== transaction.id &&
@@ -1131,6 +1417,9 @@ formatMoney(item.balance),
               </FormActions>
             </>
           }
+          intent="create"
+          size="lg"
+          description="Confira os valores da conta e informe os dados do recebimento."
         >
           <Alert type="info">
             {receiptForm.method === "cash"
@@ -1140,81 +1429,109 @@ formatMoney(item.balance),
               : "Este pagamento será registrado no financeiro. Ele não altera o dinheiro físico da gaveta."}
           </Alert>
           <FormGrid cols={2}>
-            <Input
-              label="Cliente"
-              value={selectedReceivable.reservation.guest}
-              readOnly
-            />
-            <Input
-              label="Reserva / hospedagem"
-              value={
-                selectedReceivable.invoice
-                  ? selectedReceivable.reservation.code.replace("RES", "HOS")
-                  : selectedReceivable.reservation.code
-              }
-              readOnly
-            />
-            <Input
-              label="Valor total devido"
-              value={formatMoney(selectedReceivable.total)}
-              readOnly
-            />
-            <Input
-              label="Valor ja recebido"
-              value={formatMoney(selectedReceivable.received)}
-              readOnly
-            />
-            <Input
-              label="Saldo pendente"
-              value={formatMoney(selectedReceivable.balance)}
-              readOnly
-            />
-            <Input
-              label="Valor a receber *"
-              type="number"
-              min="0.01"
-              step="0.01"
-              max={selectedReceivable.balance}
-              value={receiptForm.value}
-              onChange={(event) =>
-                setReceiptForm({ ...receiptForm, value: event.target.value })
-              }
-            />
-            <Select
-              label="Forma de pagamento *"
-              value={receiptForm.method}
-              onChange={(event) =>
-                setReceiptForm({ ...receiptForm, method: event.target.value })
-              }
-            >
-              {methodOptions.map((method) => (
-                <option key={method.value} value={method.value}>
-                  {method.label}
-                </option>
-              ))}
-            </Select>
-            <Input
-              label="Data *"
-              type="date"
-              value={receiptForm.date}
-              onChange={(event) =>
-                setReceiptForm({ ...receiptForm, date: event.target.value })
-              }
-            />
-            <ResponsibleSelect
-              value={receiptForm.responsible}
-              onChange={(responsible) =>
-                setReceiptForm({ ...receiptForm, responsible })
-              }
-            />
             <FullCol>
-              <Textarea
-                label="Observações"
-                value={receiptForm.notes}
-                onChange={(event) =>
-                  setReceiptForm({ ...receiptForm, notes: event.target.value })
-                }
-              />
+              <FormSection title="Conferência da conta">
+                <FormGrid cols={2}>
+                  <Input
+                    label="Cliente"
+                    value={selectedReceivable.reservation.guest}
+                    readOnly
+                  />
+                  <Input
+                    label="Reserva / hospedagem"
+                    value={
+                      selectedReceivable.invoice
+                        ? selectedReceivable.reservation.code.replace(
+                            "RES",
+                            "HOS",
+                          )
+                        : selectedReceivable.reservation.code
+                    }
+                    readOnly
+                  />
+                  <Input
+                    label="Valor total devido"
+                    value={formatMoney(selectedReceivable.total)}
+                    readOnly
+                  />
+                  <Input
+                    label="Valor ja recebido"
+                    value={formatMoney(selectedReceivable.received)}
+                    readOnly
+                  />
+                  <Input
+                    label="Saldo pendente"
+                    value={formatMoney(selectedReceivable.balance)}
+                    readOnly
+                  />
+                </FormGrid>
+              </FormSection>
+            </FullCol>
+            <FullCol>
+              <FormSection title="Dados do recebimento">
+                <FormGrid cols={2}>
+                  <Input
+                    label="Valor a receber *"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    max={selectedReceivable.balance}
+                    value={receiptForm.value}
+                    onChange={(event) =>
+                      setReceiptForm({
+                        ...receiptForm,
+                        value: event.target.value,
+                      })
+                    }
+                    currency
+                  />
+                  <Select
+                    label="Forma de pagamento *"
+                    value={receiptForm.method}
+                    onChange={(event) =>
+                      setReceiptForm({
+                        ...receiptForm,
+                        method: event.target.value,
+                      })
+                    }
+                  >
+                    {methodOptions.map((method) => (
+                      <option key={method.value} value={method.value}>
+                        {method.label}
+                      </option>
+                    ))}
+                  </Select>
+                  <Input
+                    label="Data *"
+                    type="date"
+                    value={receiptForm.date}
+                    onChange={(event) =>
+                      setReceiptForm({
+                        ...receiptForm,
+                        date: event.target.value,
+                      })
+                    }
+                  />
+                  <ResponsibleSelect
+                    value={receiptForm.responsible}
+                    onChange={(responsible) =>
+                      setReceiptForm({ ...receiptForm, responsible })
+                    }
+                  />
+                  <FullCol>
+                    <Textarea
+                      label="Observações"
+                      value={receiptForm.notes}
+                      onChange={(event) =>
+                        setReceiptForm({
+                          ...receiptForm,
+                          notes: event.target.value,
+                        })
+                      }
+                    />
+                  </FullCol>
+                </FormGrid>
+              </FormSection>
             </FullCol>
           </FormGrid>
         </Modal>
@@ -1236,6 +1553,9 @@ formatMoney(item.balance),
               </FormActions>
             </>
           }
+          intent="create"
+          size="lg"
+          description="Confira os valores do evento e informe os dados do recebimento."
         >
           <Alert type="info">
             {receiptForm.method === "cash"
@@ -1245,77 +1565,102 @@ formatMoney(item.balance),
               : "Este pagamento será registrado no financeiro. Ele não altera o dinheiro físico da gaveta."}
           </Alert>
           <FormGrid cols={2}>
-            <Input
-              label="Cliente"
-              value={selectedEventReceivable.event.contractorName}
-              readOnly
-            />
-            <Input
-              label="Evento"
-              value={selectedEventReceivable.event.name}
-              readOnly
-            />
-            <Input
-              label="Valor total devido"
-              value={formatMoney(selectedEventReceivable.total)}
-              readOnly
-            />
-            <Input
-              label="Valor ja recebido"
-              value={formatMoney(selectedEventReceivable.received)}
-              readOnly
-            />
-            <Input
-              label="Saldo pendente"
-              value={formatMoney(selectedEventReceivable.balance)}
-              readOnly
-            />
-            <Input
-              label="Valor a receber *"
-              type="number"
-              min="0.01"
-              step="0.01"
-              max={selectedEventReceivable.balance}
-              value={receiptForm.value}
-              onChange={(event) =>
-                setReceiptForm({ ...receiptForm, value: event.target.value })
-              }
-            />
-            <Select
-              label="Forma de pagamento *"
-              value={receiptForm.method}
-              onChange={(event) =>
-                setReceiptForm({ ...receiptForm, method: event.target.value })
-              }
-            >
-              {methodOptions.map((method) => (
-                <option key={method.value} value={method.value}>
-                  {method.label}
-                </option>
-              ))}
-            </Select>
-            <Input
-              label="Data *"
-              type="date"
-              value={receiptForm.date}
-              onChange={(event) =>
-                setReceiptForm({ ...receiptForm, date: event.target.value })
-              }
-            />
-            <ResponsibleSelect
-              value={receiptForm.responsible}
-              onChange={(responsible) =>
-                setReceiptForm({ ...receiptForm, responsible })
-              }
-            />
             <FullCol>
-              <Textarea
-                label="Observações"
-                value={receiptForm.notes}
-                onChange={(event) =>
-                  setReceiptForm({ ...receiptForm, notes: event.target.value })
-                }
-              />
+              <FormSection title="Conferência da conta">
+                <FormGrid cols={2}>
+                  <Input
+                    label="Cliente"
+                    value={selectedEventReceivable.event.contractorName}
+                    readOnly
+                  />
+                  <Input
+                    label="Evento"
+                    value={selectedEventReceivable.event.name}
+                    readOnly
+                  />
+                  <Input
+                    label="Valor total devido"
+                    value={formatMoney(selectedEventReceivable.total)}
+                    readOnly
+                  />
+                  <Input
+                    label="Valor ja recebido"
+                    value={formatMoney(selectedEventReceivable.received)}
+                    readOnly
+                  />
+                  <Input
+                    label="Saldo pendente"
+                    value={formatMoney(selectedEventReceivable.balance)}
+                    readOnly
+                  />
+                </FormGrid>
+              </FormSection>
+            </FullCol>
+            <FullCol>
+              <FormSection title="Dados do recebimento">
+                <FormGrid cols={2}>
+                  <Input
+                    label="Valor a receber *"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    max={selectedEventReceivable.balance}
+                    value={receiptForm.value}
+                    onChange={(event) =>
+                      setReceiptForm({
+                        ...receiptForm,
+                        value: event.target.value,
+                      })
+                    }
+                    currency
+                  />
+                  <Select
+                    label="Forma de pagamento *"
+                    value={receiptForm.method}
+                    onChange={(event) =>
+                      setReceiptForm({
+                        ...receiptForm,
+                        method: event.target.value,
+                      })
+                    }
+                  >
+                    {methodOptions.map((method) => (
+                      <option key={method.value} value={method.value}>
+                        {method.label}
+                      </option>
+                    ))}
+                  </Select>
+                  <Input
+                    label="Data *"
+                    type="date"
+                    value={receiptForm.date}
+                    onChange={(event) =>
+                      setReceiptForm({
+                        ...receiptForm,
+                        date: event.target.value,
+                      })
+                    }
+                  />
+                  <ResponsibleSelect
+                    value={receiptForm.responsible}
+                    onChange={(responsible) =>
+                      setReceiptForm({ ...receiptForm, responsible })
+                    }
+                  />
+                  <FullCol>
+                    <Textarea
+                      label="Observações"
+                      value={receiptForm.notes}
+                      onChange={(event) =>
+                        setReceiptForm({
+                          ...receiptForm,
+                          notes: event.target.value,
+                        })
+                      }
+                    />
+                  </FullCol>
+                </FormGrid>
+              </FormSection>
             </FullCol>
           </FormGrid>
         </Modal>
@@ -1339,6 +1684,9 @@ formatMoney(item.balance),
               </FormActions>
             </>
           }
+          intent="create"
+          size="lg"
+          description="Identifique a obrigação, o fornecedor, o centro de custo e o vencimento."
         >
           <PayableForm
             form={payableForm}
@@ -1363,6 +1711,9 @@ formatMoney(item.balance),
               </FormActions>
             </>
           }
+          intent="create"
+          size="md"
+          description="Confira o saldo e registre os dados do pagamento."
         >
           <Alert type="info">
             {paymentForm.method === "cash"
@@ -1382,6 +1733,7 @@ formatMoney(item.balance),
               value={formatMoney(
                 pendingBalance(
                   selectedPayable.originalValue,
+
                   paidValue(selectedPayable),
                 ),
               )}
@@ -1396,6 +1748,7 @@ formatMoney(item.balance),
               onChange={(event) =>
                 setPaymentForm({ ...paymentForm, value: event.target.value })
               }
+              currency
             />
             <Select
               label="Forma *"
@@ -1452,8 +1805,11 @@ formatMoney(item.balance),
                   onClick={() => {
                     const result = openCashSession({
                       responsible: cashOpenForm.responsible,
+
                       openingCash: Number(cashOpenForm.openingCash),
+
                       shift: cashOpenForm.shift,
+
                       notes: cashOpenForm.notes,
                     })
 
@@ -1467,6 +1823,9 @@ formatMoney(item.balance),
               </FormActions>
             </>
           }
+          intent="create"
+          size="md"
+          description="Identifique o turno e informe o fundo inicial em dinheiro."
         >
           <FormGrid cols={1}>
             <ResponsibleSelect
@@ -1481,6 +1840,7 @@ formatMoney(item.balance),
               onChange={(event) =>
                 setCashOpenForm({
                   ...cashOpenForm,
+
                   shift: event.target.value as typeof cashOpenForm.shift,
                 })
               }
@@ -1497,9 +1857,11 @@ formatMoney(item.balance),
               onChange={(event) =>
                 setCashOpenForm({
                   ...cashOpenForm,
+
                   openingCash: event.target.value,
                 })
               }
+              currency
             />
             <Textarea
               label="Observações"
@@ -1529,10 +1891,12 @@ formatMoney(item.balance),
                   onClick={() => {
                     const result = closeCashSession({
                       sessionId: openCash.id,
+
                       countedCash:
                         cashCloseForm.countedCash === ""
                           ? NaN
                           : Number(cashCloseForm.countedCash),
+
                       notes: cashCloseForm.notes,
                     })
 
@@ -1546,6 +1910,9 @@ formatMoney(item.balance),
               </FormActions>
             </>
           }
+          intent="create"
+          size="md"
+          description="Conte o dinheiro físico e registre a conferência do turno."
         >
           <Alert type="info">
             Turno {openCash.shift ?? "Não informado"} · valor físico esperado:{" "}
@@ -1567,9 +1934,11 @@ formatMoney(item.balance),
               onChange={(event) =>
                 setCashCloseForm({
                   ...cashCloseForm,
+
                   countedCash: event.target.value,
                 })
               }
+              currency
             />
             <Input
               label="Diferença entre contado e esperado"
@@ -1589,6 +1958,7 @@ formatMoney(item.balance),
               onChange={(event) =>
                 setCashCloseForm({
                   ...cashCloseForm,
+
                   notes: event.target.value,
                 })
               }
@@ -1612,7 +1982,9 @@ formatMoney(item.balance),
                   onClick={() => {
                     const result = registerManualCashMovement({
                       ...cashMoveForm,
+
                       direction: cashMoveForm.direction as "entrada" | "saida",
+
                       value: Number(cashMoveForm.value),
                     })
 
@@ -1626,6 +1998,9 @@ formatMoney(item.balance),
               </FormActions>
             </>
           }
+          intent="create"
+          size="md"
+          description="Informe o tipo, o valor e o responsável pela movimentação."
         >
           <FormGrid cols={2}>
             <Select
@@ -1634,6 +2009,7 @@ formatMoney(item.balance),
               onChange={(event) =>
                 setCashMoveForm({
                   ...cashMoveForm,
+
                   direction: event.target.value,
                 })
               }
@@ -1662,6 +2038,7 @@ formatMoney(item.balance),
               onChange={(event) =>
                 setCashMoveForm({ ...cashMoveForm, value: event.target.value })
               }
+              currency
             />
             <ResponsibleSelect
               value={cashMoveForm.responsible}
@@ -1676,6 +2053,7 @@ formatMoney(item.balance),
                 onChange={(event) =>
                   setCashMoveForm({
                     ...cashMoveForm,
+
                     description: event.target.value,
                   })
                 }
@@ -1688,6 +2066,7 @@ formatMoney(item.balance),
                 onChange={(event) =>
                   setCashMoveForm({
                     ...cashMoveForm,
+
                     notes: event.target.value,
                   })
                 }
@@ -1712,6 +2091,9 @@ formatMoney(item.balance),
               </FormActions>
             </>
           }
+          intent="create"
+          size="md"
+          description="Cadastre a identificação e a finalidade do centro de custo."
         >
           <FormGrid cols={2}>
             <Input
@@ -1734,6 +2116,7 @@ formatMoney(item.balance),
               onChange={(event) =>
                 setCenterForm({
                   ...centerForm,
+
                   active: event.target.value === "ativo",
                 })
               }
@@ -1748,6 +2131,7 @@ formatMoney(item.balance),
                 onChange={(event) =>
                   setCenterForm({
                     ...centerForm,
+
                     description: event.target.value,
                   })
                 }
@@ -1773,12 +2157,17 @@ formatMoney(item.balance),
                   onClick={() => {
                     const result = reconcileBankTransaction({
                       date: bankForm.date,
+
                       description: bankForm.description,
+
                       value: Number(bankForm.value),
+
                       direction: bankForm.direction as "credito" | "debito",
+
                       movementId: bankForm.movementId
                         ? Number(bankForm.movementId)
                         : undefined,
+
                       notes: bankForm.notes,
                     })
 
@@ -1792,6 +2181,9 @@ formatMoney(item.balance),
               </FormActions>
             </>
           }
+          intent="create"
+          size="lg"
+          description="Compare o extrato informado com os movimentos registrados. Não há integração bancária externa."
         >
           <FormGrid cols={2}>
             <Input
@@ -1808,7 +2200,9 @@ formatMoney(item.balance),
               onChange={(event) =>
                 setBankForm({
                   ...bankForm,
+
                   direction: event.target.value,
+
                   movementId: "",
                 })
               }
@@ -1824,6 +2218,7 @@ formatMoney(item.balance),
               onChange={(event) =>
                 setBankForm({ ...bankForm, value: event.target.value })
               }
+              currency
             />
             <Select
               label="Movimento do sistema"
@@ -1834,6 +2229,7 @@ formatMoney(item.balance),
             >
               <option value="">Nao vincular</option>
               {cashMovements
+
                 .filter(
                   (movement) =>
                     !isCashPayment(movement.methodId) &&
@@ -1844,6 +2240,7 @@ formatMoney(item.balance),
                         transaction.matchedMovementId === movement.id,
                     ),
                 )
+
                 .map((movement) => (
                   <option key={movement.id} value={movement.id}>
                     {movement.date} - {movement.description} -{" "}
@@ -1878,7 +2275,9 @@ formatMoney(item.balance),
 
 function PayableForm({
   form,
+
   setForm,
+
   costCenters,
 }: {
   form: typeof emptyPayable
@@ -1934,6 +2333,7 @@ function PayableForm({
         onChange={(event) =>
           setForm({ ...form, originalValue: event.target.value })
         }
+        currency
       />
       <Input
         label="Vencimento *"
@@ -1969,8 +2369,11 @@ function receivableDescription(reservation: Reservation) {
 
 function costCenterTotals(
   center: CostCenter,
+
   receipts: { value: number; status: string }[],
+
   payables: PayableAccount[],
+
   movements: CashMovement[],
 ) {
   const receiptsTotal =
@@ -2001,6 +2404,7 @@ function costCenterTotals(
 
   return {
     receipts: receiptsTotal,
+
     payments:
       paymentsTotal + (center.name === "Administracao" ? manualCash : 0),
   }

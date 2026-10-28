@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react"
+
 import {
+  FormSection,
   Alert,
   Badge,
   Btn,
@@ -18,6 +20,7 @@ import {
   Textarea,
   formatDisplayDate,
 } from "../ui"
+
 import {
   formatMoney,
   OPERATIONAL_SERVICES,
@@ -27,63 +30,106 @@ import {
   type PackageBenefit,
   type PackagePriceRule,
 } from "../HotelOperationsContext"
+
 import { useDemoEngine } from "../demo/DemoEngineContext"
 
 type Tab = "lista" | "cards" | "promocoes"
+
 type PackageModal = "new" | "edit" | "view" | null
 
 const seasons = [
   "Ano inteiro",
+
   "Baixa temporada",
+
   "Alta temporada",
+
   "Feriados",
+
   "Fim de ano",
 ]
+
 const mealPlans = [
   "Apenas hospedagem",
+
   "Café da manhã",
+
   "Meia pensão",
+
   "Pensão completa",
 ]
+
 const emptyForm = {
   code: "",
+
   name: "",
+
   description: "",
+
   season: "Ano inteiro",
+
   mealPlan: "Café da manhã",
+
   roomCategories: "Standard",
+
   minNights: "1",
+
   maxNights: "7",
+
   includedGuests: "2",
+
   price: "",
+
   priceRule: "Preço fechado" as PackagePriceRule,
+
   discountPercent: "0",
+
   validFrom: "",
+
   validTo: "",
+
   benefits: "",
+
   structuredBenefits: [] as PackageBenefit[],
+
   conditions: "",
+
   active: true,
 }
 
 const mockForm = () => {
   const end = new Date()
+
   end.setFullYear(end.getFullYear() + 1)
+
   return {
     ...emptyForm,
+
     code: "DEMO-FDS-RO",
+
     name: "Fim de Semana Pacaas",
+
     description:
       "Pacote demonstrativo com hospedagem, café da manhã e trilha guiada.",
+
     roomCategories: "Standard, Luxo",
+
     minNights: "2",
+
     maxNights: "3",
+
     includedGuests: "2",
+
     price: "780",
+
     discountPercent: "10",
+
     validFrom: today(),
+
     validTo: end.toISOString().slice(0, 10),
+
     benefits: "Café da manhã, Trilha guiada, Late checkout",
+
     conditions:
       "Exemplo preenchido automaticamente para apresentação do módulo.",
   }
@@ -100,56 +146,93 @@ function isCurrent(commercialPackage: CommercialPackage) {
 export default function Pacotes() {
   const { packages, setPackages, reservations, products, categories } =
     useHotelOperations()
+
   const [tab, setTab] = useState<Tab>("lista")
+
   const [modal, setModal] = useState<PackageModal>(null)
+
   const [selected, setSelected] = useState<CommercialPackage | null>(null)
+
   const [search, setSearch] = useState("")
+
   const [statusFilter, setStatusFilter] = useState("Ativo")
+
   const [validation, setValidation] = useState("")
+
   const [form, setForm] = useState(emptyForm)
+
   const [categoryToAdd, setCategoryToAdd] = useState("")
+
   const [benefitDraft, setBenefitDraft] = useState({
     kind: "Serviço" as "Produto" | "Serviço",
+
     reference: "Café da manhã",
+
     quantity: "1",
+
     limitType: "Por hospedagem" as "Por hospedagem" | "Por diária",
   })
+
   const [demoScenarioKey, setDemoScenarioKey] = useState("")
+
   const demo = useDemoEngine()
 
   useEffect(() => {
     const command = demo.activeCommand
+
     if (
       !command ||
       command.target !== "pacotes" ||
       command.command !== "prefill-package-form"
     )
       return
+
     const end = new Date()
+
     end.setFullYear(end.getFullYear() + 1)
+
     setSelected(null)
+
     setDemoScenarioKey(demo.scenario?.scenarioKey ?? "")
+
     setForm({
       ...emptyForm,
+
       code: String(command.payload.code),
+
       name: String(command.payload.name),
+
       description:
         "Pacote fictício e isolado para a demonstração da jornada completa.",
+
       roomCategories: "Standard",
+
       minNights: "3",
+
       maxNights: "3",
+
       includedGuests: "1",
+
       price: String(command.payload.price),
+
       priceRule: "Preço fechado",
+
       validFrom: today(),
+
       validTo: end.toISOString().slice(0, 10),
+
       benefits: "Café da manhã",
+
       conditions: "Uso exclusivo no cenário demonstrativo João Silva.",
     })
+
     setValidation("")
+
     setModal("new")
+
     demo.resolveCommand(command.id, {
       status: "running",
+
       message: "Pacote preenchido. Revise e use Salvar pacote.",
     })
   }, [demo.activeCommand])
@@ -164,6 +247,7 @@ export default function Pacotes() {
           ? commercialPackage.active
           : !commercialPackage.active)),
   )
+
   const linkedPackageIds = new Set(
     reservations.flatMap((reservation) =>
       reservation.packageId ? [reservation.packageId] : [],
@@ -172,48 +256,79 @@ export default function Pacotes() {
 
   const openNew = () => {
     setSelected(null)
+
     setDemoScenarioKey("")
+
     setForm(mockForm())
+
     setCategoryToAdd("")
+
     setValidation("")
+
     setModal("new")
   }
 
   const openEdit = (commercialPackage: CommercialPackage) => {
     setSelected(commercialPackage)
+
     setForm({
       code: commercialPackage.code,
+
       name: commercialPackage.name,
+
       description: commercialPackage.description,
+
       season: commercialPackage.season,
+
       mealPlan: commercialPackage.mealPlan,
+
       roomCategories: commercialPackage.roomCategories.join(", "),
+
       minNights: String(commercialPackage.minNights),
+
       maxNights: String(commercialPackage.maxNights),
+
       includedGuests: String(commercialPackage.includedGuests),
+
       price: String(commercialPackage.price),
+
       priceRule: commercialPackage.priceRule,
+
       discountPercent: String(commercialPackage.discountPercent),
+
       validFrom: commercialPackage.validFrom,
+
       validTo: commercialPackage.validTo,
+
       benefits: commercialPackage.benefits.join(", "),
+
       conditions: commercialPackage.conditions,
+
       structuredBenefits: structuredClone(
         commercialPackage.structuredBenefits ?? [],
       ),
+
       active: commercialPackage.active,
     })
+
     setCategoryToAdd("")
+
     setValidation("")
+
     setModal("edit")
   }
 
   const save = () => {
     const price = Number(form.price)
+
     const minNights = Number(form.minNights)
+
     const maxNights = Number(form.maxNights)
+
     const includedGuests = Number(form.includedGuests)
+
     const discountPercent = Number(form.discountPercent)
+
     if (
       !form.code.trim() ||
       !form.name.trim() ||
@@ -221,14 +336,18 @@ export default function Pacotes() {
       !form.validTo
     ) {
       setValidation("Código, nome e vigência são obrigatórios.")
+
       return
     }
+
     if (form.validTo < form.validFrom) {
       setValidation(
         "A data final da vigência deve ser posterior à data inicial.",
       )
+
       return
     }
+
     if (
       !form.roomCategories ||
       price <= 0 ||
@@ -239,50 +358,83 @@ export default function Pacotes() {
       discountPercent > 100
     ) {
       setValidation("Revise preço, desconto, hóspedes e limites de diárias.")
+
       return
     }
+
     const duplicate = packages.some(
       (item) =>
         item.id !== selected?.id &&
         item.code.toLowerCase() === form.code.trim().toLowerCase(),
     )
+
     if (duplicate) {
       setValidation("Já existe um pacote com este código.")
+
       return
     }
+
     const packageData = {
       code: form.code.trim(),
+
       name: form.name.trim(),
+
       description: form.description.trim(),
+
       season: form.season,
+
       mealPlan: form.mealPlan,
+
       roomCategories: form.roomCategories
+
         .split(",")
+
         .map((value) => value.trim())
+
         .filter(Boolean),
+
       minNights,
+
       maxNights,
+
       includedGuests,
+
       price,
+
       priceRule: form.priceRule,
+
       discountPercent,
+
       validFrom: form.validFrom,
+
       validTo: form.validTo,
+
       benefits: form.benefits
+
         .split(",")
+
         .map((value) => value.trim())
+
         .filter(Boolean),
+
       structuredBenefits: form.structuredBenefits,
+
       conditions: form.conditions.trim(),
+
       active: form.active,
     }
+
     if (modal === "new") {
       const nextId = Math.max(0, ...packages.map((item) => item.id)) + 1
+
       setPackages((current) => [
         ...current,
+
         {
           id: nextId,
+
           scenarioKey: demoScenarioKey || undefined,
+
           ...packageData,
         },
       ])
@@ -293,37 +445,56 @@ export default function Pacotes() {
         ),
       )
     }
+
     setModal(null)
   }
+
   const addStructuredBenefit = () => {
     const quantity = Number(benefitDraft.quantity)
+
     const product = products.find(
       (item) => item.id === Number(benefitDraft.reference),
     )
+
     const label =
       benefitDraft.kind === "Produto" ? product?.name : benefitDraft.reference
+
     if (!label || !Number.isFinite(quantity) || quantity <= 0)
       return setValidation(
         "Selecione um item e uma quantidade válida para o benefício.",
       )
+
     const benefit: PackageBenefit = {
       id: `BEN-${Date.now()}`,
+
       kind: benefitDraft.kind,
+
       productId: benefitDraft.kind === "Produto" ? product?.id : undefined,
+
       serviceCode:
         benefitDraft.kind === "Serviço" ? benefitDraft.reference : undefined,
+
       label,
+
       description: label,
+
       quantityIncluded: quantity,
+
       unit: benefitDraft.kind === "Produto" ? (product?.unit ?? "un") : "un",
+
       limitType: benefitDraft.limitType,
+
       excessRule: "Cobrar preço unitário",
+
       active: true,
     }
+
     setForm({
       ...form,
+
       structuredBenefits: [...form.structuredBenefits, benefit],
     })
+
     setValidation("")
   }
 
@@ -370,7 +541,9 @@ export default function Pacotes() {
       <Tabs
         tabs={[
           { id: "lista", label: "Lista de pacotes" },
+
           { id: "cards", label: "Visualização comercial" },
+
           { id: "promocoes", label: "Promoções ativas" },
         ]}
         active={tab}
@@ -403,23 +576,38 @@ export default function Pacotes() {
           <Table
             headers={[
               "Código",
+
               "Pacote",
+
               "Categorias",
+
               "Regra",
+
               "Valor",
+
               "Diárias",
+
               "Vigência",
+
               "Status",
+
               "Ações",
             ]}
             rows={filtered.map((commercialPackage) => [
               commercialPackage.code,
+
               commercialPackage.name,
+
               commercialPackage.roomCategories.join(", "),
+
               commercialPackage.priceRule,
+
               formatMoney(commercialPackage.price),
+
               `${commercialPackage.minNights}–${commercialPackage.maxNights}`,
+
               `${formatDisplayDate(commercialPackage.validFrom)} a ${formatDisplayDate(commercialPackage.validTo)}`,
+
               <Badge
                 label={
                   isCurrent(commercialPackage)
@@ -429,12 +617,14 @@ export default function Pacotes() {
                       : "Inativo"
                 }
               />,
+
               <div className="table-actions">
                 <Btn
                   small
                   variant="ghost"
                   onClick={() => {
                     setSelected(commercialPackage)
+
                     setModal("view")
                   }}
                 >
@@ -499,6 +689,7 @@ export default function Pacotes() {
                   variant="ghost"
                   onClick={() => {
                     setSelected(commercialPackage)
+
                     setModal("view")
                   }}
                 >
@@ -522,18 +713,28 @@ export default function Pacotes() {
           <Table
             headers={[
               "Pacote",
+
               "Desconto",
+
               "Preço de referência",
+
               "Regra",
+
               "Vigência",
             ]}
             rows={packages
+
               .filter((item) => item.active && item.discountPercent > 0)
+
               .map((item) => [
                 item.name,
+
                 `${item.discountPercent}%`,
+
                 formatMoney(item.price),
+
                 item.priceRule,
+
                 `${formatDisplayDate(item.validFrom)} a ${formatDisplayDate(item.validTo)}`,
               ])}
           />
@@ -547,356 +748,440 @@ export default function Pacotes() {
             modal === "new" ? "Cadastrar Pacote" : `Atualizar ${selected?.code}`
           }
           onClose={() => setModal(null)}
+          footer={
+            <>{validation && <Alert type="error">{validation}</Alert>}
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setModal(null)}>
+                  Cancelar
+                </Btn>
+                <Btn onClick={save}>Salvar pacote</Btn>
+              </FormActions>
+            </>
+          }
+          intent="create"
+          size="xl"
+          description="Defina as condições comerciais, a elegibilidade e os benefícios incluídos no pacote."
         >
           <SectionTitle>Identificação e elegibilidade</SectionTitle>
           <FormGrid cols={2}>
-            <Input
-              label="Código *"
-              value={form.code}
-              onChange={(event) =>
-                setForm({ ...form, code: event.target.value })
-              }
-            />
-            <Input
-              label="Nome *"
-              value={form.name}
-              onChange={(event) =>
-                setForm({ ...form, name: event.target.value })
-              }
-            />
             <FullCol>
-              <Textarea
-                label="Descrição"
-                value={form.description}
-                onChange={(event) =>
-                  setForm({ ...form, description: event.target.value })
-                }
-              />
-            </FullCol>
-            <Select
-              label="Temporada"
-              value={form.season}
-              onChange={(event) =>
-                setForm({ ...form, season: event.target.value })
-              }
-            >
-              {seasons.map((season) => (
-                <option key={season}>{season}</option>
-              ))}
-            </Select>
-            <Select
-              label="Regime alimentar"
-              value={form.mealPlan}
-              onChange={(event) =>
-                setForm({ ...form, mealPlan: event.target.value })
-              }
-            >
-              {mealPlans.map((mealPlan) => (
-                <option key={mealPlan}>{mealPlan}</option>
-              ))}
-            </Select>
-            <FullCol>
-              <Select
-                label="Adicionar categoria elegível"
-                value={categoryToAdd}
-                onChange={(event) => setCategoryToAdd(event.target.value)}
-              >
-                <option value="">Selecione uma categoria</option>
-                {categories
-                  .filter(
-                    (category) =>
-                      !form.roomCategories.split(", ").includes(category.name),
-                  )
-                  .map((category) => (
-                    <option key={category.id} value={category.name}>
-                      {category.name}
-                    </option>
-                  ))}
-              </Select>
-              <FormActions>
-                <Btn
-                  small
-                  variant="secondary"
-                  disabled={!categoryToAdd}
-                  onClick={() => {
-                    setForm({
-                      ...form,
-                      roomCategories: [
-                        ...form.roomCategories.split(", ").filter(Boolean),
-                        categoryToAdd,
-                      ].join(", "),
-                    })
-                    setCategoryToAdd("")
-                  }}
-                >
-                  Adicionar categoria
-                </Btn>
-              </FormActions>
-              <div className="benefit-list">
-                {form.roomCategories
-                  .split(", ")
-                  .filter(Boolean)
-                  .map((category) => (
-                    <Btn
-                      key={category}
-                      small
-                      variant="ghost"
-                      onClick={() =>
-                        setForm({
-                          ...form,
-                          roomCategories: form.roomCategories
-                            .split(", ")
-                            .filter((item) => item !== category)
-                            .join(", "),
-                        })
+              <FormSection title="Identificação do pacote">
+                <FormGrid cols={2}>
+                  <Input
+                    label="Código *"
+                    value={form.code}
+                    onChange={(event) =>
+                      setForm({ ...form, code: event.target.value })
+                    }
+                  />
+                  <Input
+                    label="Nome *"
+                    value={form.name}
+                    onChange={(event) =>
+                      setForm({ ...form, name: event.target.value })
+                    }
+                  />
+                  <FullCol>
+                    <Textarea
+                      label="Descrição"
+                      value={form.description}
+                      onChange={(event) =>
+                        setForm({ ...form, description: event.target.value })
                       }
+                    />
+                  </FullCol>
+                </FormGrid>
+              </FormSection>
+            </FullCol>
+            <FullCol>
+              <FormSection title="Elegibilidade e permanência">
+                <FormGrid cols={2}>
+                  <Select
+                    label="Temporada"
+                    value={form.season}
+                    onChange={(event) =>
+                      setForm({ ...form, season: event.target.value })
+                    }
+                  >
+                    {seasons.map((season) => (
+                      <option key={season}>{season}</option>
+                    ))}
+                  </Select>
+                  <Select
+                    label="Regime alimentar"
+                    value={form.mealPlan}
+                    onChange={(event) =>
+                      setForm({ ...form, mealPlan: event.target.value })
+                    }
+                  >
+                    {mealPlans.map((mealPlan) => (
+                      <option key={mealPlan}>{mealPlan}</option>
+                    ))}
+                  </Select>
+                  <FullCol>
+                    <Select
+                      label="Adicionar categoria elegível"
+                      value={categoryToAdd}
+                      onChange={(event) => setCategoryToAdd(event.target.value)}
                     >
-                      {category} ×
-                    </Btn>
-                  ))}
-              </div>
+                      <option value="">Selecione uma categoria</option>
+                      {categories
+
+                        .filter(
+                          (category) =>
+                            !form.roomCategories
+                              .split(", ")
+                              .includes(category.name),
+                        )
+
+                        .map((category) => (
+                          <option key={category.id} value={category.name}>
+                            {category.name}
+                          </option>
+                        ))}
+                    </Select>
+                    <FormActions>
+                      <Btn
+                        small
+                        variant="secondary"
+                        disabled={!categoryToAdd}
+                        onClick={() => {
+                          setForm({
+                            ...form,
+
+                            roomCategories: [
+                              ...form.roomCategories
+                                .split(", ")
+                                .filter(Boolean),
+
+                              categoryToAdd,
+                            ].join(", "),
+                          })
+
+                          setCategoryToAdd("")
+                        }}
+                      >
+                        Adicionar categoria
+                      </Btn>
+                    </FormActions>
+                    <div className="benefit-list">
+                      {form.roomCategories
+
+                        .split(", ")
+
+                        .filter(Boolean)
+
+                        .map((category) => (
+                          <Btn
+                            key={category}
+                            small
+                            variant="ghost"
+                            onClick={() =>
+                              setForm({
+                                ...form,
+
+                                roomCategories: form.roomCategories
+
+                                  .split(", ")
+
+                                  .filter((item) => item !== category)
+
+                                  .join(", "),
+                              })
+                            }
+                          >
+                            {category} ×
+                          </Btn>
+                        ))}
+                    </div>
+                  </FullCol>
+                  <Input
+                    label="Mínimo de diárias *"
+                    type="number"
+                    min="1"
+                    value={form.minNights}
+                    onChange={(event) =>
+                      setForm({ ...form, minNights: event.target.value })
+                    }
+                  />
+                  <Input
+                    label="Máximo de diárias *"
+                    type="number"
+                    min="1"
+                    value={form.maxNights}
+                    onChange={(event) =>
+                      setForm({ ...form, maxNights: event.target.value })
+                    }
+                  />
+                  <Input
+                    label="Hóspedes contemplados *"
+                    type="number"
+                    min="1"
+                    value={form.includedGuests}
+                    onChange={(event) =>
+                      setForm({ ...form, includedGuests: event.target.value })
+                    }
+                  />
+                </FormGrid>
+              </FormSection>
             </FullCol>
-            <Input
-              label="Mínimo de diárias *"
-              type="number"
-              min="1"
-              value={form.minNights}
-              onChange={(event) =>
-                setForm({ ...form, minNights: event.target.value })
-              }
-            />
-            <Input
-              label="Máximo de diárias *"
-              type="number"
-              min="1"
-              value={form.maxNights}
-              onChange={(event) =>
-                setForm({ ...form, maxNights: event.target.value })
-              }
-            />
-            <Input
-              label="Hóspedes contemplados *"
-              type="number"
-              min="1"
-              value={form.includedGuests}
-              onChange={(event) =>
-                setForm({ ...form, includedGuests: event.target.value })
-              }
-            />
-            <Select
-              label="Regra de preço *"
-              value={form.priceRule}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  priceRule: event.target.value as PackagePriceRule,
-                })
-              }
-            >
-              <option>Preço fechado</option>
-              <option>Por diária</option>
-            </Select>
-            <Input
-              label="Preço *"
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={form.price}
-              onChange={(event) =>
-                setForm({ ...form, price: event.target.value })
-              }
-            />
-            <Input
-              label="Desconto (%)"
-              type="number"
-              min="0"
-              max="100"
-              value={form.discountPercent}
-              onChange={(event) =>
-                setForm({ ...form, discountPercent: event.target.value })
-              }
-            />
-            <Input
-              label="Vigência inicial *"
-              type="date"
-              value={form.validFrom}
-              onChange={(event) =>
-                setForm({ ...form, validFrom: event.target.value })
-              }
-            />
-            <Input
-              label="Vigência final *"
-              type="date"
-              min={form.validFrom}
-              value={form.validTo}
-              onChange={(event) =>
-                setForm({ ...form, validTo: event.target.value })
-              }
-            />
             <FullCol>
-              <Textarea
-                label="Benefícios inclusos"
-                placeholder="Café da manhã, Decoração especial"
-                value={form.benefits}
-                onChange={(event) =>
-                  setForm({ ...form, benefits: event.target.value })
-                }
-              />
-            </FullCol>
-            <FullCol>
-              <SectionTitle>Benefícios com controle de cota</SectionTitle>
-              <Alert type="info">
-                Os textos legados permanecem apenas como descrição comercial.
-                Configure abaixo os itens que devem gerar gratuidade e cobrança
-                de excedentes.
-              </Alert>
-            </FullCol>
-            <Select
-              label="Tipo do benefício"
-              value={benefitDraft.kind}
-              onChange={(event) =>
-                setBenefitDraft({
-                  ...benefitDraft,
-                  kind: event.target.value as "Produto" | "Serviço",
-                  reference:
-                    event.target.value === "Produto" ? "" : "Café da manhã",
-                })
-              }
-            >
-              <option>Serviço</option>
-              <option>Produto</option>
-            </Select>
-            {benefitDraft.kind === "Produto" ? (
-              <Select
-                label="Produto do estoque"
-                value={benefitDraft.reference}
-                onChange={(event) =>
-                  setBenefitDraft({
-                    ...benefitDraft,
-                    reference: event.target.value,
-                  })
-                }
-              >
-                <option value="">Selecione</option>
-                {products
-                  .filter((item) => item.status === "Ativo")
-                  .map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-              </Select>
-            ) : (
-              <Select
-                label="Serviço"
-                value={benefitDraft.reference}
-                onChange={(event) =>
-                  setBenefitDraft({
-                    ...benefitDraft,
-                    reference: event.target.value,
-                  })
-                }
-              >
-                {OPERATIONAL_SERVICES.map((service) => (
-                  <option key={service}>{service}</option>
-                ))}
-              </Select>
-            )}
-            <Input
-              label="Quantidade incluída"
-              type="number"
-              min="1"
-              value={benefitDraft.quantity}
-              onChange={(event) =>
-                setBenefitDraft({
-                  ...benefitDraft,
-                  quantity: event.target.value,
-                })
-              }
-            />
-            <Select
-              label="Limite"
-              value={benefitDraft.limitType}
-              onChange={(event) =>
-                setBenefitDraft({
-                  ...benefitDraft,
-                  limitType: event.target
-                    .value as "Por hospedagem" | "Por diária",
-                })
-              }
-            >
-              <option>Por hospedagem</option>
-              <option>Por diária</option>
-            </Select>
-            <FullCol>
-              <Btn small variant="secondary" onClick={addStructuredBenefit}>
-                Adicionar benefício estruturado
-              </Btn>
-              <Table
-                headers={[
-                  "Item",
-                  "Tipo",
-                  "Cota",
-                  "Limite",
-                  "Excedente",
-                  "Ação",
-                ]}
-                rows={form.structuredBenefits.map((benefit) => [
-                  benefit.label,
-                  benefit.kind,
-                  `${benefit.quantityIncluded} ${benefit.unit}`,
-                  benefit.limitType,
-                  benefit.excessRule,
-                  <Btn
-                    small
-                    variant="danger"
-                    onClick={() =>
+              <FormSection title="Preço e vigência">
+                <FormGrid cols={2}>
+                  <Select
+                    label="Regra de preço *"
+                    value={form.priceRule}
+                    onChange={(event) =>
                       setForm({
                         ...form,
-                        structuredBenefits: form.structuredBenefits.filter(
-                          (item) => item.id !== benefit.id,
-                        ),
+
+                        priceRule: event.target.value as PackagePriceRule,
                       })
                     }
                   >
-                    Remover
-                  </Btn>,
-                ])}
-              />
+                    <option>Preço fechado</option>
+                    <option>Por diária</option>
+                  </Select>
+                  <Input
+                    label="Preço *"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={form.price}
+                    onChange={(event) =>
+                      setForm({ ...form, price: event.target.value })
+                    }
+                    currency
+                  />
+                  <Input
+                    label="Desconto (%)"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={form.discountPercent}
+                    onChange={(event) =>
+                      setForm({ ...form, discountPercent: event.target.value })
+                    }
+                  />
+                  <Input
+                    label="Vigência inicial *"
+                    type="date"
+                    value={form.validFrom}
+                    onChange={(event) =>
+                      setForm({ ...form, validFrom: event.target.value })
+                    }
+                  />
+                  <Input
+                    label="Vigência final *"
+                    type="date"
+                    min={form.validFrom}
+                    value={form.validTo}
+                    onChange={(event) =>
+                      setForm({ ...form, validTo: event.target.value })
+                    }
+                  />
+                </FormGrid>
+              </FormSection>
             </FullCol>
             <FullCol>
-              <Textarea
-                label="Condições de contratação"
-                value={form.conditions}
-                onChange={(event) =>
-                  setForm({ ...form, conditions: event.target.value })
-                }
-              />
+              <FormSection title="Benefícios incluídos">
+                <FormGrid cols={2}>
+                  <FullCol>
+                    <Textarea
+                      label="Benefícios inclusos"
+                      placeholder="Café da manhã, Decoração especial"
+                      value={form.benefits}
+                      onChange={(event) =>
+                        setForm({ ...form, benefits: event.target.value })
+                      }
+                    />
+                  </FullCol>
+                  <FullCol>
+                    <SectionTitle>Benefícios com controle de cota</SectionTitle>
+                    <Alert type="info">
+                      Os textos legados permanecem apenas como descrição
+                      comercial. Configure abaixo os itens que devem gerar
+                      gratuidade e cobrança de excedentes.
+                    </Alert>
+                  </FullCol>
+                  <Select
+                    label="Tipo do benefício"
+                    value={benefitDraft.kind}
+                    onChange={(event) =>
+                      setBenefitDraft({
+                        ...benefitDraft,
+
+                        kind: event.target.value as "Produto" | "Serviço",
+
+                        reference:
+                          event.target.value === "Produto"
+                            ? ""
+                            : "Café da manhã",
+                      })
+                    }
+                  >
+                    <option>Serviço</option>
+                    <option>Produto</option>
+                  </Select>
+                  {benefitDraft.kind === "Produto" ? (
+                    <Select
+                      label="Produto do estoque"
+                      value={benefitDraft.reference}
+                      onChange={(event) =>
+                        setBenefitDraft({
+                          ...benefitDraft,
+
+                          reference: event.target.value,
+                        })
+                      }
+                    >
+                      <option value="">Selecione</option>
+                      {products
+
+                        .filter((item) => item.status === "Ativo")
+
+                        .map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.name}
+                          </option>
+                        ))}
+                    </Select>
+                  ) : (
+                    <Select
+                      label="Serviço"
+                      value={benefitDraft.reference}
+                      onChange={(event) =>
+                        setBenefitDraft({
+                          ...benefitDraft,
+
+                          reference: event.target.value,
+                        })
+                      }
+                    >
+                      {OPERATIONAL_SERVICES.map((service) => (
+                        <option key={service}>{service}</option>
+                      ))}
+                    </Select>
+                  )}
+                  <Input
+                    label="Quantidade incluída"
+                    type="number"
+                    min="1"
+                    value={benefitDraft.quantity}
+                    onChange={(event) =>
+                      setBenefitDraft({
+                        ...benefitDraft,
+
+                        quantity: event.target.value,
+                      })
+                    }
+                  />
+                  <Select
+                    label="Limite"
+                    value={benefitDraft.limitType}
+                    onChange={(event) =>
+                      setBenefitDraft({
+                        ...benefitDraft,
+
+                        limitType: event.target
+                          .value as "Por hospedagem" | "Por diária",
+                      })
+                    }
+                  >
+                    <option>Por hospedagem</option>
+                    <option>Por diária</option>
+                  </Select>
+                  <FullCol>
+                    <Btn
+                      small
+                      variant="secondary"
+                      onClick={addStructuredBenefit}
+                    >
+                      Adicionar benefício estruturado
+                    </Btn>
+                    <Table
+                      headers={[
+                        "Item",
+
+                        "Tipo",
+
+                        "Cota",
+
+                        "Limite",
+
+                        "Excedente",
+
+                        "Ação",
+                      ]}
+                      rows={form.structuredBenefits.map((benefit) => [
+                        benefit.label,
+
+                        benefit.kind,
+
+                        `${benefit.quantityIncluded} ${benefit.unit}`,
+
+                        benefit.limitType,
+
+                        benefit.excessRule,
+
+                        <Btn
+                          small
+                          variant="danger"
+                          onClick={() =>
+                            setForm({
+                              ...form,
+
+                              structuredBenefits:
+                                form.structuredBenefits.filter(
+                                  (item) => item.id !== benefit.id,
+                                ),
+                            })
+                          }
+                        >
+                          Remover
+                        </Btn>,
+                      ])}
+                    />
+                  </FullCol>
+                </FormGrid>
+              </FormSection>
             </FullCol>
-            <Select
-              label="Status"
-              value={form.active ? "Ativo" : "Inativo"}
-              onChange={(event) =>
-                setForm({ ...form, active: event.target.value === "Ativo" })
-              }
-            >
-              <option>Ativo</option>
-              <option>Inativo</option>
-            </Select>
+            <FullCol>
+              <FormSection title="Condições e disponibilidade">
+                <FormGrid cols={2}>
+                  <FullCol>
+                    <Textarea
+                      label="Condições de contratação"
+                      value={form.conditions}
+                      onChange={(event) =>
+                        setForm({ ...form, conditions: event.target.value })
+                      }
+                    />
+                  </FullCol>
+                  <Select
+                    label="Status"
+                    value={form.active ? "Ativo" : "Inativo"}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        active: event.target.value === "Ativo",
+                      })
+                    }
+                  >
+                    <option>Ativo</option>
+                    <option>Inativo</option>
+                  </Select>
+                </FormGrid>
+              </FormSection>
+            </FullCol>
           </FormGrid>
-          {validation && <Alert type="error">{validation}</Alert>}
+
           {selected && linkedPackageIds.has(selected.id) && (
             <Alert type="warning">
               Alterações afetam apenas novas contratações. Reservas existentes
               mantêm a cópia das condições originais.
             </Alert>
           )}
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setModal(null)}>
-              Cancelar
-            </Btn>
-            <Btn onClick={save}>Salvar pacote</Btn>
-          </FormActions>
         </Modal>
       )}
 
@@ -952,7 +1237,7 @@ export default function Pacotes() {
   )
 }
 
-function Detail({ label, value }: { label: string ;value: string }) {
+function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div className="summary-item">
       <span>{label}</span>

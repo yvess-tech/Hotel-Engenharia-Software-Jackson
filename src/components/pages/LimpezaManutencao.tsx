@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react"
 import {
   Alert,
   Badge,
@@ -15,57 +15,57 @@ import {
   Table,
   Tabs,
   Textarea,
-} from "../ui";
-import { useHotelOperations } from "../HotelOperationsContext";
-import { useDemoEngine } from "../demo/DemoEngineContext";
+} from "../ui"
+import { useHotelOperations } from "../HotelOperationsContext"
+import { useDemoEngine } from "../demo/DemoEngineContext"
 
-type Tab = "limpeza" | "manutencao";
-type Status = "Pendente" | "Em andamento" | "Concluída" | "Cancelada";
-type Prioridade = "Baixa" | "Média" | "Alta" | "Urgente";
-type ModalMode = "new" | "edit" | "view" | "complete" | "cancel" | null;
+type Tab = "limpeza" | "manutencao"
+type Status = "Pendente" | "Em andamento" | "Concluída" | "Cancelada"
+type Prioridade = "Baixa" | "Média" | "Alta" | "Urgente"
+type ModalMode = "new" | "edit" | "view" | "complete" | "cancel" | null
 
 interface TarefaLimpeza {
-  id: number;
-  codigo: string;
-  quarto: string;
-  tipo: "Saída" | "Estadia" | "Chegada" | "Extra";
-  responsavel: string;
-  agendamento: string;
-  prioridade: Prioridade;
-  observacoes: string;
-  status: Status;
-  inicio?: string;
-  conclusao?: string;
-  executadoPor?: string;
-  condicaoQuarto?: string;
-  registro?: string;
-  motivoCancelamento?: string;
-  sourceTaskId?: number;
+  id: number
+  codigo: string
+  quarto: string
+  tipo: "Saída" | "Estadia" | "Chegada" | "Extra"
+  responsavel: string
+  agendamento: string
+  prioridade: Prioridade
+  observacoes: string
+  status: Status
+  inicio?: string
+  conclusao?: string
+  executadoPor?: string
+  condicaoQuarto?: string
+  registro?: string
+  motivoCancelamento?: string
+  sourceTaskId?: number
 }
 
 interface Manutencao {
-  id: number;
-  codigo: string;
-  quarto: string;
-  tipo: "Preventiva" | "Corretiva";
-  categoria: string;
-  descricao: string;
-  responsavel: string;
-  abertura: string;
-  agendamento: string;
-  prioridade: Prioridade;
-  status: Status;
-  conclusao?: string;
-  executadoPor?: string;
-  servicoRealizado?: string;
-  custo?: number;
-  motivoCancelamento?: string;
+  id: number
+  codigo: string
+  quarto: string
+  tipo: "Preventiva" | "Corretiva"
+  categoria: string
+  descricao: string
+  responsavel: string
+  abertura: string
+  agendamento: string
+  prioridade: Prioridade
+  status: Status
+  conclusao?: string
+  executadoPor?: string
+  servicoRealizado?: string
+  custo?: number
+  motivoCancelamento?: string
 }
 
 interface OperationsSnapshot {
-  tarefas: TarefaLimpeza[];
-  manutencoes: Manutencao[];
-  updatedAt: string;
+  tarefas: TarefaLimpeza[]
+  manutencoes: Manutencao[]
+  updatedAt: string
 }
 
 const initialTarefas: TarefaLimpeza[] = [
@@ -120,7 +120,7 @@ const initialTarefas: TarefaLimpeza[] = [
     status: "Cancelada",
     motivoCancelamento: "Solicitação retirada pelo hóspede.",
   },
-];
+]
 
 const initialManutencoes: Manutencao[] = [
   {
@@ -166,27 +166,42 @@ const initialManutencoes: Manutencao[] = [
     servicoRealizado: "Inspeção concluída e duas tomadas substituídas.",
     custo: 180,
   },
-];
+]
 
-const OPERATIONS_STORAGE_KEY = "hotel-pacaas-limpeza-manutencao";
-const OPERATIONS_CHANNEL = "hotel-pacaas-operacoes";
+const OPERATIONS_STORAGE_KEY = "hotel-pacaas-limpeza-manutencao"
+const OPERATIONS_CHANNEL = "hotel-pacaas-operacoes"
 
 function loadOperations(): OperationsSnapshot {
   if (typeof window === "undefined") {
-    return { tarefas: initialTarefas, manutencoes: initialManutencoes, updatedAt: "" };
+    return {
+      tarefas: initialTarefas,
+      manutencoes: initialManutencoes,
+      updatedAt: "",
+    }
   }
   try {
-    const stored = window.localStorage.getItem(OPERATIONS_STORAGE_KEY);
+    const stored = window.localStorage.getItem(OPERATIONS_STORAGE_KEY)
     if (!stored) {
-      return { tarefas: initialTarefas, manutencoes: initialManutencoes, updatedAt: "" };
+      return {
+        tarefas: initialTarefas,
+        manutencoes: initialManutencoes,
+        updatedAt: "",
+      }
     }
-    const snapshot = JSON.parse(stored) as OperationsSnapshot;
-    if (!Array.isArray(snapshot.tarefas) || !Array.isArray(snapshot.manutencoes)) {
-      throw new Error("Invalid operations snapshot");
+    const snapshot = JSON.parse(stored) as OperationsSnapshot
+    if (
+      !Array.isArray(snapshot.tarefas) ||
+      !Array.isArray(snapshot.manutencoes)
+    ) {
+      throw new Error("Invalid operations snapshot")
     }
-    return snapshot;
+    return snapshot
   } catch {
-    return { tarefas: initialTarefas, manutencoes: initialManutencoes, updatedAt: "" };
+    return {
+      tarefas: initialTarefas,
+      manutencoes: initialManutencoes,
+      updatedAt: "",
+    }
   }
 }
 
@@ -195,14 +210,15 @@ const statusColor: Record<Status, "green" | "yellow" | "blue" | "gray"> = {
   "Em andamento": "blue",
   Concluída: "green",
   Cancelada: "gray",
-};
+}
 
-const prioridadeColor: Record<Prioridade, "gray" | "blue" | "yellow" | "red"> = {
-  Baixa: "gray",
-  Média: "blue",
-  Alta: "yellow",
-  Urgente: "red",
-};
+const prioridadeColor: Record<Prioridade, "gray" | "blue" | "yellow" | "red"> =
+  {
+    Baixa: "gray",
+    Média: "blue",
+    Alta: "yellow",
+    Urgente: "red",
+  }
 
 const emptyTarefa = () => ({
   quarto: "",
@@ -212,7 +228,7 @@ const emptyTarefa = () => ({
   prioridade: "Média" as Prioridade,
   observacoes: "",
   status: "Pendente" as Status,
-});
+})
 
 const emptyManutencao = () => ({
   quarto: "",
@@ -223,54 +239,64 @@ const emptyManutencao = () => ({
   agendamento: "",
   prioridade: "Média" as Prioridade,
   status: "Pendente" as Status,
-});
+})
 
 function formatDate(value?: string) {
-  if (!value) return "—";
+  if (!value) return "—"
   return new Date(value).toLocaleString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  });
+  })
 }
 
 export default function LimpezaManutencao() {
-  const { rooms, setRooms, housekeepingTasks, completeHousekeeping, setRoomMaintenance } = useHotelOperations();
-  const demo = useDemoEngine();
-  const storedOperations = useRef(loadOperations());
-  const [tab, setTab] = useState<Tab>("limpeza");
-  const [tarefas, setTarefas] = useState<TarefaLimpeza[]>(storedOperations.current.tarefas);
+  const {
+    rooms,
+    setRooms,
+    housekeepingTasks,
+    completeHousekeeping,
+    setRoomMaintenance,
+  } = useHotelOperations()
+  const demo = useDemoEngine()
+  const storedOperations = useRef(loadOperations())
+  const [tab, setTab] = useState<Tab>("limpeza")
+  const [tarefas, setTarefas] = useState<TarefaLimpeza[]>(
+    storedOperations.current.tarefas,
+  )
   const [manutencoes, setManutencoes] = useState<Manutencao[]>(
     storedOperations.current.manutencoes,
-  );
+  )
   const [lastSync, setLastSync] = useState(
     storedOperations.current.updatedAt || new Date().toISOString(),
-  );
-  const channelRef = useRef<BroadcastChannel | null>(null);
-  const applyingRemoteUpdate = useRef(false);
-  const lastSyncRef = useRef(lastSync);
-  const [modalMode, setModalMode] = useState<ModalMode>(null);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [busca, setBusca] = useState("");
-  const [filtroStatus, setFiltroStatus] = useState("");
-  const [filtroPrioridade, setFiltroPrioridade] = useState("");
-  const [formTarefa, setFormTarefa] = useState(emptyTarefa());
-  const [formManutencao, setFormManutencao] = useState(emptyManutencao());
+  )
+  const channelRef = useRef<BroadcastChannel | null>(null)
+  const applyingRemoteUpdate = useRef(false)
+  const lastSyncRef = useRef(lastSync)
+  const [modalMode, setModalMode] = useState<ModalMode>(null)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [busca, setBusca] = useState("")
+  const [filtroStatus, setFiltroStatus] = useState("")
+  const [filtroPrioridade, setFiltroPrioridade] = useState("")
+  const [formTarefa, setFormTarefa] = useState(emptyTarefa())
+  const [formManutencao, setFormManutencao] = useState(emptyManutencao())
   const [completion, setCompletion] = useState({
     executadoPor: "",
     dataHora: "",
     condicaoQuarto: "Liberado",
     descricao: "",
     custo: "",
-  });
-  const [motivoCancelamento, setMotivoCancelamento] = useState("");
-  const [error, setError] = useState("");
+  })
+  const [motivoCancelamento, setMotivoCancelamento] = useState("")
+  const [error, setError] = useState("")
 
   useEffect(() => {
     setTarefas((current) => {
-      const knownSourceIds = new Set(current.map((item) => item.sourceTaskId).filter(Boolean));
+      const knownSourceIds = new Set(
+        current.map((item) => item.sourceTaskId).filter(Boolean),
+      )
       const generated = housekeepingTasks
         .filter((task) => !knownSourceIds.has(task.id))
         .map<TarefaLimpeza>((task) => ({
@@ -288,76 +314,84 @@ export default function LimpezaManutencao() {
           executadoPor: task.completedBy,
           registro: task.status === "Concluída" ? task.notes : undefined,
           condicaoQuarto: task.status === "Concluída" ? "Liberado" : undefined,
-        }));
-      return generated.length ? [...generated, ...current] : current;
-    });
-  }, [housekeepingTasks, rooms]);
+        }))
+      return generated.length ? [...generated, ...current] : current
+    })
+  }, [housekeepingTasks, rooms])
 
   useEffect(() => {
     const applySnapshot = (snapshot: OperationsSnapshot) => {
-      if (!snapshot.updatedAt || snapshot.updatedAt <= lastSyncRef.current) return;
-      applyingRemoteUpdate.current = true;
-      lastSyncRef.current = snapshot.updatedAt;
-      setLastSync(snapshot.updatedAt);
-      setTarefas(snapshot.tarefas);
-      setManutencoes(snapshot.manutencoes);
-    };
+      if (!snapshot.updatedAt || snapshot.updatedAt <= lastSyncRef.current)
+        return
+      applyingRemoteUpdate.current = true
+      lastSyncRef.current = snapshot.updatedAt
+      setLastSync(snapshot.updatedAt)
+      setTarefas(snapshot.tarefas)
+      setManutencoes(snapshot.manutencoes)
+    }
 
     if ("BroadcastChannel" in window) {
-      const channel = new BroadcastChannel(OPERATIONS_CHANNEL);
+      const channel = new BroadcastChannel(OPERATIONS_CHANNEL)
       channel.onmessage = (event: MessageEvent<OperationsSnapshot>) =>
-        applySnapshot(event.data);
-      channelRef.current = channel;
+        applySnapshot(event.data)
+      channelRef.current = channel
     }
 
     const synchronizationTimer = window.setInterval(
       () => applySnapshot(loadOperations()),
       5000,
-    );
+    )
 
     return () => {
-      window.clearInterval(synchronizationTimer);
-      channelRef.current?.close();
-    };
-  }, []);
+      window.clearInterval(synchronizationTimer)
+      channelRef.current?.close()
+    }
+  }, [])
 
   useEffect(() => {
     if (applyingRemoteUpdate.current) {
-      applyingRemoteUpdate.current = false;
-      return;
+      applyingRemoteUpdate.current = false
+      return
     }
     const snapshot: OperationsSnapshot = {
       tarefas,
       manutencoes,
       updatedAt: new Date().toISOString(),
-    };
-    window.localStorage.setItem(OPERATIONS_STORAGE_KEY, JSON.stringify(snapshot));
-    channelRef.current?.postMessage(snapshot);
-    lastSyncRef.current = snapshot.updatedAt;
-    setLastSync(snapshot.updatedAt);
-  }, [tarefas, manutencoes]);
+    }
+    window.localStorage.setItem(
+      OPERATIONS_STORAGE_KEY,
+      JSON.stringify(snapshot),
+    )
+    channelRef.current?.postMessage(snapshot)
+    lastSyncRef.current = snapshot.updatedAt
+    setLastSync(snapshot.updatedAt)
+  }, [tarefas, manutencoes])
 
-  const selectedTarefa = tarefas.find((item) => item.id === selectedId) ?? null;
-  const selectedManutencao = manutencoes.find((item) => item.id === selectedId) ?? null;
-  const roomByNumber = (number: string) => rooms.find((room) => room.number === number);
+  const selectedTarefa = tarefas.find((item) => item.id === selectedId) ?? null
+  const selectedManutencao =
+    manutencoes.find((item) => item.id === selectedId) ?? null
+  const roomByNumber = (number: string) =>
+    rooms.find((room) => room.number === number)
   const roomOptions = rooms
     .slice()
-    .sort((first, second) => first.number.localeCompare(second.number, "pt-BR", { numeric: true }));
+    .sort((first, second) =>
+      first.number.localeCompare(second.number, "pt-BR", { numeric: true }),
+    )
   const maintenanceLocations = [
     ...roomOptions.map((room) => room.number),
     "Recepção",
     "Restaurante",
     "Salão Ipê",
     "Área técnica",
-  ];
+  ]
   const roomSummary = (number: string) => {
-    const room = roomByNumber(number);
-    if (!room) return "Local não vinculado";
-    return `${room.category} · ${room.occupancyStatus} · ${room.cleaningStatus} · ${room.maintenanceStatus}`;
-  };
+    const room = roomByNumber(number)
+    if (!room) return "Local não vinculado"
+    return `${room.category} · ${room.occupancyStatus} · ${room.cleaningStatus} · ${room.maintenanceStatus}`
+  }
 
   const tarefasFiltradas = tarefas.filter((item) => {
-    const termo = busca.toLowerCase();
+    const termo = busca.toLowerCase()
     return (
       (!termo ||
         item.codigo.toLowerCase().includes(termo) ||
@@ -365,11 +399,11 @@ export default function LimpezaManutencao() {
         item.responsavel.toLowerCase().includes(termo)) &&
       (!filtroStatus || item.status === filtroStatus) &&
       (!filtroPrioridade || item.prioridade === filtroPrioridade)
-    );
-  });
+    )
+  })
 
   const manutencoesFiltradas = manutencoes.filter((item) => {
-    const termo = busca.toLowerCase();
+    const termo = busca.toLowerCase()
     return (
       (!termo ||
         item.codigo.toLowerCase().includes(termo) ||
@@ -377,49 +411,65 @@ export default function LimpezaManutencao() {
         item.descricao.toLowerCase().includes(termo)) &&
       (!filtroStatus || item.status === filtroStatus) &&
       (!filtroPrioridade || item.prioridade === filtroPrioridade)
-    );
-  });
+    )
+  })
 
   const closeModal = () => {
-    setModalMode(null);
-    setSelectedId(null);
-    setError("");
-  };
+    setModalMode(null)
+    setSelectedId(null)
+    setError("")
+  }
 
   const openNew = () => {
-    setSelectedId(null);
-    setError("");
-    if (tab === "limpeza") setFormTarefa({
-      ...emptyTarefa(),
-      quarto: roomOptions.find((room) => room.cleaningStatus !== "Limpo" || room.status === "Livre")?.number ?? roomOptions[0]?.number ?? "",
-      responsavel: "LÃºcia Santos",
-      agendamento: new Date().toISOString().slice(0, 16),
-      prioridade: "Alta",
-      observacoes: "Preparar quarto para check-in demonstrativo.",
-    });
-    else setFormManutencao({
-      ...emptyManutencao(),
-      quarto: roomOptions.find((room) => room.maintenanceStatus === "Disponível" && room.occupancyStatus === "Livre")?.number ?? roomOptions[0]?.number ?? "Recepção",
-      categoria: "ElÃ©trica",
-      descricao: "Troca preventiva de lampada e teste de tomada para demonstracao.",
-      responsavel: "Roberto Alves",
-      agendamento: new Date().toISOString().slice(0, 16),
-      prioridade: "Média",
-    });
-    setModalMode("new");
-  };
+    setSelectedId(null)
+    setError("")
+    if (tab === "limpeza")
+      setFormTarefa({
+        ...emptyTarefa(),
+        quarto:
+          roomOptions.find(
+            (room) =>
+              room.cleaningStatus !== "Limpo" || room.status === "Livre",
+          )?.number ??
+          roomOptions[0]?.number ??
+          "",
+        responsavel: "LÃºcia Santos",
+        agendamento: new Date().toISOString().slice(0, 16),
+        prioridade: "Alta",
+        observacoes: "Preparar quarto para check-in demonstrativo.",
+      })
+    else
+      setFormManutencao({
+        ...emptyManutencao(),
+        quarto:
+          roomOptions.find(
+            (room) =>
+              room.maintenanceStatus === "Disponível" &&
+              room.occupancyStatus === "Livre",
+          )?.number ??
+          roomOptions[0]?.number ??
+          "Recepção",
+        categoria: "ElÃ©trica",
+        descricao:
+          "Troca preventiva de lampada e teste de tomada para demonstracao.",
+        responsavel: "Roberto Alves",
+        agendamento: new Date().toISOString().slice(0, 16),
+        prioridade: "Média",
+      })
+    setModalMode("new")
+  }
 
   const openView = (id: number) => {
-    setSelectedId(id);
-    setModalMode("view");
-  };
+    setSelectedId(id)
+    setModalMode("view")
+  }
 
   const openEdit = (id: number) => {
-    setSelectedId(id);
-    setError("");
+    setSelectedId(id)
+    setError("")
     if (tab === "limpeza") {
-      const item = tarefas.find((tarefa) => tarefa.id === id);
-      if (!item) return;
+      const item = tarefas.find((tarefa) => tarefa.id === id)
+      if (!item) return
       setFormTarefa({
         quarto: item.quarto,
         tipo: item.tipo,
@@ -428,10 +478,10 @@ export default function LimpezaManutencao() {
         prioridade: item.prioridade,
         observacoes: item.observacoes,
         status: item.status,
-      });
+      })
     } else {
-      const item = manutencoes.find((manutencao) => manutencao.id === id);
-      if (!item) return;
+      const item = manutencoes.find((manutencao) => manutencao.id === id)
+      if (!item) return
       setFormManutencao({
         quarto: item.quarto,
         tipo: item.tipo,
@@ -441,80 +491,114 @@ export default function LimpezaManutencao() {
         agendamento: item.agendamento,
         prioridade: item.prioridade,
         status: item.status,
-      });
+      })
     }
-    setModalMode("edit");
-  };
+    setModalMode("edit")
+  }
 
   const openComplete = (id: number) => {
     const item =
       tab === "limpeza"
         ? tarefas.find((tarefa) => tarefa.id === id)
-        : manutencoes.find((manutencao) => manutencao.id === id);
-    if (!item || item.status === "Concluída" || item.status === "Cancelada") return;
-    setSelectedId(id);
-    setError("");
+        : manutencoes.find((manutencao) => manutencao.id === id)
+    if (!item || item.status === "Concluída" || item.status === "Cancelada")
+      return
+    setSelectedId(id)
+    setError("")
     setCompletion({
       executadoPor: item.responsavel,
       dataHora: new Date().toISOString().slice(0, 16),
       condicaoQuarto: "Liberado",
       descricao: "",
       custo: "",
-    });
-    setModalMode("complete");
-  };
+    })
+    setModalMode("complete")
+  }
 
   useEffect(() => {
-    const command = demo.activeCommand;
-    if (!command || command.target !== "limpeza" || command.command !== "open-housekeeping") return;
-    const source = housekeepingTasks.find((item) => item.id === demo.scenario?.ids.housekeepingTaskId);
+    const command = demo.activeCommand
+    if (
+      !command ||
+      command.target !== "limpeza" ||
+      command.command !== "open-housekeeping"
+    )
+      return
+    const source = housekeepingTasks.find(
+      (item) => item.id === demo.scenario?.ids.housekeepingTaskId,
+    )
     if (!source) {
-      demo.resolveCommand(command.id, { status: "error", message: "Tarefa de limpeza do cenário não encontrada." });
-      return;
+      demo.resolveCommand(command.id, {
+        status: "error",
+        message: "Tarefa de limpeza do cenário não encontrada.",
+      })
+      return
     }
-    const id = 100000 + source.id;
-    setTab("limpeza");
-    setTarefas((current) => current.some((item) => item.sourceTaskId === source.id) ? current : [{
-      id, sourceTaskId: source.id, codigo: source.code,
-      quarto: rooms.find((room) => room.id === source.roomId)?.number ?? "—",
-      tipo: "Saída", responsavel: "Governança", agendamento: source.scheduledAt,
-      prioridade: source.priority, observacoes: source.notes, status: source.status,
-    }, ...current]);
-    setSelectedId(id);
+    const id = 100000 + source.id
+    setTab("limpeza")
+    setTarefas((current) =>
+      current.some((item) => item.sourceTaskId === source.id)
+        ? current
+        : [
+            {
+              id,
+              sourceTaskId: source.id,
+              codigo: source.code,
+              quarto:
+                rooms.find((room) => room.id === source.roomId)?.number ?? "—",
+              tipo: "Saída",
+              responsavel: "Governança",
+              agendamento: source.scheduledAt,
+              prioridade: source.priority,
+              observacoes: source.notes,
+              status: source.status,
+            },
+            ...current,
+          ],
+    )
+    setSelectedId(id)
     setCompletion({
       executadoPor: "Governança",
       dataHora: new Date().toISOString().slice(0, 16),
       condicaoQuarto: "Liberado",
       descricao: "Limpeza de saída concluída e quarto vistoriado.",
       custo: "",
-    });
-    setError("");
-    setModalMode("complete");
-    demo.resolveCommand(command.id, { status: "running", message: "Tarefa de limpeza aberta. Revise e confirme a conclusão." });
-  }, [demo.activeCommand]);
+    })
+    setError("")
+    setModalMode("complete")
+    demo.resolveCommand(command.id, {
+      status: "running",
+      message: "Tarefa de limpeza aberta. Revise e confirme a conclusão.",
+    })
+  }, [demo.activeCommand])
 
   const openCancel = (id: number) => {
-    setSelectedId(id);
-    setMotivoCancelamento("");
-    setError("");
-    setModalMode("cancel");
-  };
+    setSelectedId(id)
+    setMotivoCancelamento("")
+    setError("")
+    setModalMode("cancel")
+  }
 
   const saveItem = () => {
-    setError("");
+    setError("")
     if (tab === "limpeza") {
-      if (!formTarefa.quarto || !formTarefa.responsavel || !formTarefa.agendamento) {
-        setError("Informe quarto, responsável e agendamento.");
-        return;
+      if (
+        !formTarefa.quarto ||
+        !formTarefa.responsavel ||
+        !formTarefa.agendamento
+      ) {
+        setError("Informe quarto, responsável e agendamento.")
+        return
       }
-      const room = roomByNumber(formTarefa.quarto);
+      const room = roomByNumber(formTarefa.quarto)
       if (!room) {
-        setError("Selecione um quarto cadastrado.");
-        return;
+        setError("Selecione um quarto cadastrado.")
+        return
       }
       if (formTarefa.tipo !== "Estadia" && room.occupancyStatus === "Ocupado") {
-        setError(`O quarto ${room.number} está ocupado. Para hóspede em permanência, use limpeza de estadia.`);
-        return;
+        setError(
+          `O quarto ${room.number} está ocupado. Para hóspede em permanência, use limpeza de estadia.`,
+        )
+        return
       }
       if (modalMode === "new") {
         setTarefas((current) => [
@@ -524,8 +608,20 @@ export default function LimpezaManutencao() {
             ...formTarefa,
           },
           ...current,
-        ]);
-        setRooms((current) => current.map((room) => room.number === formTarefa.quarto ? { ...room, cleaningStatus: formTarefa.status === "Em andamento" ? "Em limpeza" : room.cleaningStatus } : room));
+        ])
+        setRooms((current) =>
+          current.map((room) =>
+            room.number === formTarefa.quarto
+              ? {
+                  ...room,
+                  cleaningStatus:
+                    formTarefa.status === "Em andamento"
+                      ? "Em limpeza"
+                      : room.cleaningStatus,
+                }
+              : room,
+          ),
+        )
       } else if (selectedId) {
         setTarefas((current) =>
           current.map((item) =>
@@ -540,7 +636,7 @@ export default function LimpezaManutencao() {
                 }
               : item,
           ),
-        );
+        )
       }
     } else {
       if (
@@ -550,13 +646,15 @@ export default function LimpezaManutencao() {
         !formManutencao.responsavel ||
         !formManutencao.agendamento
       ) {
-        setError("Preencha todos os campos obrigatórios.");
-        return;
+        setError("Preencha todos os campos obrigatórios.")
+        return
       }
-      const selectedRoom = roomByNumber(formManutencao.quarto);
+      const selectedRoom = roomByNumber(formManutencao.quarto)
       if (selectedRoom?.occupancyStatus === "Ocupado") {
-        setError(`O quarto ${selectedRoom.number} está ocupado. Não é possível bloqueá-lo para manutenção neste fluxo.`);
-        return;
+        setError(
+          `O quarto ${selectedRoom.number} está ocupado. Não é possível bloqueá-lo para manutenção neste fluxo.`,
+        )
+        return
       }
       if (modalMode === "new") {
         setManutencoes((current) => [
@@ -567,53 +665,98 @@ export default function LimpezaManutencao() {
             ...formManutencao,
           },
           ...current,
-        ]);
-        if (selectedRoom) setRoomMaintenance(formManutencao.quarto, true);
+        ])
+        if (selectedRoom) setRoomMaintenance(formManutencao.quarto, true)
       } else if (selectedId) {
         setManutencoes((current) =>
           current.map((item) =>
             item.id === selectedId ? { ...item, ...formManutencao } : item,
           ),
-        );
+        )
       }
     }
-    closeModal();
-  };
+    closeModal()
+  }
 
   const completeItem = () => {
-    setError("");
-    if (!completion.executadoPor || !completion.dataHora || !completion.descricao) {
-      setError("Informe responsável, data/hora e o registro da execução.");
-      return;
+    setError("")
+    if (
+      !completion.executadoPor ||
+      !completion.dataHora ||
+      !completion.descricao
+    ) {
+      setError("Informe responsável, data/hora e o registro da execução.")
+      return
     }
     if (tab === "limpeza") {
-      const task = tarefas.find((item) => item.id === selectedId);
-      const room = rooms.find((item) => item.number === task?.quarto);
-      if (completion.condicaoQuarto === "Liberado" && room?.occupancyStatus === "Ocupado") {
-        setError(`O quarto ${room.number} ainda está ocupado. Registre como limpeza de estadia ou finalize o check-out antes de liberar.`);
-        return;
+      const task = tarefas.find((item) => item.id === selectedId)
+      const room = rooms.find((item) => item.number === task?.quarto)
+      if (
+        completion.condicaoQuarto === "Liberado" &&
+        room?.occupancyStatus === "Ocupado"
+      ) {
+        setError(
+          `O quarto ${room.number} ainda está ocupado. Registre como limpeza de estadia ou finalize o check-out antes de liberar.`,
+        )
+        return
       }
       if (task?.sourceTaskId) {
-        const result = completeHousekeeping(task.sourceTaskId, completion.executadoPor, completion.descricao);
+        const result = completeHousekeeping(
+          task.sourceTaskId,
+          completion.executadoPor,
+          completion.descricao,
+        )
         if (!result.ok) {
-          setError(result.error ?? "Não foi possível liberar o quarto.");
-          return;
+          setError(result.error ?? "Não foi possível liberar o quarto.")
+          return
         }
         if (completion.condicaoQuarto !== "Liberado") {
-          setRooms((current) => current.map((room) => room.number === task.quarto ? {
-            ...room,
-            cleaningStatus: completion.condicaoQuarto === "Necessita inspeção" ? "Em limpeza" : "Sujo",
-            maintenanceStatus: completion.condicaoQuarto === "Bloqueado para manutenção" ? "Bloqueado" : room.maintenanceStatus,
-            status: completion.condicaoQuarto === "Bloqueado para manutenção" ? "Em manutenção" : room.status,
-          } : room));
+          setRooms((current) =>
+            current.map((room) =>
+              room.number === task.quarto
+                ? {
+                    ...room,
+                    cleaningStatus:
+                      completion.condicaoQuarto === "Necessita inspeção"
+                        ? "Em limpeza"
+                        : "Sujo",
+                    maintenanceStatus:
+                      completion.condicaoQuarto === "Bloqueado para manutenção"
+                        ? "Bloqueado"
+                        : room.maintenanceStatus,
+                    status:
+                      completion.condicaoQuarto === "Bloqueado para manutenção"
+                        ? "Em manutenção"
+                        : room.status,
+                  }
+                : room,
+            ),
+          )
         }
       } else if (task) {
-        setRooms((current) => current.map((room) => room.number === task.quarto ? {
-          ...room,
-          cleaningStatus: completion.condicaoQuarto === "Liberado" ? "Limpo" : completion.condicaoQuarto === "Necessita inspeção" ? "Em limpeza" : "Sujo",
-          maintenanceStatus: completion.condicaoQuarto === "Bloqueado para manutenção" ? "Bloqueado" : room.maintenanceStatus,
-          status: completion.condicaoQuarto === "Bloqueado para manutenção" ? "Em manutenção" : room.status,
-        } : room));
+        setRooms((current) =>
+          current.map((room) =>
+            room.number === task.quarto
+              ? {
+                  ...room,
+                  cleaningStatus:
+                    completion.condicaoQuarto === "Liberado"
+                      ? "Limpo"
+                      : completion.condicaoQuarto === "Necessita inspeção"
+                        ? "Em limpeza"
+                        : "Sujo",
+                  maintenanceStatus:
+                    completion.condicaoQuarto === "Bloqueado para manutenção"
+                      ? "Bloqueado"
+                      : room.maintenanceStatus,
+                  status:
+                    completion.condicaoQuarto === "Bloqueado para manutenção"
+                      ? "Em manutenção"
+                      : room.status,
+                }
+              : room,
+          ),
+        )
       }
       setTarefas((current) =>
         current.map((item) =>
@@ -629,10 +772,10 @@ export default function LimpezaManutencao() {
               }
             : item,
         ),
-      );
+      )
     } else {
-      const maintenance = manutencoes.find((item) => item.id === selectedId);
-      if (maintenance) setRoomMaintenance(maintenance.quarto, false);
+      const maintenance = manutencoes.find((item) => item.id === selectedId)
+      if (maintenance) setRoomMaintenance(maintenance.quarto, false)
       setManutencoes((current) =>
         current.map((item) =>
           item.id === selectedId
@@ -646,15 +789,15 @@ export default function LimpezaManutencao() {
               }
             : item,
         ),
-      );
+      )
     }
-    closeModal();
-  };
+    closeModal()
+  }
 
   const cancelItem = () => {
     if (!motivoCancelamento.trim()) {
-      setError("Informe o motivo do cancelamento.");
-      return;
+      setError("Informe o motivo do cancelamento.")
+      return
     }
     if (tab === "limpeza") {
       setTarefas((current) =>
@@ -663,31 +806,41 @@ export default function LimpezaManutencao() {
             ? { ...item, status: "Cancelada", motivoCancelamento }
             : item,
         ),
-      );
+      )
     } else {
-      const maintenance = manutencoes.find((item) => item.id === selectedId);
-      if (maintenance) setRoomMaintenance(maintenance.quarto, false);
+      const maintenance = manutencoes.find((item) => item.id === selectedId)
+      if (maintenance) setRoomMaintenance(maintenance.quarto, false)
       setManutencoes((current) =>
         current.map((item) =>
           item.id === selectedId
             ? { ...item, status: "Cancelada", motivoCancelamento }
             : item,
         ),
-      );
+      )
     }
-    closeModal();
-  };
+    closeModal()
+  }
 
-  const activeItems = tab === "limpeza" ? tarefas : manutencoes;
+  const activeItems = tab === "limpeza" ? tarefas : manutencoes
   const statItems = [
-    { label: "Pendentes", value: activeItems.filter((item) => item.status === "Pendente").length },
+    {
+      label: "Pendentes",
+      value: activeItems.filter((item) => item.status === "Pendente").length,
+    },
     {
       label: "Em andamento",
-      value: activeItems.filter((item) => item.status === "Em andamento").length,
+      value: activeItems.filter((item) => item.status === "Em andamento")
+        .length,
     },
-    { label: "Concluídas", value: activeItems.filter((item) => item.status === "Concluída").length },
-    { label: "Urgentes", value: activeItems.filter((item) => item.prioridade === "Urgente").length },
-  ];
+    {
+      label: "Concluídas",
+      value: activeItems.filter((item) => item.status === "Concluída").length,
+    },
+    {
+      label: "Urgentes",
+      value: activeItems.filter((item) => item.prioridade === "Urgente").length,
+    },
+  ]
 
   return (
     <div className="space-y-5">
@@ -695,7 +848,9 @@ export default function LimpezaManutencao() {
         title="Limpeza & Manutenção"
         actions={
           <Btn onClick={openNew}>
-            {tab === "limpeza" ? "+ Nova tarefa de limpeza" : "+ Nova manutenção"}
+            {tab === "limpeza"
+              ? "+ Nova tarefa de limpeza"
+              : "+ Nova manutenção"}
           </Btn>
         }
       />
@@ -709,7 +864,8 @@ export default function LimpezaManutencao() {
             </p>
           </div>
           <p className="text-xs text-gray-500">
-            Sincronização em até 5 segundos · última atualização {formatDate(lastSync)}
+            Sincronização em até 5 segundos · última atualização{" "}
+            {formatDate(lastSync)}
           </p>
         </div>
       </Card>
@@ -717,7 +873,9 @@ export default function LimpezaManutencao() {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {statItems.map((item) => (
           <Card key={item.label} className="min-h-24">
-            <p className="text-xs font-bold uppercase tracking-wider text-primary/70">{item.label}</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-primary/70">
+              {item.label}
+            </p>
             <p className="mt-2 text-3xl font-bold text-primary">{item.value}</p>
           </Card>
         ))}
@@ -730,16 +888,18 @@ export default function LimpezaManutencao() {
         ]}
         active={tab}
         onChange={(nextTab) => {
-          setTab(nextTab);
-          setBusca("");
-          setFiltroStatus("");
-          setFiltroPrioridade("");
+          setTab(nextTab)
+          setBusca("")
+          setFiltroStatus("")
+          setFiltroPrioridade("")
         }}
       />
 
       <Card>
         <SectionTitle>
-          {tab === "limpeza" ? "Controle de tarefas de limpeza" : "Controle de manutenções"}
+          {tab === "limpeza"
+            ? "Controle de tarefas de limpeza"
+            : "Controle de manutenções"}
         </SectionTitle>
 
         <div className="mb-4 grid gap-3 md:grid-cols-[minmax(220px,1fr)_180px_160px]">
@@ -791,11 +951,17 @@ export default function LimpezaManutencao() {
             ]}
             rows={tarefasFiltradas.map((item) => [
               item.codigo,
-              <div><strong>{item.quarto}</strong><p className="text-xs text-muted">{roomSummary(item.quarto)}</p></div>,
+              <div>
+                <strong>{item.quarto}</strong>
+                <p className="text-xs text-muted">{roomSummary(item.quarto)}</p>
+              </div>,
               item.tipo,
               item.responsavel,
               formatDate(item.agendamento),
-              <Badge label={item.prioridade} color={prioridadeColor[item.prioridade]} />,
+              <Badge
+                label={item.prioridade}
+                color={prioridadeColor[item.prioridade]}
+              />,
               <Badge label={item.status} color={statusColor[item.status]} />,
               <div className="flex flex-wrap gap-1">
                 <Btn small variant="ghost" onClick={() => openView(item.id)}>
@@ -803,13 +969,25 @@ export default function LimpezaManutencao() {
                 </Btn>
                 {item.status !== "Concluída" && item.status !== "Cancelada" && (
                   <>
-                    <Btn small variant="ghost" onClick={() => openEdit(item.id)}>
+                    <Btn
+                      small
+                      variant="ghost"
+                      onClick={() => openEdit(item.id)}
+                    >
                       Atualizar
                     </Btn>
-                    <Btn small variant="secondary" onClick={() => openComplete(item.id)}>
+                    <Btn
+                      small
+                      variant="secondary"
+                      onClick={() => openComplete(item.id)}
+                    >
                       Registrar limpeza
                     </Btn>
-                    <Btn small variant="danger" onClick={() => openCancel(item.id)}>
+                    <Btn
+                      small
+                      variant="danger"
+                      onClick={() => openCancel(item.id)}
+                    >
                       Cancelar
                     </Btn>
                   </>
@@ -832,12 +1010,18 @@ export default function LimpezaManutencao() {
             ]}
             rows={manutencoesFiltradas.map((item) => [
               item.codigo,
-              <div><strong>{item.quarto}</strong><p className="text-xs text-muted">{roomSummary(item.quarto)}</p></div>,
+              <div>
+                <strong>{item.quarto}</strong>
+                <p className="text-xs text-muted">{roomSummary(item.quarto)}</p>
+              </div>,
               item.tipo,
               item.categoria,
               item.responsavel,
               formatDate(item.agendamento),
-              <Badge label={item.prioridade} color={prioridadeColor[item.prioridade]} />,
+              <Badge
+                label={item.prioridade}
+                color={prioridadeColor[item.prioridade]}
+              />,
               <Badge label={item.status} color={statusColor[item.status]} />,
               <div className="flex flex-wrap gap-1">
                 <Btn small variant="ghost" onClick={() => openView(item.id)}>
@@ -845,13 +1029,25 @@ export default function LimpezaManutencao() {
                 </Btn>
                 {item.status !== "Concluída" && item.status !== "Cancelada" && (
                   <>
-                    <Btn small variant="ghost" onClick={() => openEdit(item.id)}>
+                    <Btn
+                      small
+                      variant="ghost"
+                      onClick={() => openEdit(item.id)}
+                    >
                       Atualizar
                     </Btn>
-                    <Btn small variant="secondary" onClick={() => openComplete(item.id)}>
+                    <Btn
+                      small
+                      variant="secondary"
+                      onClick={() => openComplete(item.id)}
+                    >
                       Registrar execução
                     </Btn>
-                    <Btn small variant="danger" onClick={() => openCancel(item.id)}>
+                    <Btn
+                      small
+                      variant="danger"
+                      onClick={() => openCancel(item.id)}
+                    >
                       Cancelar
                     </Btn>
                   </>
@@ -875,6 +1071,24 @@ export default function LimpezaManutencao() {
                 : "Atualizar manutenção"
           }
           onClose={closeModal}
+          footer={
+            <>
+              {error && (
+                <FullCol>
+                  <Alert type="error">{error}</Alert>
+                </FullCol>
+              )}
+              <FormActions>
+                <Btn variant="ghost" onClick={closeModal}>
+                  Voltar
+                </Btn>
+                <Btn onClick={saveItem}>Salvar</Btn>
+              </FormActions>
+            </>
+          }
+          intent="create"
+          size="lg"
+          description="Defina o local, o responsável, o agendamento e as orientações da tarefa."
         >
           <FormGrid cols={2}>
             {tab === "limpeza" ? (
@@ -883,13 +1097,17 @@ export default function LimpezaManutencao() {
                   label="Quarto *"
                   value={formTarefa.quarto}
                   onChange={(event) =>
-                    setFormTarefa((current) => ({ ...current, quarto: event.target.value }))
+                    setFormTarefa((current) => ({
+                      ...current,
+                      quarto: event.target.value,
+                    }))
                   }
                 >
                   <option value="">Selecione um quarto cadastrado</option>
                   {roomOptions.map((room) => (
                     <option key={room.id} value={room.number}>
-                      {room.number} — {room.category} · {room.occupancyStatus} · {room.cleaningStatus} · {room.maintenanceStatus}
+                      {room.number} — {room.category} · {room.occupancyStatus} ·{" "}
+                      {room.cleaningStatus} · {room.maintenanceStatus}
                     </option>
                   ))}
                 </Select>
@@ -992,7 +1210,10 @@ export default function LimpezaManutencao() {
                   <option value="">Selecione</option>
                   {maintenanceLocations.map((location) => (
                     <option key={location} value={location}>
-                      {location}{roomByNumber(location) ? ` — ${roomSummary(location)}` : " — área comum"}
+                      {location}
+                      {roomByNumber(location)
+                        ? ` — ${roomSummary(location)}`
+                        : " — área comum"}
                     </option>
                   ))}
                 </Select>
@@ -1097,17 +1318,6 @@ export default function LimpezaManutencao() {
                 </FullCol>
               </>
             )}
-            {error && (
-              <FullCol>
-                <Alert type="error">{error}</Alert>
-              </FullCol>
-            )}
-            <FormActions>
-              <Btn variant="ghost" onClick={closeModal}>
-                Voltar
-              </Btn>
-              <Btn onClick={saveItem}>Salvar</Btn>
-            </FormActions>
           </FormGrid>
         </Modal>
       )}
@@ -1128,13 +1338,25 @@ export default function LimpezaManutencao() {
                 <Info label="Quarto" value={selectedTarefa.quarto} />
                 <Info label="Tipo" value={selectedTarefa.tipo} />
                 <Info label="Responsável" value={selectedTarefa.responsavel} />
-                <Info label="Agendamento" value={formatDate(selectedTarefa.agendamento)} />
+                <Info
+                  label="Agendamento"
+                  value={formatDate(selectedTarefa.agendamento)}
+                />
                 <Info label="Prioridade" value={selectedTarefa.prioridade} />
                 <Info label="Status" value={selectedTarefa.status} />
-                <Info label="Início" value={formatDate(selectedTarefa.inicio)} />
-                <Info label="Conclusão" value={formatDate(selectedTarefa.conclusao)} />
+                <Info
+                  label="Início"
+                  value={formatDate(selectedTarefa.inicio)}
+                />
+                <Info
+                  label="Conclusão"
+                  value={formatDate(selectedTarefa.conclusao)}
+                />
                 <FullCol>
-                  <Info label="Orientações" value={selectedTarefa.observacoes || "Sem observações."} />
+                  <Info
+                    label="Orientações"
+                    value={selectedTarefa.observacoes || "Sem observações."}
+                  />
                 </FullCol>
                 {selectedTarefa.registro && (
                   <>
@@ -1146,8 +1368,9 @@ export default function LimpezaManutencao() {
                     </FullCol>
                     <FullCol>
                       <Alert type="success">
-                        Conclusão registrada por {selectedTarefa.executadoPor} em{" "}
-                        {formatDate(selectedTarefa.conclusao)}. Este registro é imutável.
+                        Conclusão registrada por {selectedTarefa.executadoPor}{" "}
+                        em {formatDate(selectedTarefa.conclusao)}. Este registro
+                        é imutável.
                       </Alert>
                     </FullCol>
                   </>
@@ -1172,14 +1395,32 @@ export default function LimpezaManutencao() {
                 <FormGrid cols={2}>
                   <Info label="Local" value={selectedManutencao.quarto} />
                   <Info label="Tipo" value={selectedManutencao.tipo} />
-                  <Info label="Categoria" value={selectedManutencao.categoria} />
-                  <Info label="Responsável" value={selectedManutencao.responsavel} />
-                  <Info label="Abertura" value={formatDate(selectedManutencao.abertura)} />
-                  <Info label="Agendamento" value={formatDate(selectedManutencao.agendamento)} />
-                  <Info label="Prioridade" value={selectedManutencao.prioridade} />
+                  <Info
+                    label="Categoria"
+                    value={selectedManutencao.categoria}
+                  />
+                  <Info
+                    label="Responsável"
+                    value={selectedManutencao.responsavel}
+                  />
+                  <Info
+                    label="Abertura"
+                    value={formatDate(selectedManutencao.abertura)}
+                  />
+                  <Info
+                    label="Agendamento"
+                    value={formatDate(selectedManutencao.agendamento)}
+                  />
+                  <Info
+                    label="Prioridade"
+                    value={selectedManutencao.prioridade}
+                  />
                   <Info label="Status" value={selectedManutencao.status} />
                   <FullCol>
-                    <Info label="Descrição" value={selectedManutencao.descricao} />
+                    <Info
+                      label="Descrição"
+                      value={selectedManutencao.descricao}
+                    />
                   </FullCol>
                   {selectedManutencao.servicoRealizado && (
                     <>
@@ -1191,8 +1432,10 @@ export default function LimpezaManutencao() {
                       </FullCol>
                       <FullCol>
                         <Alert type="success">
-                          Conclusão registrada por {selectedManutencao.executadoPor} em{" "}
-                          {formatDate(selectedManutencao.conclusao)}. Este registro é imutável.
+                          Conclusão registrada por{" "}
+                          {selectedManutencao.executadoPor} em{" "}
+                          {formatDate(selectedManutencao.conclusao)}. Este
+                          registro é imutável.
                         </Alert>
                       </FullCol>
                     </>
@@ -1219,14 +1462,36 @@ export default function LimpezaManutencao() {
       {modalMode === "complete" && (
         <Modal
           wide
-          title={tab === "limpeza" ? "Registrar limpeza realizada" : "Registrar manutenção realizada"}
+          title={
+            tab === "limpeza"
+              ? "Registrar limpeza realizada"
+              : "Registrar manutenção realizada"
+          }
           onClose={closeModal}
+          footer={
+            <>
+              {error && (
+                <FullCol>
+                  <Alert type="error">{error}</Alert>
+                </FullCol>
+              )}
+              <FormActions>
+                <Btn variant="ghost" onClick={closeModal}>
+                  Voltar
+                </Btn>
+                <Btn onClick={completeItem}>Confirmar conclusão</Btn>
+              </FormActions>
+            </>
+          }
+          intent="create"
+          size="md"
+          description="Confira a execução e informe os dados que serão registrados na conclusão."
         >
           <FormGrid cols={2}>
             <FullCol>
               <Alert type="warning">
-                Após confirmar, data, hora, responsável e detalhes da conclusão não poderão
-                ser editados.
+                Após confirmar, data, hora, responsável e detalhes da conclusão
+                não poderão ser editados.
               </Alert>
             </FullCol>
             <Input
@@ -1244,7 +1509,10 @@ export default function LimpezaManutencao() {
               type="datetime-local"
               value={completion.dataHora}
               onChange={(event) =>
-                setCompletion((current) => ({ ...current, dataHora: event.target.value }))
+                setCompletion((current) => ({
+                  ...current,
+                  dataHora: event.target.value,
+                }))
               }
             />
             {tab === "limpeza" ? (
@@ -1271,8 +1539,12 @@ export default function LimpezaManutencao() {
                 placeholder="0,00"
                 value={completion.custo}
                 onChange={(event) =>
-                  setCompletion((current) => ({ ...current, custo: event.target.value }))
+                  setCompletion((current) => ({
+                    ...current,
+                    custo: event.target.value,
+                  }))
                 }
+                currency
               />
             )}
             <FullCol>
@@ -1292,24 +1564,17 @@ export default function LimpezaManutencao() {
                 }
               />
             </FullCol>
-            {error && (
-              <FullCol>
-                <Alert type="error">{error}</Alert>
-              </FullCol>
-            )}
-            <FormActions>
-              <Btn variant="ghost" onClick={closeModal}>
-                Voltar
-              </Btn>
-              <Btn onClick={completeItem}>Confirmar conclusão</Btn>
-            </FormActions>
           </FormGrid>
         </Modal>
       )}
 
       {modalMode === "cancel" && (
         <Modal
-          title={tab === "limpeza" ? "Cancelar tarefa de limpeza" : "Cancelar manutenção"}
+          title={
+            tab === "limpeza"
+              ? "Cancelar tarefa de limpeza"
+              : "Cancelar manutenção"
+          }
           onClose={closeModal}
         >
           <div className="space-y-4">
@@ -1334,14 +1599,16 @@ export default function LimpezaManutencao() {
         </Modal>
       )}
     </div>
-  );
+  )
 }
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg bg-surface p-3">
-      <p className="text-xs font-bold uppercase tracking-wide text-primary/70">{label}</p>
+      <p className="text-xs font-bold uppercase tracking-wide text-primary/70">
+        {label}
+      </p>
       <p className="mt-1 text-sm text-body">{value}</p>
     </div>
-  );
+  )
 }

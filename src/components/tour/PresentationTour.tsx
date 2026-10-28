@@ -1,3 +1,4 @@
+import { DialogAssistant } from "../use-dialog-layer";
 import { useEffect, useMemo, useState } from "react";
 import type { Page } from "../AppShell";
 import { useHotelOperations } from "../HotelOperationsContext";
@@ -142,7 +143,7 @@ export default function PresentationTour({ currentPage, allowedPages, launcherOp
     start(restored, storedProgress.stepIndex);
   };
 
-  return <>
+  return <DialogAssistant>
     {launcherOpen && <Modal title="Tour do Sistema de Hotel" onClose={onCloseLauncher} wide>
       {storedProgress && <Alert type="info">Existe um tour salvo em {new Date(storedProgress.savedAt).toLocaleString("pt-BR")}.</Alert>}
       {storedProgress && <FormActions><Btn onClick={continueStored}>Continuar tour</Btn><Btn variant="secondary" onClick={() => { window.localStorage.removeItem(PROGRESS_KEY); setStoredProgress(null); }}>Descartar progresso</Btn></FormActions>}
@@ -179,7 +180,7 @@ export default function PresentationTour({ currentPage, allowedPages, launcherOp
       </aside>}
       {paused && <div className="tour-paused"><strong>Tour pausado</strong><span>O progresso foi salvo localmente.</span><Btn onClick={() => setPaused(false)}>Retomar</Btn><Btn variant="ghost" onClick={() => setScript(null)}>Encerrar</Btn></div>}
     </>}
-  </>;
+  </DialogAssistant>;
 }
 
 function PresentationOption({ title, description, action, onClick }: { title: string; description: string; action: string; onClick: () => void }) {

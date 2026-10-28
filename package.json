@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "test:financial": "node --experimental-strip-types --test src/domain/financial-rules.test.ts",
+    "test:dialogs": "node --experimental-strip-types --test src/components/dialog-rules.test.ts",
     "test:events": "node --experimental-strip-types --test src/domain/event-rules.test.ts",
     "test:operations": "node --experimental-strip-types --test src/domain/hotel-rules.test.ts",
     "test:tour": "node --experimental-strip-types --test src/components/tour/tour-scripts.test.ts",

@@ -465,7 +465,28 @@ export default function Hospedagens() {
         </Modal>
       )}
       {modal === "transfer" && selected && (
-        <Modal title="Trocar quarto" onClose={() => setModal("manage")}>
+        <Modal
+          title="Trocar quarto"
+          onClose={() => setModal("manage")}
+          footer={
+            <>
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setModal("manage")}>
+                  Cancelar
+                </Btn>
+                <Btn
+                  disabled={!transfer.roomId || !transfer.reason.trim()}
+                  onClick={saveTransfer}
+                >
+                  Confirmar transferência
+                </Btn>
+              </FormActions>
+            </>
+          }
+          intent="create"
+          size="md"
+          description="Selecione a nova acomodação e registre o motivo e o responsável pela transferência."
+        >
           <Alert type="info">
             Fatura, pagamentos, consumos e pacote serão preservados. O quarto
             anterior ficará sujo para limpeza.
@@ -500,17 +521,6 @@ export default function Hospedagens() {
               }
             />
           </FormGrid>
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setModal("manage")}>
-              Cancelar
-            </Btn>
-            <Btn
-              disabled={!transfer.roomId || !transfer.reason.trim()}
-              onClick={saveTransfer}
-            >
-              Confirmar transferência
-            </Btn>
-          </FormActions>
         </Modal>
       )}
       {modal === "consumption" && (
@@ -518,6 +528,32 @@ export default function Hospedagens() {
           wide
           title={`Registrar consumo — ${selected?.code ?? ""}`}
           onClose={() => setModal("manage")}
+          footer={
+            <>
+              <FormActions>
+                <Btn variant="ghost" onClick={() => setModal("manage")}>
+                  Cancelar
+                </Btn>
+                <Btn
+                  disabled={
+                    (consumption.category === "Produto" && !selectedProduct) ||
+                    Number(consumption.quantity) <= 0 ||
+                    Number(consumption.unitPrice) < 0
+                  }
+                  onClick={saveConsumption}
+                >
+                  Registrar{" "}
+                  {formatMoney(
+                    Number(consumption.quantity) *
+                      Number(consumption.unitPrice),
+                  )}
+                </Btn>
+              </FormActions>
+            </>
+          }
+          intent="create"
+          size="lg"
+          description="Selecione o produto ou serviço e confira os valores antes de registrar o consumo."
         >
           <Alert type="info">
             Produtos reduzem o estoque e atualizam a fatura. Serviços são
@@ -603,6 +639,7 @@ export default function Hospedagens() {
                   unitPrice: event.target.value,
                 })
               }
+              currency
             />
             <ResponsibleSelect
               value={consumption.responsible}
@@ -633,24 +670,6 @@ export default function Hospedagens() {
               .
             </Alert>
           )}
-          <FormActions>
-            <Btn variant="ghost" onClick={() => setModal("manage")}>
-              Cancelar
-            </Btn>
-            <Btn
-              disabled={
-                (consumption.category === "Produto" && !selectedProduct) ||
-                Number(consumption.quantity) <= 0 ||
-                Number(consumption.unitPrice) < 0
-              }
-              onClick={saveConsumption}
-            >
-              Registrar{" "}
-              {formatMoney(
-                Number(consumption.quantity) * Number(consumption.unitPrice),
-              )}
-            </Btn>
-          </FormActions>
         </Modal>
       )}
       {modal === "reverse" && (
@@ -684,7 +703,7 @@ export default function Hospedagens() {
   )
 }
 
-function Info({ label, value }: { label: string ;value: string }) {
+function Info({ label, value }: { label: string; value: string }) {
   return (
     <div className="summary-item">
       <span>{label}</span>

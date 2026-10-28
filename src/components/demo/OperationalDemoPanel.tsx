@@ -1,3 +1,4 @@
+import { DialogAssistant } from "../use-dialog-layer";
 import { useEffect, useMemo, useState } from "react";
 import type { Page } from "../AppShell";
 import { useHotelOperations } from "../HotelOperationsContext";
@@ -133,7 +134,7 @@ export default function OperationalDemoPanel({ currentPage, allowedPages, onNavi
   const progressText = `Passo ${engine.progress.currentStep + 1} de ${route.steps.length}`;
   const primaryLabel = canAdvance ? (isLastStep ? "Concluir" : "Proximo") : step.cta ?? "Proximo";
 
-  return <>
+  return <DialogAssistant>
     {targetRect && <DemoSpotlight rect={targetRect} />}
     <aside className={`demo-panel ${panelOnTop ? "demo-panel--top" : ""}`} role="dialog" aria-label={`Demonstracao operacional: ${step.title}`}>
       <div className="demo-panel__heading">
@@ -162,7 +163,7 @@ export default function OperationalDemoPanel({ currentPage, allowedPages, onNavi
     </aside>
     {requirementOpen && <Modal title={`Rastreabilidade - ${step.rfs}`} onClose={() => setRequirementOpen(false)}><Alert type="info">Resumo interno de rastreabilidade. A matriz completa permanece fora da apresentacao principal.</Alert><div className="detail-list"><Info label="Codigo" value={step.rfs} /><Info label="Processo" value={step.process} /><Info label="Operacao" value={step.title} /><Info label="Situacao" value={statusLabel[status]} /></div></Modal>}
     {confirmRestart && <ConfirmDialog title="Reiniciar roteiro operacional" description="O progresso e os registros deste cenario serao removidos. Dados normais permanecem preservados." onCancel={() => setConfirmRestart(false)} onConfirm={() => { engine.restartRoute(); setConfirmRestart(false); }} />}
-  </>;
+  </DialogAssistant>;
 }
 
 function Info({ label, value }: { label: string; value: string }) {
