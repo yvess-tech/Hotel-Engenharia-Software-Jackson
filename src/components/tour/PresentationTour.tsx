@@ -205,15 +205,15 @@ function evaluateCondition(condition: TourCondition, operations: ReturnType<type
   const received = reservation ? operations.activeReceiptsTotal(reservation.id) : 0;
   const conditions: Record<TourCondition, boolean> = {
     "demo-client": operations.clients.some((client) => client.name === "Maria Costa"),
-    "demo-reservation": Boolean(reservation && ["Confirmada", "Hospedado", "Concluida"].includes(reservation.status)),
-    "demo-room-ready": Boolean(room && room.cleaningStatus === "Limpo" && room.maintenanceStatus === "Disponivel"),
+    "demo-reservation": Boolean(reservation && ["Confirmada", "Hospedado", "Concluída"].includes(reservation.status)),
+    "demo-room-ready": Boolean(room && room.cleaningStatus === "Limpo" && room.maintenanceStatus === "Disponível"),
     "demo-active-stay": Boolean(stay?.status === "Ativa"),
     "demo-consumption": Boolean(stay && operations.consumptions.some((item) => item.stayId === stay.id)),
     "demo-invoice": Boolean(invoice),
     "demo-paid": Boolean(invoice && received + 0.009 >= invoice.total),
     "demo-checkout": Boolean(stay?.status === "Encerrada"),
     "demo-cleaning-created": Boolean(stay && operations.housekeepingTasks.some((item) => item.stayId === stay.id)),
-    "demo-cleaning-complete": Boolean(stay && operations.housekeepingTasks.some((item) => item.stayId === stay.id && item.status === "Concluida")),
+    "demo-cleaning-complete": Boolean(stay && operations.housekeepingTasks.some((item) => item.stayId === stay.id && item.status === "Concluída")),
   };
   return { satisfied: conditions[condition], message: conditions[condition] ? "" : "Use os controles da tela antes de avancar." };
 }

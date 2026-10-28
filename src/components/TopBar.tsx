@@ -7,6 +7,7 @@ const SERIF = "'Inria Serif', Georgia, serif";
 const pageTitles: Record<Page, string> = {
   dashboard:    "Dashboard",
   hospedes:     "Hóspedes",
+  hospedagens:  "Hospedagens",
   reservas:     "Reservas",
   quartos:      "Quartos",
   checkinout:   "Check-in / Check-out",

@@ -167,7 +167,7 @@ export default function Estoque() {
   };
 
   const openMovimentacao = (tipo: TipoMov) => {
-    const produto = tipo === "SaÃ­da"
+    const produto = tipo === "Saída"
       ? produtos.find((p) => p.status === "Ativo" && p.quantidade > 0)
       : produtos.find((p) => p.status === "Ativo");
     setFm({

@@ -4,7 +4,28 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d066661a-c5ce-4082-b4d7-22267333271e" name="Changes" comment="alteração 12/10/2026" />
+    <list default="true" id="d066661a-c5ce-4082-b4d7-22267333271e" name="Changes" comment="alteração 19/10/2026">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/HotelOperationsContext.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/HotelOperationsContext.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/TopBar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/TopBar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/demo/OperationalDemoPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/demo/OperationalDemoPanel.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/CheckInOut.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/CheckInOut.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Consumos.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Consumos.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Estoque.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Estoque.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Eventos.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Eventos.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Financeiro.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Financeiro.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Fiscal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Fiscal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Hospedagens.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Hospedagens.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Pacotes.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Pacotes.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/pages/Reservas.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/pages/Reservas.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/tour/PresentationTour.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/tour/PresentationTour.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/ui.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/ui.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/domain/consumption-stock-rules.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/domain/consumption-stock-rules.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/domain/event-rules.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/domain/event-rules.test.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/domain/event-rules.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/domain/event-rules.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/domain/financial-rules.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/domain/financial-rules.test.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/domain/financial-rules.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/domain/financial-rules.ts" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -39,23 +60,23 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.4819347477192915" />
-      <entry key="MS500" value="5.0428111497522226" />
-      <entry key="S2" value="14.27114552614008" />
-      <entry key="S5" value="28.727256106157427" />
-      <entry key="S10" value="41.432792273477176" />
-      <entry key="S30" value="55.40740497000844" />
-      <entry key="S60" value="59.94068086603803" />
-      <entry key="M2" value="62.40050243122734" />
-      <entry key="M5" value="63.94341944376732" />
-      <entry key="M10" value="64.55474993132745" />
-      <entry key="M15" value="65.11527470907781" />
-      <entry key="M30" value="67.38750562824715" />
-      <entry key="H1" value="70.90357836050553" />
-      <entry key="H2" value="74.11484267429395" />
-      <entry key="H4" value="76.30161488179509" />
-      <entry key="D1" value="78.50992954376163" />
-      <entry key="W1" value="78.92893249980753" />
+      <entry key="MS100" value="1.5459525675895431" />
+      <entry key="MS500" value="6.46006570590038" />
+      <entry key="S2" value="23.426729261108072" />
+      <entry key="S5" value="46.73593627917541" />
+      <entry key="S10" value="64.63777575399416" />
+      <entry key="S30" value="83.1622220755927" />
+      <entry key="S60" value="95.63219190621983" />
+      <entry key="M2" value="139.8676151713132" />
+      <entry key="M5" value="273.25830047320557" />
+      <entry key="M10" value="395.38829509600873" />
+      <entry key="M15" value="488.0421701499445" />
+      <entry key="M30" value="778.2642167796006" />
+      <entry key="H1" value="1224.199517044907" />
+      <entry key="H2" value="1676.981380992213" />
+      <entry key="H4" value="2026.2670858550148" />
+      <entry key="D1" value="2425.0443737914075" />
+      <entry key="W1" value="2506.9019620043355" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -77,23 +98,23 @@
       <entry key="W1" value="0.0" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.4225874140975556" />
-      <entry key="MS500" value="5.004734717246285" />
-      <entry key="S2" value="14.242663938014362" />
-      <entry key="S5" value="28.702364304920316" />
-      <entry key="S10" value="41.41413092912867" />
-      <entry key="S30" value="55.3988564916837" />
-      <entry key="S60" value="59.936025217166915" />
-      <entry key="M2" value="62.3980708086951" />
-      <entry key="M5" value="63.94242067423884" />
-      <entry key="M10" value="64.55424243392504" />
-      <entry key="M15" value="65.1149242872546" />
-      <entry key="M30" value="67.38729933243911" />
-      <entry key="H1" value="70.90344990202928" />
-      <entry key="H2" value="74.11476673652983" />
-      <entry key="H4" value="76.30157290703923" />
-      <entry key="D1" value="78.50992187199432" />
-      <entry key="W1" value="78.92893138549502" />
+      <entry key="MS100" value="1.4809182833674972" />
+      <entry key="MS500" value="6.406814873795586" />
+      <entry key="S2" value="23.378017533486123" />
+      <entry key="S5" value="46.69668087434467" />
+      <entry key="S10" value="64.6105645593201" />
+      <entry key="S30" value="83.15052741728256" />
+      <entry key="S60" value="95.62529362075175" />
+      <entry key="M2" value="139.86222340324986" />
+      <entry key="M5" value="273.254018233915" />
+      <entry key="M10" value="395.38526374837636" />
+      <entry key="M15" value="488.0397373566993" />
+      <entry key="M30" value="778.2623896392687" />
+      <entry key="H1" value="1224.198122783899" />
+      <entry key="H2" value="1676.9804162729629" />
+      <entry key="H4" value="2026.2664892872533" />
+      <entry key="D1" value="2425.044250574138" />
+      <entry key="W1" value="2506.9019436666267" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">
@@ -128,7 +149,7 @@
     "npm.dev.executor": "Run",
     "settings.editor.selected.configurable": "ml.llm.LLMThirdPartyAiProvidersConfigurable",
     "to.speed.mode.migration.done": "true",
-    "ts.external.directory.path": "C:\\Users\\Yves\\AppData\\Local\\Programs\\WebStorm\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external",
+    "ts.external.directory.path": "F:\\Desenvolvimento\\Hotel-Engenharia-Software-Jackson\\node_modules\\typescript\\lib",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -169,7 +190,10 @@
       <workItem from="1792448447903" duration="764000" />
       <workItem from="1792449298844" duration="110000" />
       <workItem from="1792449420724" duration="448000" />
-      <workItem from="1792449929809" duration="3835000" />
+      <workItem from="1792449929809" duration="4639000" />
+      <workItem from="1792461993583" duration="126000" />
+      <workItem from="1792951996099" duration="6128000" />
+      <workItem from="1793152683969" duration="2014000" />
     </task>
     <task id="LOCAL-00001" summary="Versão 1  projeto de hotel">
       <option name="closed" value="true" />
@@ -259,7 +283,15 @@
       <option name="project" value="LOCAL" />
       <updated>1792454295490</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="alteração 19/10/2026">
+      <option name="closed" value="true" />
+      <created>1792455300205</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1792455300205</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -281,6 +313,7 @@
     <MESSAGE value="Correções de erros de projeto" />
     <MESSAGE value="teste de segurança" />
     <MESSAGE value="alteração 12/10/2026" />
-    <option name="LAST_COMMIT_MESSAGE" value="alteração 12/10/2026" />
+    <MESSAGE value="alteração 19/10/2026" />
+    <option name="LAST_COMMIT_MESSAGE" value="alteração 19/10/2026" />
   </component>
 </project>

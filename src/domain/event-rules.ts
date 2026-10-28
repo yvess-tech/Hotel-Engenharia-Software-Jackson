@@ -1,3 +1,5 @@
+import { deriveReceivableStatus, pendingBalance, roundMoney } from "./financial-rules.ts";
+
 export type EventStatus = "Planejado" | "Confirmado" | "Em andamento" | "Concluido" | "Cancelado";
 export type RoomAvailabilityStatus = "Ativo" | "Inativo";
 
@@ -7,12 +9,27 @@ export type EventPeriod = {
   start: string;
   end: string;
   status: EventStatus;
+  setupMinutes?: number;
+  teardownMinutes?: number;
 };
 
 export type ContractedServiceLine = {
   quantity: number;
   contractedUnitPrice: number;
 };
+
+export function eventFinancialSnapshot(event: {
+  status: EventStatus;
+  totalContracted: number;
+  billingType: string;
+  end: string;
+  balanceDueDate?: string;
+  cancellation?: { refunded: number };
+}, received: number, today: string, linkedBalance?: number) {
+  if (event.status === "Cancelado") return { total: event.totalContracted, received: roundMoney(Math.max(0, received - (event.cancellation?.refunded ?? 0))), balance: 0, status: "Cancelada" as const };
+  if (event.billingType === "Vinculada a hospedagem") return { total: event.totalContracted, received: 0, balance: 0, status: "Na fatura da hospedagem" as const, linkedBalance };
+  return { total: event.totalContracted, received: roundMoney(received), balance: pendingBalance(event.totalContracted, received), status: deriveReceivableStatus(event.totalContracted, received, event.balanceDueDate || event.end.slice(0, 10), false, today) };
+}
 
 export function eventDurationHours(start: string, end: string) {
   if (!start || !end) return 0;
@@ -30,12 +47,13 @@ export function eventPeriodsOverlap(firstStart: string, firstEnd: string, second
   return firstStart < secondEnd && firstEnd > secondStart;
 }
 
-export function findRoomScheduleConflict(events: EventPeriod[], roomId: number, start: string, end: string, ignoredEventId?: number | null) {
+export function findRoomScheduleConflict<T extends EventPeriod>(events: T[], roomId: number, start: string, end: string, ignoredEventId?: number | null, setupMinutes = 0, teardownMinutes = 0) {
   return events.find((event) =>
     event.id !== ignoredEventId &&
     event.roomId === roomId &&
     activeEventStatus(event.status) &&
-    eventPeriodsOverlap(start, end, event.start, event.end)
+    new Date(start).getTime() - setupMinutes * 60000 < new Date(event.end).getTime() + (event.teardownMinutes ?? 0) * 60000 &&
+    new Date(end).getTime() + teardownMinutes * 60000 > new Date(event.start).getTime() - (event.setupMinutes ?? 0) * 60000
   ) ?? null;
 }
 

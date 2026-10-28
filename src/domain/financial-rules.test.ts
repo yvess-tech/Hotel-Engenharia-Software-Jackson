@@ -8,6 +8,10 @@ import {
   paymentMethodLabel,
   pendingBalance,
   validateSettlement,
+  PAYMENT_METHODS,
+  validateRefund,
+  validateBankMatch,
+  calculateCashFlow,
 } from "./financial-rules.ts";
 
 test("padroniza formas de pagamento sem duplicar modalidades", () => {
@@ -16,6 +20,51 @@ test("padroniza formas de pagamento sem duplicar modalidades", () => {
   assert.equal(normalizePaymentMethod("Cartão de débito"), "debit_card");
   assert.equal(normalizePaymentMethod("Transferência"), "bank_transfer");
   assert.equal(paymentMethodLabel("cash"), "Dinheiro");
+});
+
+test("preserva os identificadores enviados pelos formulários para todas as formas de pagamento", () => {
+  for (const method of PAYMENT_METHODS) {
+    assert.equal(normalizePaymentMethod(method.id), method.id);
+    assert.equal(normalizePaymentMethod(method.label), method.id);
+  }
+});
+
+test("devolução admite retenção total, parcial e nenhuma, sem exceder o recebido", () => {
+  for (const value of [0, 100.25, 300]) assert.equal(validateRefund(300, value).ok, true);
+  for (const value of [-1, 300.01, NaN, Infinity, 12.345]) assert.equal(validateRefund(300, value).ok, false);
+});
+
+test("conciliação impede direção errada, duplicidade, dinheiro físico e valores diferentes", () => {
+  const credit = { direction: "credito" as const, value: 450 };
+  const movement = { direction: "entrada" as const, value: 450, methodId: "pix" as const };
+  assert.equal(validateBankMatch(credit, movement, false).ok, true);
+  assert.equal(validateBankMatch(credit, movement, true).ok, false);
+  assert.equal(validateBankMatch({ ...credit, direction: "debito" }, movement, false).ok, false);
+  assert.equal(validateBankMatch(credit, { ...movement, methodId: "cash" }, false).ok, false);
+  assert.equal(validateBankMatch({ ...credit, value: 451 }, movement, false).ok, false);
+});
+
+test("fluxo separa realizado de previsto e leva vencidos para hoje sem duplicar pagamentos", () => {
+  const flow = calculateCashFlow([
+    { date: "2026-10-01", value: 500, direction: "entrada" },
+    { date: "2026-10-27", value: 100, direction: "entrada" },
+    { date: "2026-10-27", value: 50, direction: "saida" },
+    { date: "2026-11-30", value: 9999, direction: "entrada" },
+  ], [
+    { date: "2026-10-20", value: 200, direction: "entrada" },
+    { date: "2026-10-28", value: 350, direction: "saida" },
+    { date: "2026-10-28", value: 0, direction: "entrada" },
+  ], "2026-10-27", "2026-10-31", "2026-10-27");
+  assert.equal(flow.opening, 500);
+  assert.equal(flow.actual, 550);
+  assert.equal(flow.projected, 400);
+  assert.equal(flow.rows[0].date, "2026-10-27");
+  assert.equal(flow.rows[0].expectedEntries, 200);
+  assert.equal(flow.rows.length, 2);
+});
+
+test("conta parcialmente paga e vencida permanece classificada como vencida", () => {
+  assert.equal(derivePayableStatus(1000, 250, "2026-10-20", false, "2026-10-27"), "Vencida");
 });
 
 test("calcula recebimento parcial, integral e saldo pendente", () => {

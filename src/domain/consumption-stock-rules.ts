@@ -16,6 +16,6 @@ export function canReverseConsumption(status: string | undefined, stayStatus: st
   return status !== "Estornado" && stayStatus === "Ativa";
 }
 
-export function migrateStockCollections<T>(products: T[] | undefined, movements: T[] | undefined, defaults: T[]) {
-  return { products: Array.isArray(products) ? products : structuredClone(defaults), movements: Array.isArray(movements) ? movements : [] as T[] };
+export function migrateStockCollections<T, M>(products: T[] | undefined, movements: M[] | undefined, defaults: T[]) {
+  return { products: Array.isArray(products) ? products : structuredClone(defaults), movements: Array.isArray(movements) ? movements : [] as M[] };
 }

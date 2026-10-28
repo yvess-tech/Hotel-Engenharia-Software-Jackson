@@ -126,8 +126,8 @@ export default function Fiscal() {
     setDocForm({
       ...docForm,
       origin: origin.origin,
-      reservationId: origin.reservationId,
-      eventId: origin.eventId,
+      reservationId: origin.origin === "Hospedagem" ? origin.reservationId : undefined,
+      eventId: origin.origin === "Evento" ? origin.eventId : undefined,
       recipient: origin.recipient,
       recipientDocument: origin.recipientDocument,
       description: origin.description,
