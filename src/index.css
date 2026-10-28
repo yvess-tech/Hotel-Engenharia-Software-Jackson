@@ -311,6 +311,8 @@ body {
 .form-grid { display: grid; gap: 14px; }
 .full-col { grid-column: 1 / -1; }
 .form-actions { display: flex; grid-column: 1 / -1; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.ops-page .consumption-history-filters { gap: 20px; }
+.ops-page .consumption-history-filters + .consumption-history-filters { margin-top: 8px; }
 .text-muted { color: var(--text-muted); }
 .text-body { color: var(--text-body); }
 .tabular-nums { font-variant-numeric: tabular-nums; }
