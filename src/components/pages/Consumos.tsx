@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import {
   FormSection,
@@ -91,6 +91,14 @@ export default function Consumos() {
   })
 
   const activeStays = stays.filter((stay) => stay.status === "Ativa")
+
+  useEffect(() => {
+    const stayId = Number(window.sessionStorage.getItem("hotel-consumption-stay"))
+    if (!stayId) return
+
+    window.sessionStorage.removeItem("hotel-consumption-stay")
+    setStayFilter(String(stayId))
+  }, [])
 
   const staysForFilter = useMemo(
     () =>

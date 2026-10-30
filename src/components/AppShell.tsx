@@ -71,7 +71,24 @@ export default function AppShell({ user, onLogout }: Props) {
       setCurrentPage("checkinout");
     };
     window.addEventListener("hotel:open-checkout", openCheckout);
-    return () => { window.removeEventListener("hotel:open-stay", openStay); window.removeEventListener("hotel:open-checkout", openCheckout); };
+    const openConsumptions = (event: Event) => {
+      const stayId = (event as CustomEvent<number>).detail;
+      if (Number.isFinite(stayId)) window.sessionStorage.setItem("hotel-consumption-stay", String(stayId));
+      setCurrentPage("consumos");
+    };
+    window.addEventListener("hotel:open-consumptions", openConsumptions);
+    const openRoomMap = (event: Event) => {
+      const stayId = (event as CustomEvent<number>).detail;
+      if (Number.isFinite(stayId)) window.sessionStorage.setItem("hotel-transfer-stay", String(stayId));
+      setCurrentPage("quartos");
+    };
+    window.addEventListener("hotel:open-room-map", openRoomMap);
+    return () => {
+      window.removeEventListener("hotel:open-stay", openStay);
+      window.removeEventListener("hotel:open-checkout", openCheckout);
+      window.removeEventListener("hotel:open-consumptions", openConsumptions);
+      window.removeEventListener("hotel:open-room-map", openRoomMap);
+    };
   }, []);
 
   const PageComponent = pageComponents[currentPage];

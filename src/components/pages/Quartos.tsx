@@ -10,6 +10,7 @@ import {
   Input,
   Modal,
   PageHeader,
+  ResponsibleSelect,
   SectionTitle,
   Select,
   Table,
@@ -17,6 +18,7 @@ import {
   Textarea,
 } from "../ui"
 import {
+  countNights,
   formatMoney,
   today,
   useHotelOperations,
@@ -96,6 +98,8 @@ export default function Quartos() {
     setCategories,
     reservations,
     setReservations,
+    stays,
+    transferStayRoom,
   } = useHotelOperations()
   const [tab, setTab] = useState<Tab>("painel")
   const [roomModal, setRoomModal] = useState<RoomModal>(null)
@@ -110,6 +114,14 @@ export default function Quartos() {
   const [page, setPage] = useState(1)
   const [roomForm, setRoomForm] = useState(emptyRoom)
   const [categoryForm, setCategoryForm] = useState(emptyCategory)
+  const [preferredStayId, setPreferredStayId] = useState("")
+  const [transferTargetRoomId, setTransferTargetRoomId] = useState<number | null>(null)
+  const [transferForm, setTransferForm] = useState({
+    stayId: "",
+    reason: "Transferência solicitada no mapa de quartos.",
+    responsible: "Recepção",
+  })
+  const [transferFeedback, setTransferFeedback] = useState("")
   const demo = useDemoEngine()
 
   useEffect(() => {
@@ -139,6 +151,15 @@ export default function Quartos() {
       message: `Consulta do quarto ${room.number} aberta para conferir ocupação, limpeza e manutenção.`,
     })
   }, [demo.activeCommand])
+
+  useEffect(() => {
+    const stayId = Number(window.sessionStorage.getItem("hotel-transfer-stay"))
+    if (!stayId) return
+
+    window.sessionStorage.removeItem("hotel-transfer-stay")
+    setTab("painel")
+    setPreferredStayId(String(stayId))
+  }, [])
 
   const filteredRooms = useMemo(
     () =>
@@ -293,6 +314,13 @@ export default function Quartos() {
     },
   }
 
+  const roomStatusClass: Record<RoomStatus, string> = {
+    Livre: "available",
+    Ocupado: "occupied",
+    "Em manutenção": "maintenance",
+    Reservado: "reserved",
+  }
+
   const nextReservationFor = (room: Room) =>
     reservations
       .filter(
@@ -302,6 +330,47 @@ export default function Quartos() {
           ["Pendente", "Confirmada"].includes(reservation.status),
       )
       .sort((first, second) => first.entry.localeCompare(second.entry))[0]
+
+  const activeStays = stays.filter((stay) => stay.status === "Ativa")
+  const transferTargetRoom = rooms.find((room) => room.id === transferTargetRoomId)
+  const selectedTransferStay = activeStays.find(
+    (stay) => stay.id === Number(transferForm.stayId),
+  )
+  const transferSourceRoom = rooms.find(
+    (room) => room.id === selectedTransferStay?.roomId,
+  )
+  const remainingNights = selectedTransferStay
+    ? Math.max(0, countNights(today(), selectedTransferStay.expectedExit))
+    : 0
+  const transferDifference =
+    transferTargetRoom && transferSourceRoom
+      ? Math.max(0, transferTargetRoom.rate - transferSourceRoom.rate) *
+        remainingNights
+      : 0
+
+  const openTransfer = (roomId: number) => {
+    setTransferFeedback("")
+    setTransferTargetRoomId(roomId)
+    setTransferForm({
+      stayId: preferredStayId,
+      reason: "Transferência solicitada no mapa de quartos.",
+      responsible: "Recepção",
+    })
+  }
+
+  const saveTransfer = () => {
+    if (!transferTargetRoom || !selectedTransferStay) return
+    const result = transferStayRoom(
+      selectedTransferStay.id,
+      transferTargetRoom.id,
+      transferForm.reason,
+      transferForm.responsible,
+    )
+    if (!result.ok) return setTransferFeedback(result.error ?? "Não foi possível transferir.")
+
+    setTransferTargetRoomId(null)
+    setPreferredStayId("")
+  }
 
   return (
     <div className="ops-page">
@@ -334,35 +403,54 @@ export default function Quartos() {
       />
 
       {tab === "painel" && (
-        <Card>
-          <SectionTitle>Mapa de quartos</SectionTitle>
-          <div className="status-legend">
+        <Card className="room-map-panel">
+          <div className="room-map-heading">
+            <div>
+              <SectionTitle>Mapa de quartos</SectionTitle>
+              <p className="text-body">Consulte a operação em tempo real. Selecione uma acomodação livre para transferir uma hospedagem ativa.</p>
+            </div>
+            <div className="room-map-stats" aria-label="Resumo da ocupação">
+              {roomStatuses.map((status) => (
+                <div key={status} className={`room-map-stat room-map-stat--${roomStatusClass[status]}`}>
+                  <strong>{rooms.filter((room) => room.status === status).length}</strong>
+                  <span>{status}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="status-legend room-map-legend">
             {roomStatuses.map((status) => (
               <span key={status}>
-                <i style={{ background: roomStatusStyle[status].border }} />
+                <i className={`room-map-dot room-map-dot--${roomStatusClass[status]}`} />
                 {status}
               </span>
             ))}
           </div>
-          <div className="room-grid">
+          <div className="room-grid room-map-grid">
             {rooms.map((room) => (
               <button
                 key={room.id}
-                className="room-tile"
+                className={`room-tile room-map-tile room-map-tile--${roomStatusClass[room.status]}`}
                 onClick={() => {
+                  if (
+                    room.status === "Livre" &&
+                    room.cleaningStatus === "Limpo" &&
+                    room.maintenanceStatus === "Disponível"
+                  ) {
+                    openTransfer(room.id)
+                    return
+                  }
                   setSelectedRoom(room)
                   setRoomModal("view")
                 }}
-                style={{
-                  background: roomStatusStyle[room.status].background,
-                  border: `1px solid ${roomStatusStyle[room.status].border}`,
-                }}
               >
-                <strong>{room.number}</strong>
-                <span>{room.category}</span>
-                <Badge label={room.occupancyStatus} />
+                <span className="room-map-tile__topline">
+                  <strong>{room.number}</strong>
+                  <Badge label={room.status} />
+                </span>
+                <span className="room-map-tile__category">{room.category} · andar {room.floor}</span>
                 <span>
-                  {room.cleaningStatus} · {room.maintenanceStatus}
+                  {activeStays.find((stay) => stay.roomId === room.id)?.guest ?? `${room.cleaningStatus} · ${room.maintenanceStatus}`}
                 </span>
                 <span>
                   {nextReservationFor(room)
@@ -566,6 +654,80 @@ export default function Quartos() {
             Categorias com quartos vinculados não podem ser excluídas.
           </Alert>
         </Card>
+      )}
+
+      {transferTargetRoom && (
+        <Modal
+          title={`Transferir para o quarto ${transferTargetRoom.number}`}
+          onClose={() => setTransferTargetRoomId(null)}
+          intent="create"
+          size="lg"
+          description="Selecione a hospedagem ativa que ocupará esta acomodação e revise o ajuste financeiro antes de confirmar."
+          footer={
+            <FormActions>
+              <Btn variant="ghost" onClick={() => setTransferTargetRoomId(null)}>
+                Cancelar
+              </Btn>
+              <Btn
+                disabled={!selectedTransferStay || !transferForm.reason.trim()}
+                onClick={saveTransfer}
+              >
+                Confirmar transferência
+              </Btn>
+            </FormActions>
+          }
+        >
+          {transferFeedback && <Alert type="error">{transferFeedback}</Alert>}
+          <FormGrid cols={2}>
+            <Input label="Novo quarto" value={`${transferTargetRoom.number} · ${transferTargetRoom.category}`} readOnly />
+            <Input label="Nova tarifa" value={formatMoney(transferTargetRoom.rate)} readOnly />
+            <FullCol>
+              <Select
+                label="Hóspede / hospedagem ativa *"
+                value={transferForm.stayId}
+                onChange={(event) =>
+                  setTransferForm({ ...transferForm, stayId: event.target.value })
+                }
+              >
+                <option value="">Selecione</option>
+                {activeStays
+                  .filter((stay) => stay.roomId !== transferTargetRoom.id)
+                  .map((stay) => {
+                    const currentRoom = rooms.find((room) => room.id === stay.roomId)
+                    return (
+                      <option key={stay.id} value={stay.id}>
+                        {stay.guest} · {stay.code} · quarto atual {currentRoom?.number ?? "—"}
+                      </option>
+                    )
+                  })}
+              </Select>
+            </FullCol>
+            {selectedTransferStay && (
+              <>
+                <Input label="Quarto atual" value={`${transferSourceRoom?.number ?? "—"} · ${transferSourceRoom?.category ?? "—"}`} readOnly />
+                <Input label="Tarifa atual" value={formatMoney(transferSourceRoom?.rate ?? 0)} readOnly />
+              </>
+            )}
+            <ResponsibleSelect
+              value={transferForm.responsible}
+              onChange={(responsible) => setTransferForm({ ...transferForm, responsible })}
+            />
+            <FullCol>
+              <Textarea
+                label="Motivo da transferência *"
+                value={transferForm.reason}
+                onChange={(event) => setTransferForm({ ...transferForm, reason: event.target.value })}
+              />
+            </FullCol>
+          </FormGrid>
+          {selectedTransferStay && (
+            <Alert type={transferDifference > 0 ? "warning" : "info"}>
+              {transferDifference > 0
+                ? `A nova acomodação custa mais. ${formatMoney(transferDifference)} será incluído na fatura para ${remainingNights} diária(s) restante(s).`
+                : "Não há diferença adicional a cobrar para as diárias restantes."}
+            </Alert>
+          )}
+        </Modal>
       )}
 
       {(roomModal === "new" || roomModal === "edit") && (

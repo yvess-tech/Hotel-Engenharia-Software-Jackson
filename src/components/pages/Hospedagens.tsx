@@ -362,20 +362,15 @@ export default function Hospedagens() {
               </p>
             </div>
             <Btn
-              onClick={() => {
-                setConsumption({
-                  service: "Room Service",
-                  category: "Serviço",
-                  productId: "",
-                  quantity: "1",
-                  unitPrice: "0",
-                  description: "",
-                  responsible: "Recepção",
-                })
-                setModal("consumption")
-              }}
+              onClick={() =>
+                window.dispatchEvent(
+                  new CustomEvent("hotel:open-consumptions", {
+                    detail: selected.id,
+                  }),
+                )
+              }
             >
-              + Registrar consumo
+              Ir para Consumos
             </Btn>
           </div>
           <Table
@@ -430,12 +425,13 @@ export default function Hospedagens() {
           <Btn
             small
             variant="secondary"
-            onClick={() => {
-              setTransfer({ roomId: "", reason: "", responsible: "Recepção" })
-              setModal("transfer")
-            }}
+            onClick={() =>
+              window.dispatchEvent(
+                new CustomEvent("hotel:open-room-map", { detail: selected.id }),
+              )
+            }
           >
-            Trocar quarto
+            Trocar quarto no mapa
           </Btn>
           <div className="detail-list">
             {selected.history?.map((entry) => (

@@ -171,6 +171,7 @@ export type Reservation = {
   dailyRate: number;
   contractType: ContractType;
   contractedValue: number;
+  roomTransferCharge?: number;
   packageId?: number;
   packageSnapshot?: PackageSnapshot;
   checkedInAt?: string;
@@ -1952,8 +1953,18 @@ export function HotelOperationsProvider({ children }: { children: ReactNode }) {
     if (hasRemainingStayRoomConflict({ reservationId: reservation.id, roomId: destination.id, remainingFrom: today(), expectedExit: stay.expectedExit, reservations })) return { ok: false, error: "O quarto possui reserva ou hospedagem conflitante no período restante." };
     const at = new Date().toISOString();
     const previousRoomId = stay.roomId;
-    setStays((current) => current.map((item) => item.id === stayId ? { ...item, roomId, history: [...(item.history ?? []), { at, type: "Transferência de quarto", description: `Quarto ${rooms.find((room) => room.id === previousRoomId)?.number ?? previousRoomId} → ${destination.number}. Motivo: ${reason.trim()}. Responsável: ${responsible || "Recepção"}.` }] } : item));
-    setReservations((current) => current.map((item) => item.id === stay.reservationId ? { ...item, roomId, audit: `Transferência para o quarto ${destination.number} em ${new Date(at).toLocaleString("pt-BR")}.` } : item));
+    const source = rooms.find((room) => room.id === previousRoomId);
+    const remainingNights = Math.max(0, countNights(today(), stay.expectedExit));
+    const upgradeCharge = Math.max(0, destination.rate - (source?.rate ?? 0)) * remainingNights;
+    const updatedTransferCharge = (reservation.roomTransferCharge ?? 0) + upgradeCharge;
+    const baseValue = reservationBaseValue({ ...reservation, roomTransferCharge: updatedTransferCharge });
+    const extrasValue = consumptions.filter((item) => item.stayId === stay.id && !item.includedInPackage && item.status !== "Estornado").reduce((total, item) => total + item.value, 0);
+    const invoice = invoices.find((item) => item.stayId === stay.id);
+    const invoiceTotal = baseValue + extrasValue - (invoice?.discounts ?? 0);
+    const transferDescription = `Quarto ${source?.number ?? previousRoomId} → ${destination.number}. Motivo: ${reason.trim()}. Responsável: ${responsible || "Recepção"}.${upgradeCharge > 0 ? ` Acréscimo por ${remainingNights} diária(s) restante(s): ${formatMoney(upgradeCharge)}.` : ""}`;
+    setStays((current) => current.map((item) => item.id === stayId ? { ...item, roomId, history: [...(item.history ?? []), { at, type: "Transferência de quarto", description: transferDescription }] } : item));
+    setReservations((current) => current.map((item) => item.id === stay.reservationId ? { ...item, roomId, category: destination.category, roomTransferCharge: updatedTransferCharge, audit: `Transferência para o quarto ${destination.number} em ${new Date(at).toLocaleString("pt-BR")}.${upgradeCharge > 0 ? ` Acréscimo de ${formatMoney(upgradeCharge)} incluído na fatura.` : ""}` } : item));
+    if (invoice) setInvoices((current) => current.map((item) => item.id === invoice.id ? { ...item, baseValue, extrasValue, total: invoiceTotal, status: activeReceiptsTotal(reservation.id) >= invoiceTotal ? "Quitada" : "Aberta", updatedAt: at } : item));
     setRooms((current) => current.map((room) => room.id === roomId ? { ...room, status: "Ocupado", occupancyStatus: "Ocupado" } : room.id === previousRoomId ? { ...room, status: "Livre", occupancyStatus: "Livre", cleaningStatus: "Sujo" } : room));
     return { ok: true };
   };
@@ -2144,7 +2155,8 @@ export function createPackageSnapshot(commercialPackage: CommercialPackage, nigh
 }
 
 export function reservationBaseValue(reservation: Reservation) {
-  return reservation.packageSnapshot?.contractedValue ?? reservation.contractedValue ?? countNights(reservation.entry, reservation.exit) * reservation.dailyRate;
+  const contracted = reservation.packageSnapshot?.contractedValue ?? reservation.contractedValue ?? countNights(reservation.entry, reservation.exit) * reservation.dailyRate;
+  return contracted + (reservation.roomTransferCharge ?? 0);
 }
 
 export function formatMoney(value: number) {
