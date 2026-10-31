@@ -437,6 +437,53 @@ body {
   font-size: 12px;
 }
 
+.room-map-panel { padding: 24px; }
+.room-map-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+.room-map-heading .section-title { margin-bottom: 8px; }
+.room-map-heading .text-body { max-width: 620px; }
+.room-map-stats { display: grid; grid-template-columns: repeat(4, minmax(82px, 1fr)); gap: 8px; }
+.room-map-stat { min-width: 82px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-card); }
+.room-map-stat strong { display: block; color: var(--text-strong); font-size: 20px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.room-map-stat span { display: block; margin-top: 4px; color: var(--text-muted); font-size: 11px; font-weight: 600; }
+.room-map-stat--available { border-color: color-mix(in srgb, var(--ok-fg) 35%, var(--border)); }
+.room-map-stat--occupied { border-color: color-mix(in srgb, var(--info-fg) 35%, var(--border)); }
+.room-map-stat--reserved { border-color: color-mix(in srgb, var(--reserved-fg) 35%, var(--border)); }
+.room-map-stat--maintenance { border-color: color-mix(in srgb, var(--warn-fg) 35%, var(--border)); }
+.room-map-legend { gap: 18px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.room-map-dot { background: var(--neutral-fg); }
+.room-map-dot--available { background: var(--ok-fg); }
+.room-map-dot--occupied { background: var(--info-fg); }
+.room-map-dot--reserved { background: var(--reserved-fg); }
+.room-map-dot--maintenance { background: var(--warn-fg); }
+.room-map-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+.room-map-grid .room-map-tile {
+  min-height: 152px;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgb(38 61 25 / 4%);
+  text-align: left;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.room-map-grid .room-map-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-card); }
+.room-map-grid .room-map-tile:focus-visible { outline: 3px solid color-mix(in srgb, var(--gold-500) 65%, white); outline-offset: 2px; }
+.room-map-tile__topline { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.room-map-grid .room-map-tile .room-map-tile__topline strong { font-size: 24px; letter-spacing: -.03em; }
+.room-map-grid .room-map-tile .room-map-tile__category { color: var(--text-body); font-size: 13px; font-weight: 600; }
+.room-map-grid .room-map-tile > span:not(.room-map-tile__topline):not(.room-map-tile__category) { padding-top: 10px; border-top: 1px solid rgb(38 61 25 / 12%); color: var(--text-muted); font-size: 12px; }
+.room-map-tile--available { border-left: 4px solid var(--ok-fg) !important; background: linear-gradient(135deg, var(--ok-bg), var(--bg-card) 72%); }
+.room-map-tile--occupied { border-left: 4px solid var(--info-fg) !important; background: linear-gradient(135deg, var(--info-bg), var(--bg-card) 72%); }
+.room-map-tile--reserved { border-left: 4px solid var(--reserved-fg) !important; background: linear-gradient(135deg, var(--reserved-bg), var(--bg-card) 72%); }
+.room-map-tile--maintenance { border-left: 4px solid var(--warn-fg) !important; background: linear-gradient(135deg, var(--warn-bg), var(--bg-card) 72%); }
+
 .status-legend {
   display: flex;
   flex-wrap: wrap;
@@ -991,6 +1038,8 @@ body {
 }
 
 @media (max-width: 900px) {
+  .room-map-heading { flex-direction: column; }
+
   .ops-page .form-grid,
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
@@ -1006,6 +1055,10 @@ body {
 }
 
 @media (max-width: 640px) {
+  .room-map-panel { padding: 18px; }
+  .room-map-stats { width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .room-map-grid { grid-template-columns: 1fr; }
+
   .ops-page .form-grid,
   .summary-grid,
   .invoice-totals {
